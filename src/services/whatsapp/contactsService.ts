@@ -11,6 +11,9 @@ import {
 } from '@/types/whatsappTypes';
 
 class ContactsService {
+  private normalizePhoneParam(phone: string) {
+    return phone.replace(/^\+/, '');
+  }
   /**
    * Get all contacts with optional filters
    */
@@ -76,23 +79,24 @@ class ContactsService {
   /**
    * Get single contact by phone number
    */
-  async getContact(phone: string): Promise<Contact> {
+    async getContact(phone: string): Promise<Contact> {
     try {
-      console.log('📋 Fetching contact:', phone);
+      console.log('Fetching contact:', phone);
+      const cleanPhone = this.normalizePhoneParam(phone);
       
       const url = buildUrl(
         API_CONFIG.WHATSAPP.CONTACT_DETAIL,
-        { phone },
+        { phone: cleanPhone },
         'whatsapp'
       );
       
       const response = await whatsappClient.get<Contact>(url);
       
-      console.log('✅ Contact fetched:', response.data.name || response.data.phone);
+      console.log('Contact fetched:', response.data.name || response.data.phone);
       
       return response.data;
     } catch (error: any) {
-      console.error('❌ Failed to fetch contact:', error);
+      console.error('Failed to fetch contact:', error);
       
       if (error.response?.status === 404) {
         throw new Error('Contact not found');
@@ -133,23 +137,24 @@ class ContactsService {
   /**
    * Update an existing contact
    */
-  async updateContact(phone: string, payload: UpdateContactPayload): Promise<Contact> {
+    async updateContact(phone: string, payload: UpdateContactPayload): Promise<Contact> {
     try {
-      console.log('✏️ Updating contact:', phone);
+      console.log('Updating contact:', phone);
+      const cleanPhone = this.normalizePhoneParam(phone);
       
       const url = buildUrl(
         API_CONFIG.WHATSAPP.CONTACT_UPDATE,
-        { phone },
+        { phone: cleanPhone },
         'whatsapp'
       );
       
       const response = await whatsappClient.put<Contact>(url, payload);
       
-      console.log('✅ Contact updated:', response.data.phone);
+      console.log('Contact updated:', response.data.phone);
       
       return response.data;
     } catch (error: any) {
-      console.error('❌ Failed to update contact:', error);
+      console.error('Failed to update contact:', error);
       
       if (error.response?.status === 404) {
         throw new Error('Contact not found');
@@ -163,23 +168,24 @@ class ContactsService {
   /**
    * Delete a contact
    */
-  async deleteContact(phone: string): Promise<DeleteContactResponse> {
+    async deleteContact(phone: string): Promise<DeleteContactResponse> {
     try {
-      console.log('🗑️ Deleting contact:', phone);
+      console.log('Deleting contact:', phone);
+      const cleanPhone = this.normalizePhoneParam(phone);
       
       const url = buildUrl(
         API_CONFIG.WHATSAPP.CONTACT_DELETE,
-        { phone },
+        { phone: cleanPhone },
         'whatsapp'
       );
       
       const response = await whatsappClient.delete<DeleteContactResponse>(url);
       
-      console.log('✅ Contact deleted:', response.data.phone);
+      console.log('Contact deleted:', response.data.phone);
       
       return response.data;
     } catch (error: any) {
-      console.error('❌ Failed to delete contact:', error);
+      console.error('Failed to delete contact:', error);
       
       if (error.response?.status === 404) {
         throw new Error('Contact not found');
@@ -218,6 +224,39 @@ class ContactsService {
       groups: group,
       limit,
     });
+  }
+
+  /**
+   * Import contacts from Excel file
+   */
+  async importContacts(file: File): Promise<string> {
+    try {
+      console.log('📤 Importing contacts from file:', file.name);
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const url = buildUrl(
+        API_CONFIG.WHATSAPP.CONTACT_IMPORT,
+        undefined,
+        'whatsapp'
+      );
+
+      const response = await whatsappClient.post<string>(url, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      console.log('✅ Contacts imported successfully');
+
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ Failed to import contacts:', error);
+
+      const message = error.response?.data?.detail || error.message || 'Failed to import contacts';
+      throw new Error(message);
+    }
   }
 }
 

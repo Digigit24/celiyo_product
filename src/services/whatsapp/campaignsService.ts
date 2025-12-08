@@ -21,30 +21,34 @@ class CampaignsService {
    */
   async sendBroadcast(payload: BroadcastCampaignPayload): Promise<BroadcastCampaignResponse> {
     try {
-      console.log('📤 Sending broadcast campaign:', {
+      const recipientInfo = {
         campaign_name: payload.campaign_name,
-        recipients: payload.recipients.length
-      });
-      
+        direct_recipients: payload.recipients?.length || 0,
+        contact_ids: payload.contact_ids?.length || 0,
+        group_ids: payload.group_ids?.length || 0
+      };
+
+      console.log('📤 Sending broadcast campaign:', recipientInfo);
+
       const response = await whatsappClient.post<BroadcastCampaignResponse>(
         API_CONFIG.WHATSAPP.CAMPAIGN_BROADCAST,
         payload
       );
-      
+
       console.log('✅ Broadcast sent:', {
         campaign_id: response.data.campaign_id,
         sent: response.data.sent,
         failed: response.data.failed
       });
-      
+
       return response.data;
     } catch (error: any) {
       console.error('❌ Failed to send broadcast:', error);
-      
+
       if (error.response?.status === 403) {
         throw new Error('WhatsApp module not enabled');
       }
-      
+
       const message = error.response?.data?.detail || 'Failed to send broadcast';
       throw new Error(message);
     }
@@ -55,10 +59,14 @@ class CampaignsService {
    */
   async createBroadcast(payload: CreateCampaignPayload): Promise<WACampaign> {
     try {
-      console.log('📤 Creating broadcast (backend-aligned):', {
+      const recipientInfo = {
         campaign_name: payload.campaign_name,
-        recipients: payload.recipients.length
-      });
+        direct_recipients: payload.recipients?.length || 0,
+        contact_ids: payload.contact_ids?.length || 0,
+        group_ids: payload.group_ids?.length || 0
+      };
+
+      console.log('📤 Creating broadcast (backend-aligned):', recipientInfo);
 
       const response = await whatsappClient.post<WACampaign>(
         API_CONFIG.WHATSAPP.CAMPAIGN_BROADCAST,
@@ -269,7 +277,7 @@ class CampaignsService {
       return this.sendBroadcast({
         campaign_name: `${campaign.campaign_name} - Retry`,
         recipients: failedRecipients,
-        message,
+        message_text: message,
       });
     } catch (error: any) {
       console.error('❌ Failed to retry messages:', error);
@@ -289,7 +297,7 @@ class CampaignsService {
     return this.sendBroadcast({
       campaign_name: campaignName || `Campaign - ${templateName}`,
       recipients,
-      message: '', // Message will be generated from template
+      message_text: '', // Message will be generated from template
       template_name: templateName,
       template_variables: variables,
     });

@@ -46,6 +46,13 @@ export default function ContactsFormDrawer({
   // Form ref to collect values
   const formRef = useRef<ContactBasicInfoHandle | null>(null);
 
+  // Ensure we fetch latest detail when opening a contact
+  useEffect(() => {
+    if (open && contactPhone) {
+      revalidate();
+    }
+  }, [open, contactPhone, revalidate]);
+
   // Sync internal mode with prop
   useEffect(() => {
     setCurrentMode(mode);
@@ -240,8 +247,10 @@ export default function ContactsFormDrawer({
 
         <TabsContent value="basic" className="mt-6 space-y-6">
           <ContactBasicInfo
+            key={`${contactPhone || 'new'}-${currentMode}`}
             ref={formRef}
             contact={contact}
+            fallbackPhone={contactPhone}
             mode={currentMode}
             onSuccess={handleSuccess}
           />

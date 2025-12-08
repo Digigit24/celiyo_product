@@ -35,6 +35,7 @@ import {
   DollarSign,
   CreditCard,
   TrendingUp,
+  Workflow,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -105,6 +106,12 @@ const menuItems: MenuItem[] = [
         label: "Campaigns",
         icon: Send,
         path: "/whatsapp/campaigns",
+      },
+      {
+        id: "whatsapp-flows",
+        label: "Flows",
+        icon: Workflow,
+        path: "/whatsapp/flows",
       },
     ],
   },

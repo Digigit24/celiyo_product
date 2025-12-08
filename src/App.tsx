@@ -32,6 +32,8 @@ import Chats from "./pages/Chats";
 import Groups from "./pages/Groups";
 import Templates from "./pages/Templates";
 import Campaigns from "./pages/Campaigns";
+import Flows from "./pages/Flows";
+import FlowEditor from "./pages/FlowEditor";
 
 import { ThemeSync } from "@/components/ThemeSync";
 import OPDVisits from "./pages/OPDVisits";  // ✅ Updated to new production page
@@ -110,6 +112,8 @@ const AppLayout = () => {
               <Route path="/whatsapp/groups" element={<Groups />} />
               <Route path="/whatsapp/templates" element={<Templates />} />
               <Route path="/whatsapp/campaigns" element={<Campaigns />} />
+              <Route path="/whatsapp/flows" element={<Flows />} />
+              <Route path="/whatsapp/flows/:flow_id" element={<FlowEditor />} />
 
               {/* Admin Routes */}
               <Route path="/admin/users" element={<Users />} />

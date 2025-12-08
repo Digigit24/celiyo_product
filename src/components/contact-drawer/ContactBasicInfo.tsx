@@ -1,6 +1,6 @@
 // src/components/contact-drawer/ContactBasicInfo.tsx
-import { forwardRef, useImperativeHandle } from 'react';
-import { useForm } from 'react-hook-form';
+import { forwardRef, useEffect, useImperativeHandle, useMemo } from 'react';
+import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 
@@ -11,8 +11,15 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
-import { X, Plus } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { X } from 'lucide-react';
+import { useUsers } from '@/hooks/useUsers';
 
 import type { Contact, CreateContactPayload } from '@/types/whatsappTypes';
 import type { ContactBasicInfoHandle } from '../ContactsFormDrawer';
@@ -21,6 +28,9 @@ import type { ContactBasicInfoHandle } from '../ContactsFormDrawer';
 const contactSchema = z.object({
   phone: z.string().min(1, 'Phone number is required'),
   name: z.string().optional(),
+  status: z.string().optional(),
+  assigned_to: z.string().optional(),
+  profile_pic_url: z.string().optional(),
   notes: z.string().optional(),
   labels: z.array(z.string()).optional(),
   groups: z.array(z.string()).optional(),
@@ -32,37 +42,67 @@ type ContactFormData = z.infer<typeof contactSchema>;
 
 interface ContactBasicInfoProps {
   contact?: Contact | null;
+  fallbackPhone?: string | null;
   mode: 'view' | 'edit' | 'create';
   onSuccess?: () => void;
 }
 
 const ContactBasicInfo = forwardRef<ContactBasicInfoHandle, ContactBasicInfoProps>(
-  ({ contact, mode, onSuccess }, ref) => {
+  ({ contact, fallbackPhone, mode }, ref) => {
     const isReadOnly = mode === 'view';
+    const { useUsersList } = useUsers();
+    const { data: usersData, isLoading: usersLoading } = useUsersList({
+      page: 1,
+      page_size: 1000,
+      is_active: true,
+    });
+
+    const normalizedDefaults = useMemo(
+      () => ({
+        phone: contact?.phone || fallbackPhone || '',
+        name: contact?.name || '',
+        status: contact?.status || '',
+        assigned_to: contact?.assigned_to ? String(contact.assigned_to) : '',
+        profile_pic_url: contact?.profile_pic_url || '',
+        notes: contact?.notes || '',
+        labels: contact?.labels || [],
+        groups: contact?.groups || [],
+        is_business: contact?.is_business ?? false,
+        business_description: contact?.business_description || '',
+      }),
+      [contact, fallbackPhone]
+    );
 
     const {
       register,
+      control,
       handleSubmit,
       formState: { errors },
       watch,
       setValue,
-      getValues,
+      reset,
     } = useForm<ContactFormData>({
       resolver: zodResolver(contactSchema),
-      defaultValues: {
-        phone: contact?.phone || '',
-        name: contact?.name || '',
-        notes: contact?.notes || '',
-        labels: contact?.labels || [],
-        groups: contact?.groups || [],
-        is_business: contact?.is_business || false,
-        business_description: contact?.business_description || '',
-      },
+      defaultValues: normalizedDefaults,
     });
 
     const watchedLabels = watch('labels') || [];
     const watchedGroups = watch('groups') || [];
     const watchedIsBusiness = watch('is_business');
+
+    useEffect(() => {
+      reset(normalizedDefaults);
+    }, [normalizedDefaults, mode, reset]);
+
+    const assignedUserDisplayName = useMemo(() => {
+      if (!contact?.assigned_to) return null;
+      const match = usersData?.results?.find((user) => user.id === contact.assigned_to);
+      if (match) {
+        const fullName = `${match.first_name || ''} ${match.last_name || ''}`.trim();
+        return fullName || match.email || match.id;
+      }
+      return contact.assigned_to;
+    }, [contact?.assigned_to, usersData]);
 
     // Expose form validation and data collection to parent
     useImperativeHandle(ref, () => ({
@@ -73,6 +113,9 @@ const ContactBasicInfo = forwardRef<ContactBasicInfoHandle, ContactBasicInfoProp
               const payload: CreateContactPayload = {
                 phone: data.phone,
                 name: data.name || undefined,
+                status: data.status || undefined,
+                assigned_to: data.assigned_to ? data.assigned_to : null,
+                profile_pic_url: data.profile_pic_url || undefined,
                 notes: data.notes || undefined,
                 labels: data.labels?.length ? data.labels : undefined,
                 groups: data.groups?.length ? data.groups : undefined,
@@ -150,6 +193,66 @@ const ContactBasicInfo = forwardRef<ContactBasicInfoHandle, ContactBasicInfoProp
                 id="name"
                 {...register('name')}
                 placeholder="Enter contact name"
+                disabled={isReadOnly}
+              />
+            </div>
+
+            {/* Status & Assigned */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="status">Status</Label>
+                <Input
+                  id="status"
+                  {...register('status')}
+                  placeholder="e.g. active, blocked"
+                  disabled={isReadOnly}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="assigned_to">Assigned To</Label>
+                <Controller
+                  name="assigned_to"
+                  control={control}
+                  render={({ field }) => (
+                    <Select
+                      value={field.value || 'unassigned'}
+                      onValueChange={(value) =>
+                        field.onChange(value === 'unassigned' ? '' : value)
+                      }
+                      disabled={isReadOnly || usersLoading}
+                    >
+                      <SelectTrigger id="assigned_to">
+                        <SelectValue placeholder={usersLoading ? 'Loading users...' : 'Select user'} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="unassigned">Unassigned</SelectItem>
+                        {usersData?.results?.map((user) => {
+                          const displayName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email || user.id;
+                          return (
+                            <SelectItem key={user.id} value={user.id}>
+                              <div className="flex items-center gap-2">
+                                <span>{displayName}</span>
+                                {user.email && (
+                                  <span className="text-xs text-muted-foreground">({user.email})</span>
+                                )}
+                              </div>
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+              </div>
+            </div>
+
+            {/* Profile Picture URL */}
+            <div className="space-y-2">
+              <Label htmlFor="profile_pic_url">Profile Picture URL</Label>
+              <Input
+                id="profile_pic_url"
+                {...register('profile_pic_url')}
+                placeholder="https://example.com/avatar.jpg"
                 disabled={isReadOnly}
               />
             </div>
@@ -285,7 +388,7 @@ const ContactBasicInfo = forwardRef<ContactBasicInfoHandle, ContactBasicInfoProp
               <CardTitle className="text-lg">Contact Information</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                 <div>
                   <Label className="text-muted-foreground">Contact ID</Label>
                   <p className="font-mono">{contact.id}</p>
@@ -295,15 +398,46 @@ const ContactBasicInfo = forwardRef<ContactBasicInfoHandle, ContactBasicInfoProp
                   <p>{contact.status || 'No status'}</p>
                 </div>
                 <div>
+                  <Label className="text-muted-foreground">Assigned To</Label>
+                  <p>{assignedUserDisplayName || contact.assigned_to || 'Unassigned'}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Tenant ID</Label>
+                  <p className="font-mono break-all">{contact.tenant_id}</p>
+                </div>
+                <div>
                   <Label className="text-muted-foreground">Last Seen</Label>
                   <p>{contact.last_seen ? new Date(contact.last_seen).toLocaleString() : 'Never'}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Last Message From User</Label>
+                  <p>{contact.last_message_from_user ? new Date(contact.last_message_from_user).toLocaleString() : 'No messages yet'}</p>
                 </div>
                 <div>
                   <Label className="text-muted-foreground">Created</Label>
                   <p>{new Date(contact.created_at).toLocaleString()}</p>
                 </div>
+                <div>
+                  <Label className="text-muted-foreground">Updated</Label>
+                  <p>{contact.updated_at ? new Date(contact.updated_at).toLocaleString() : 'Not available'}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Conversation Window</Label>
+                  <p>
+                    {contact.window_is_open === undefined || contact.window_is_open === null
+                      ? 'No data'
+                      : contact.window_is_open
+                      ? 'Open'
+                      : 'Closed'}
+                  </p>
+                  {contact.conversation_window_expires_at && (
+                    <p className="text-xs text-muted-foreground">
+                      Expires: {new Date(contact.conversation_window_expires_at).toLocaleString()}
+                    </p>
+                  )}
+                </div>
               </div>
-              
+
               {contact.profile_pic_url && (
                 <div>
                   <Label className="text-muted-foreground">Profile Picture</Label>

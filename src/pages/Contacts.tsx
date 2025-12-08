@@ -6,13 +6,14 @@ import type { ContactsListQuery, Contact } from '@/types/whatsappTypes';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Filter, Plus, Search, X, ArrowLeft, RefreshCw } from 'lucide-react';
+import { Filter, Plus, Search, X, ArrowLeft, RefreshCw, Upload } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { toast } from 'sonner';
 
 import ContactsFiltersDrawer from '@/components/ContactsFiltersDrawer';
 import ContactsTable from '@/components/ContactsTable';
 import ContactsFormDrawer from '@/components/ContactsFormDrawer';
+import ContactsImportDialog from '@/components/ContactsImportDialog';
 
 export default function Contacts() {
   const isMobile = useIsMobile();
@@ -22,6 +23,7 @@ export default function Contacts() {
     offset: 0,
   });
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
 
   // Contact Drawer state
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -101,6 +103,10 @@ export default function Contacts() {
     toast.success('Contacts refreshed');
   };
 
+  const handleImportSuccess = () => {
+    revalidate();
+  };
+
   if (isLoading && contacts.length === 0) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -151,14 +157,22 @@ export default function Contacts() {
           </div>
 
           <div className="flex items-center gap-2">
-            <Button 
-              onClick={handleRefresh} 
-              variant="outline" 
+            <Button
+              onClick={handleRefresh}
+              variant="outline"
               size={isMobile ? 'sm' : 'default'}
               disabled={isLoading}
             >
               <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''} ${!isMobile ? 'mr-2' : ''}`} />
               {!isMobile && 'Refresh'}
+            </Button>
+            <Button
+              onClick={() => setIsImportDialogOpen(true)}
+              variant="outline"
+              size={isMobile ? 'sm' : 'default'}
+            >
+              <Upload className={`h-4 w-4 ${!isMobile ? 'mr-2' : ''}`} />
+              {!isMobile && 'Import'}
             </Button>
             <Button onClick={handleCreateContact} size={isMobile ? 'sm' : 'default'}>
               <Plus className="h-4 w-4 mr-2" />
@@ -264,6 +278,13 @@ export default function Contacts() {
           }
         }}
         onModeChange={setDrawerMode}
+      />
+
+      {/* Import Dialog */}
+      <ContactsImportDialog
+        open={isImportDialogOpen}
+        onOpenChange={setIsImportDialogOpen}
+        onSuccess={handleImportSuccess}
       />
     </div>
   );

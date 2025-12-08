@@ -304,6 +304,9 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
     if (selectedFiles.length === 0 || !selectedFileType) return;
 
     try {
+      // Close preview immediately on send
+      setIsFilePreviewOpen(false);
+
       const file = selectedFiles[0];
       const media_type = selectedFileType === 'camera' ? 'image' : selectedFileType;
 
@@ -470,8 +473,10 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
         ref={messagesContainerRef}
         className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-4 py-4 space-y-3"
         style={{
-          backgroundImage: `linear-gradient(to bottom, rgba(0,0,0,0.02) 1px, transparent 1px)`,
-          backgroundSize: '100% 20px',
+          backgroundImage: `url('https://hms.thedigitechsolutions.com/imgs/wa-message-bg-faded.png')`,
+          backgroundSize: 'cover',
+          backgroundRepeat: 'repeat',
+          backgroundColor: '#e5ddd5',
         }}
       >
         {isLoading ? (
@@ -513,8 +518,8 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
                   className={cn(
                     "relative max-w-[85%] sm:max-w-[70%] md:max-w-[65%] rounded-lg px-3 py-2 shadow-sm",
                     msg.from === "me"
-                      ? "bg-primary text-primary-foreground rounded-br-none"
-                      : "bg-card text-card-foreground rounded-bl-none border border-border"
+                      ? "bg-[#dcf8c6] text-[#0b141a] rounded-br-none border border-emerald-100"
+                      : "bg-white text-[#0b141a] rounded-bl-none border border-gray-200"
                   )}
                 >
                   {msg.type === 'image' && (
@@ -524,7 +529,7 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
                         src={getMediaUrl(msg.metadata?.media_id)}
                         previewSrc={msg.metadata?.file_preview_url}
                         alt="sent image"
-                        className="rounded-md max-w-full"
+                        className="rounded-md max-w-[240px] w-full h-auto"
                       />
                       {msg.metadata?.is_uploading && (
                         <div className="absolute inset-0 flex items-center justify-center bg-black/50">
@@ -540,7 +545,7 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
                         src={getMediaUrl(msg.metadata?.media_id)}
                         previewSrc={msg.metadata?.file_preview_url}
                         alt="sent video"
-                        className="rounded-md max-w-full"
+                        className="rounded-md max-w-[240px] w-full h-auto"
                       />
                       {msg.metadata?.is_uploading && (
                         <div className="absolute inset-0 flex items-center justify-center bg-black/50">
@@ -556,7 +561,7 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
                         src={getMediaUrl(msg.metadata?.media_id)}
                         previewSrc={msg.metadata?.file_preview_url}
                         alt="sent audio"
-                        className="rounded-md max-w-full"
+                        className="rounded-md max-w-[240px] w-full h-auto"
                       />
                       {msg.metadata?.is_uploading && (
                         <div className="absolute inset-0 flex items-center justify-center bg-black/50">

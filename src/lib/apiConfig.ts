@@ -11,7 +11,7 @@ export const API_CONFIG = {
   AUTH_BASE_URL: import.meta.env.VITE_AUTH_BASE_URL || 'https://admin.celiyo.com/api',
   CRM_BASE_URL: import.meta.env.VITE_CRM_BASE_URL || 'https://crm.celiyo.com/api',
   HMS_BASE_URL: import.meta.env.VITE_HMS_BASE_URL || 'https://hms.celiyo.com/api',
-  WHATSAPP_BASE_URL: import.meta.env.VITE_WHATSAPP_BASE_URL || 'https://whatsapp.celiyo.com/api',
+  WHATSAPP_BASE_URL: import.meta.env.VITE_WHATSAPP_BASE_URL || 'http://localhost:8000/api',
 
 
   // ✅ WebSocket URL for real-time WhatsApp updates
@@ -304,6 +304,7 @@ export const API_CONFIG = {
     CONTACT_CREATE: '/contacts/',
     CONTACT_UPDATE: '/contacts/:phone/',
     CONTACT_DELETE: '/contacts/:phone/',
+    CONTACT_IMPORT: '/contacts/import',
     
     // Groups endpoints
     GROUPS: '/groups/',
@@ -331,6 +332,18 @@ export const API_CONFIG = {
     CAMPAIGN_BROADCAST: '/campaigns/broadcast',
     CAMPAIGNS: '/campaigns/',
     CAMPAIGN_DETAIL: '/campaigns/:id',
+
+    // Flows endpoints
+    FLOWS: '/flows/',
+    FLOW_DETAIL: '/flows/:flow_id',
+    FLOW_CREATE: '/flows/',
+    FLOW_UPDATE: '/flows/:flow_id',
+    FLOW_DELETE: '/flows/:flow_id',
+    FLOW_PUBLISH: '/flows/:flow_id/publish',
+    FLOW_UNPUBLISH: '/flows/:flow_id/unpublish',
+    FLOW_DUPLICATE: '/flows/:flow_id/duplicate',
+    FLOW_VALIDATE: '/flows/:flow_id/validate',
+    FLOW_STATS: '/flows/stats',
   },
 };
 

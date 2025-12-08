@@ -95,9 +95,59 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ children }
 
   const updateMessageStatus = React.useCallback(
     (messageId: string, status: 'sent' | 'delivered' | 'read') => {
-      setMessages((prevMessages) =>
-        prevMessages.map((msg) => (msg.id === messageId ? { ...msg, status } : msg))
-      );
+      setMessages((prevMessages) => {
+        let updated = false;
+        const normalizedId = String(messageId);
+        const next = prevMessages.map((msg) => {
+          if (String(msg.id) === normalizedId) {
+            updated = true;
+            return { ...msg, status, metadata: { ...(msg.metadata || {}), is_uploading: false } };
+          }
+          return msg;
+        });
+
+        // Fallback: if not found by id, patch the first uploading outgoing media message
+        if (!updated) {
+          const uploadIdx = next.findIndex(
+            (m) => m.direction === 'outgoing' && m.metadata?.is_uploading
+          );
+          if (uploadIdx > -1) {
+            const target = next[uploadIdx];
+            next[uploadIdx] = {
+              ...target,
+              id: normalizedId,
+              status,
+              metadata: { ...(target.metadata || {}), is_uploading: false },
+            };
+            updated = true;
+          }
+        }
+
+        // Secondary fallback: update the latest temp outgoing message
+        if (!updated) {
+          const tempIdx = [...next]
+            .reverse()
+            .findIndex(
+              (m) =>
+                typeof m.id === 'string' &&
+                m.direction === 'outgoing' &&
+                (m.id as string).startsWith('temp_')
+            );
+          if (tempIdx > -1) {
+            // reverse index needs conversion to original index
+            const originalIdx = next.length - 1 - tempIdx;
+            const target = next[originalIdx];
+            next[originalIdx] = {
+              ...target,
+              id: normalizedId,
+              status,
+              metadata: { ...(target.metadata || {}), is_uploading: false },
+            };
+          }
+        }
+
+        return next;
+      });
     },
     []
   );

@@ -18,7 +18,9 @@ import { toast } from 'sonner';
 
 import { useCampaigns } from '@/hooks/whatsapp/useCampaigns';
 import { useTemplates } from '@/hooks/whatsapp/useTemplates';
-import type { WACampaign, CreateCampaignPayload, Template, TemplateStatus } from '@/types/whatsappTypes';
+import { useContacts } from '@/hooks/whatsapp/useContacts';
+import { useGroups } from '@/hooks/whatsapp/useGroups';
+import type { WACampaign, CreateCampaignPayload, Template, TemplateStatus, Contact, Group } from '@/types/whatsappTypes';
 import CampaignsTable from '@/components/CampaignsTable';
 import { SideDrawer } from '@/components/SideDrawer';
 
@@ -82,6 +84,20 @@ export default function Campaigns() {
     initialQuery: { skip: 0, limit: 100, status: 'APPROVED' as TemplateStatus }
   });
 
+  // Contacts hook - fetch all contacts for selection
+  const {
+    contacts,
+    isLoading: contactsLoading,
+    error: contactsError,
+  } = useContacts({ limit: 1000, offset: 0 });
+
+  // Groups hook - fetch all groups for selection
+  const {
+    groups,
+    isLoading: groupsLoading,
+    error: groupsError,
+  } = useGroups({ limit: 1000, offset: 0 });
+
   // Header actions
   const [createOpen, setCreateOpen] = useState(false);
   const [viewOpen, setViewOpen] = useState(false);
@@ -99,8 +115,11 @@ export default function Campaigns() {
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   const [campaignTitle, setCampaignTitle] = useState('');
 
-  // Step 2: Recipients (backend expects array of phone numbers)
-  const [recipientsText, setRecipientsText] = useState('');
+  // Step 2: Recipients - three methods
+  const [recipientMethod, setRecipientMethod] = useState<'phone' | 'contacts' | 'groups'>('phone');
+  const [recipientsText, setRecipientsText] = useState(''); // For direct phone numbers
+  const [selectedContactIds, setSelectedContactIds] = useState<string[]>([]); // For contact IDs
+  const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([]); // For group IDs
 
   const total = campaigns.length;
 
@@ -114,7 +133,10 @@ export default function Campaigns() {
     setCurrentStep('template');
     setSelectedTemplate(null);
     setCampaignTitle('');
+    setRecipientMethod('phone');
     setRecipientsText('');
+    setSelectedContactIds([]);
+    setSelectedGroupIds([]);
     setTemplateSearchQuery('');
     setCreateOpen(true);
   };
@@ -142,14 +164,27 @@ export default function Campaigns() {
       }
       setCurrentStep('contacts');
     } else if (currentStep === 'contacts') {
-      if (!recipientsText.trim()) {
-        toast.error('Please enter at least one recipient phone number');
-        return;
-      }
-      const recipients = parseRecipients(recipientsText);
-      if (recipients.length === 0) {
-        toast.error('Please enter valid phone numbers');
-        return;
+      // Validate based on selected method
+      if (recipientMethod === 'phone') {
+        if (!recipientsText.trim()) {
+          toast.error('Please enter at least one recipient phone number');
+          return;
+        }
+        const recipients = parseRecipients(recipientsText);
+        if (recipients.length === 0) {
+          toast.error('Please enter valid phone numbers');
+          return;
+        }
+      } else if (recipientMethod === 'contacts') {
+        if (selectedContactIds.length === 0) {
+          toast.error('Please select at least one contact');
+          return;
+        }
+      } else if (recipientMethod === 'groups') {
+        if (selectedGroupIds.length === 0) {
+          toast.error('Please select at least one group');
+          return;
+        }
       }
       setCurrentStep('review');
     }
@@ -169,18 +204,33 @@ export default function Campaigns() {
       return;
     }
 
-    const recipients = parseRecipients(recipientsText);
-    if (recipients.length === 0) {
-      toast.error('At least one recipient is required');
-      return;
-    }
-
-    // Backend expects: campaign_name, message_text, recipients
+    // Build payload with appropriate recipient fields
     const payload: CreateCampaignPayload = {
       campaign_name: campaignTitle.trim() || selectedTemplate.name,
       message_text: getTemplateBody(selectedTemplate),
-      recipients,
     };
+
+    // Add recipients based on selected method
+    if (recipientMethod === 'phone' && recipientsText.trim()) {
+      const recipients = parseRecipients(recipientsText);
+      if (recipients.length > 0) {
+        payload.recipients = recipients;
+      }
+    }
+
+    if (recipientMethod === 'contacts' && selectedContactIds.length > 0) {
+      payload.contact_ids = selectedContactIds;
+    }
+
+    if (recipientMethod === 'groups' && selectedGroupIds.length > 0) {
+      payload.group_ids = selectedGroupIds;
+    }
+
+    // Validate at least one recipient method has data
+    if (!payload.recipients && !payload.contact_ids && !payload.group_ids) {
+      toast.error('At least one recipient is required');
+      return;
+    }
 
     try {
       setCreating(true);
@@ -325,35 +375,198 @@ export default function Campaigns() {
 
               <Separator />
 
-              <div className="space-y-3">
-                <Label htmlFor="recipients" className="text-base font-semibold">
-                  Recipients <span className="text-destructive">*</span>
+              <div className="space-y-4">
+                <Label className="text-base font-semibold">
+                  Recipient Method <span className="text-destructive">*</span>
                 </Label>
-                <Textarea
-                  id="recipients"
-                  placeholder="Enter phone numbers (one per line or comma-separated)&#10;Example:&#10;919876543210&#10;918765432109&#10;917654321098"
-                  value={recipientsText}
-                  onChange={(e) => setRecipientsText(e.target.value)}
-                  rows={8}
-                  className="font-mono text-sm"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Enter phone numbers in international format without + sign.
-                  You can separate numbers with new lines, commas, or spaces.
-                </p>
-                {recipientsText && (
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Users className="h-3 w-3" />
-                    <span>{parseRecipients(recipientsText).length} recipients</span>
+
+                <RadioGroup value={recipientMethod} onValueChange={(value: any) => setRecipientMethod(value)}>
+                  <div className="flex items-center space-x-2 border rounded-lg p-3 hover:bg-muted/50 cursor-pointer">
+                    <RadioGroupItem value="phone" id="method-phone" />
+                    <Label htmlFor="method-phone" className="flex-1 cursor-pointer">
+                      <div className="font-medium">Direct Phone Numbers</div>
+                      <div className="text-xs text-muted-foreground">Enter phone numbers directly</div>
+                    </Label>
+                    <Phone className="h-4 w-4 text-muted-foreground" />
                   </div>
-                )}
+
+                  <div className="flex items-center space-x-2 border rounded-lg p-3 hover:bg-muted/50 cursor-pointer">
+                    <RadioGroupItem value="contacts" id="method-contacts" />
+                    <Label htmlFor="method-contacts" className="flex-1 cursor-pointer">
+                      <div className="font-medium">Select from Contacts</div>
+                      <div className="text-xs text-muted-foreground">Choose saved contacts from database</div>
+                    </Label>
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                  </div>
+
+                  <div className="flex items-center space-x-2 border rounded-lg p-3 hover:bg-muted/50 cursor-pointer">
+                    <RadioGroupItem value="groups" id="method-groups" />
+                    <Label htmlFor="method-groups" className="flex-1 cursor-pointer">
+                      <div className="font-medium">Select Groups</div>
+                      <div className="text-xs text-muted-foreground">Send to all members of selected groups</div>
+                    </Label>
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                </RadioGroup>
               </div>
+
+              <Separator />
+
+              {/* Direct Phone Numbers Method */}
+              {recipientMethod === 'phone' && (
+                <div className="space-y-3">
+                  <Label htmlFor="recipients" className="text-base font-semibold">
+                    Recipients <span className="text-destructive">*</span>
+                  </Label>
+                  <Textarea
+                    id="recipients"
+                    placeholder="Enter phone numbers (one per line or comma-separated)&#10;Example:&#10;919876543210&#10;918765432109&#10;917654321098"
+                    value={recipientsText}
+                    onChange={(e) => setRecipientsText(e.target.value)}
+                    rows={8}
+                    className="font-mono text-sm"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Enter phone numbers in international format without + sign.
+                    You can separate numbers with new lines, commas, or spaces.
+                  </p>
+                  {recipientsText && (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Users className="h-3 w-3" />
+                      <span>{parseRecipients(recipientsText).length} recipients</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Contacts Selection Method */}
+              {recipientMethod === 'contacts' && (
+                <div className="space-y-3">
+                  <Label className="text-base font-semibold">
+                    Select Contacts <span className="text-destructive">*</span>
+                  </Label>
+                  {contactsLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="text-center">
+                        <RefreshCw className="h-8 w-8 animate-spin mx-auto text-muted-foreground mb-2" />
+                        <p className="text-sm text-muted-foreground">Loading contacts...</p>
+                      </div>
+                    </div>
+                  ) : contactsError ? (
+                    <div className="border rounded-lg p-4 bg-destructive/10 text-destructive text-sm">
+                      Error loading contacts: {contactsError.message || 'Unknown error'}
+                    </div>
+                  ) : contacts.length === 0 ? (
+                    <div className="border rounded-lg p-8 text-center">
+                      <Users className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
+                      <p className="text-sm text-muted-foreground">No contacts available</p>
+                      <p className="text-xs text-muted-foreground mt-1">Add contacts first to use this feature</p>
+                    </div>
+                  ) : (
+                    <div className="border rounded-lg max-h-[300px] overflow-y-auto">
+                      {contacts.map((contact) => (
+                        <div
+                          key={contact.id}
+                          className="flex items-center space-x-3 p-3 border-b last:border-b-0 hover:bg-muted/50"
+                        >
+                          <Checkbox
+                            id={`contact-${contact.id}`}
+                            checked={selectedContactIds.includes(String(contact.id))}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedContactIds([...selectedContactIds, String(contact.id)]);
+                              } else {
+                                setSelectedContactIds(selectedContactIds.filter(id => id !== String(contact.id)));
+                              }
+                            }}
+                          />
+                          <Label htmlFor={`contact-${contact.id}`} className="flex-1 cursor-pointer">
+                            <div className="font-medium">{contact.name || 'Unnamed'}</div>
+                            <div className="text-xs text-muted-foreground font-mono">{contact.phone}</div>
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {selectedContactIds.length > 0 && (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Users className="h-3 w-3" />
+                      <span>{selectedContactIds.length} contact{selectedContactIds.length !== 1 ? 's' : ''} selected</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Groups Selection Method */}
+              {recipientMethod === 'groups' && (
+                <div className="space-y-3">
+                  <Label className="text-base font-semibold">
+                    Select Groups <span className="text-destructive">*</span>
+                  </Label>
+                  {groupsLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="text-center">
+                        <RefreshCw className="h-8 w-8 animate-spin mx-auto text-muted-foreground mb-2" />
+                        <p className="text-sm text-muted-foreground">Loading groups...</p>
+                      </div>
+                    </div>
+                  ) : groupsError ? (
+                    <div className="border rounded-lg p-4 bg-destructive/10 text-destructive text-sm">
+                      Error loading groups: {groupsError.message || 'Unknown error'}
+                    </div>
+                  ) : groups.length === 0 ? (
+                    <div className="border rounded-lg p-8 text-center">
+                      <Users className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
+                      <p className="text-sm text-muted-foreground">No groups available</p>
+                      <p className="text-xs text-muted-foreground mt-1">Create groups first to use this feature</p>
+                    </div>
+                  ) : (
+                    <div className="border rounded-lg max-h-[300px] overflow-y-auto">
+                      {groups.map((group) => (
+                        <div
+                          key={group.id}
+                          className="flex items-center space-x-3 p-3 border-b last:border-b-0 hover:bg-muted/50"
+                        >
+                          <Checkbox
+                            id={`group-${group.id}`}
+                            checked={selectedGroupIds.includes(String(group.id))}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedGroupIds([...selectedGroupIds, String(group.id)]);
+                              } else {
+                                setSelectedGroupIds(selectedGroupIds.filter(id => id !== String(group.id)));
+                              }
+                            }}
+                          />
+                          <Label htmlFor={`group-${group.id}`} className="flex-1 cursor-pointer">
+                            <div className="font-medium">{group.name}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {group.participant_count} participant{group.participant_count !== 1 ? 's' : ''}
+                            </div>
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {selectedGroupIds.length > 0 && (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Users className="h-3 w-3" />
+                      <span>{selectedGroupIds.length} group{selectedGroupIds.length !== 1 ? 's' : ''} selected</span>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         );
 
       case 'review':
         const recipientsList = parseRecipients(recipientsText);
+        const totalRecipientCount =
+          (recipientMethod === 'phone' ? recipientsList.length : 0) +
+          (recipientMethod === 'contacts' ? selectedContactIds.length : 0) +
+          (recipientMethod === 'groups' ? selectedGroupIds.length : 0);
+
         return (
           <div className="space-y-6">
             <div className="space-y-4">
@@ -371,10 +584,20 @@ export default function Campaigns() {
                     </span>
                   </div>
                   <div className="grid grid-cols-3 gap-2 text-sm">
+                    <span className="text-muted-foreground">Recipient Method:</span>
+                    <span className="col-span-2">
+                      <Badge variant="secondary">
+                        {recipientMethod === 'phone' && 'Direct Phone Numbers'}
+                        {recipientMethod === 'contacts' && 'Saved Contacts'}
+                        {recipientMethod === 'groups' && 'Groups'}
+                      </Badge>
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-sm">
                     <span className="text-muted-foreground">Recipients:</span>
                     <span className="col-span-2 font-medium flex items-center gap-2">
                       <Users className="h-3 w-3" />
-                      {recipientsList.length} recipients
+                      {totalRecipientCount} {recipientMethod === 'phone' ? 'phone numbers' : recipientMethod === 'contacts' ? 'contacts' : 'groups'}
                     </span>
                   </div>
                   <div className="grid grid-cols-3 gap-2 text-sm">

@@ -11,6 +11,7 @@ import { DataTable, DataTableColumn } from '@/components/DataTable';
 import AppointmentFormDrawer from '@/components/AppointmentFormDrawer';
 import AppointmentCalendarView from '@/components/AppointmentCalendarView';
 import AppointmentTypes from '@/components/AppointmentTypes';
+import { formatCurrency } from '@/lib/currencyConfig';
 import {
   Loader2,
   Plus,
@@ -214,7 +215,7 @@ export const Appointments: React.FC = () => {
       key: 'payment',
       cell: (appointment) => (
         <div className="flex flex-col text-sm">
-          <span className="font-medium">${appointment.fee_amount ?? 0}</span>
+          <span className="font-medium">{formatCurrency(appointment.fee_amount ?? 0)}</span>
           <Badge
             variant={appointment.payment_status === 'paid' ? 'default' : 'secondary'}
             className={`text-xs ${appointment.payment_status === 'paid' ? 'bg-green-600' : ''}`}
@@ -280,7 +281,7 @@ export const Appointments: React.FC = () => {
             variant={appointment.payment_status === 'paid' ? 'default' : 'secondary'}
             className={`text-xs ${appointment.payment_status === 'paid' ? 'bg-green-600' : ''}`}
           >
-            ${appointment.fee_amount ?? 0} • {appointment.payment_status?.replace('_', ' ').toUpperCase() || 'N/A'}
+            {formatCurrency(appointment.fee_amount ?? 0)} • {appointment.payment_status?.replace('_', ' ').toUpperCase() || 'N/A'}
           </Badge>
         </div>
 

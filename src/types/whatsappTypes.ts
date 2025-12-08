@@ -138,8 +138,13 @@ export interface Contact {
   labels: string[];
   groups: string[];
   notes: string | null;
+  assigned_to: string | null;
+  last_message_from_user: string | null;
+  conversation_window_expires_at?: string | null;
+  window_is_open?: boolean | null;
   last_seen: string | null;
   created_at: string;
+  updated_at?: string;
   tenant_id: string;
 }
 
@@ -164,6 +169,9 @@ export interface CreateContactPayload {
   groups?: string[];
   is_business?: boolean;
   business_description?: string;
+  assigned_to?: string | null;
+  status?: string;
+  profile_pic_url?: string;
 }
 
 export interface UpdateContactPayload {
@@ -173,6 +181,9 @@ export interface UpdateContactPayload {
   groups?: string[];
   is_business?: boolean;
   business_description?: string;
+  assigned_to?: string | null;
+  status?: string;
+  profile_pic_url?: string;
 }
 
 export interface DeleteContactResponse {
@@ -415,8 +426,11 @@ export interface CampaignDetail extends Campaign {
 
 export interface BroadcastCampaignPayload {
   campaign_name?: string;
-  recipients: string[];
-  message: string;
+  message_text: string;
+  // Support three ways to specify recipients
+  recipients?: string[]; // Direct phone numbers
+  contact_ids?: string[]; // Contact IDs from database
+  group_ids?: string[]; // Group IDs from database
   template_name?: string;
   template_variables?: Record<string, string>;
 }
@@ -480,7 +494,10 @@ export interface WACampaign {
 export interface CreateCampaignPayload {
   campaign_name: string;
   message_text: string;
-  recipients: string[]; // phone numbers
+  // Support three ways to specify recipients
+  recipients?: string[]; // Direct phone numbers
+  contact_ids?: string[]; // Contact IDs from database
+  group_ids?: string[]; // Group IDs from database
 }
 
 /** Backend list query for campaigns */
@@ -491,3 +508,117 @@ export interface CampaignListQuery {
 
 /** The backend returns a raw array for list */
 export type WACampaignListResponse = WACampaign[];
+
+// ==================== FLOW TYPES ====================
+
+export type FlowStatus = 'DRAFT' | 'PUBLISHED' | 'DEPRECATED';
+
+export type FlowCategory =
+  | 'SIGN_UP'
+  | 'SIGN_IN'
+  | 'APPOINTMENT_BOOKING'
+  | 'LEAD_GENERATION'
+  | 'CONTACT_US'
+  | 'CUSTOMER_SUPPORT'
+  | 'SURVEY'
+  | 'OTHER';
+
+export interface FlowScreen {
+  id: string;
+  title: string;
+  terminal?: boolean;
+  data?: Array<{
+    key: string;
+    example: any;
+  }>;
+  layout: {
+    type: string;
+    children: any[];
+  };
+}
+
+export interface FlowJSON {
+  version: string;
+  screens: FlowScreen[];
+}
+
+export interface Flow {
+  id: number;
+  tenant_id: string;
+  flow_id: string;
+  name: string;
+  description?: string | null;
+  flow_json: FlowJSON;
+  category: FlowCategory;
+  version: string;
+  data_api_version?: string | null;
+  endpoint_uri?: string | null;
+  status: FlowStatus;
+  is_active: boolean;
+  tags?: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FlowsListQuery {
+  page?: number;
+  page_size?: number;
+  status?: FlowStatus;
+  category?: FlowCategory;
+  is_active?: boolean;
+  search?: string;
+}
+
+export interface FlowsListResponse {
+  total: number;
+  flows: Flow[];
+  page: number;
+  page_size: number;
+}
+
+export interface CreateFlowPayload {
+  name: string;
+  description?: string;
+  flow_json: FlowJSON;
+  category: FlowCategory;
+  version?: string;
+  data_api_version?: string;
+  endpoint_uri?: string;
+  tags?: string[];
+}
+
+export interface UpdateFlowPayload {
+  name?: string;
+  description?: string;
+  flow_json?: FlowJSON;
+  category?: FlowCategory;
+  status?: FlowStatus;
+  endpoint_uri?: string;
+  tags?: string[];
+}
+
+export interface FlowValidationResponse {
+  is_valid: boolean;
+  errors: string[];
+  warnings: string[];
+}
+
+export interface FlowStats {
+  total_flows: number;
+  draft_flows: number;
+  published_flows: number;
+  active_flows: number;
+  flows_by_category: Record<FlowCategory, number>;
+}
+
+export interface DeleteFlowResponse {
+  message: string;
+  flow_id: string;
+}
+
+export interface PublishFlowResponse {
+  success: boolean;
+  message: string;
+  flow_id: string;
+  status: FlowStatus;
+}

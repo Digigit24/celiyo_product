@@ -9,7 +9,10 @@ import {
   Phone,
   Video,
   Search,
+  Check,
   CheckCheck,
+  Clock,
+  XCircle,
   Image as ImageIcon,
   FileText,
   Music,
@@ -40,6 +43,10 @@ import { cn } from "@/lib/utils";
 import { useMessages } from "@/hooks/whatsapp/useMessages";
 import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
+import MediaWithAuth from './MediaWithAuth';
+import DocumentWithAuth from './DocumentWithAuth';
+import { getMediaUrl } from "@/services/whatsapp";
+import { API_CONFIG } from "@/lib/apiConfig";
 
 type Props = {
   conversationId: string;
@@ -110,31 +117,55 @@ const attachmentOptions = [
 ];
 
 export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onBack }: Props) => {
-  const { messages, isLoading, error, sendMessage, isSending } = useMessages(selectedConversation?.phone || null);
-  
+  const { messages, isLoading, error, sendMessage, sendMediaMessage } = useMessages(selectedConversation?.phone || null);
+
   const transformedMessages = messages.map(msg => ({
     from: msg.direction === 'outgoing' ? 'me' : 'them',
     text: msg.text,
     time: new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    status: msg.direction === 'outgoing' ? 'read' : undefined
+    status: msg.status,
+    type: msg.type,
+    metadata: msg.metadata,
   }));
-  
-  const endRef = useRef<HTMLDivElement>(null);
+
+  // Log messages for debugging
+  useEffect(() => {
+    if (messages.length > 0) {
+      const lastMsg = messages[messages.length - 1];
+      console.log('💬 ChatWindow messages updated:', {
+        count: messages.length,
+        lastMessage: {
+          id: String(lastMsg.id).substring(0, 10),
+          text: String(lastMsg.text).substring(0, 30),
+          status: lastMsg.status,
+          direction: lastMsg.direction
+        },
+        allStatuses: messages.map(m => ({
+          id: String(m.id).substring(0, 10),
+          status: m.status,
+          dir: m.direction
+        }))
+      });
+    }
+  }, [messages]);
+
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
   const [input, setInput] = useState("");
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
   const [isAttachmentMenuOpen, setIsAttachmentMenuOpen] = useState(false);
-  
+
   // Location dialog state
   const [isLocationDialogOpen, setIsLocationDialogOpen] = useState(false);
   const [locationLoading, setLocationLoading] = useState(false);
   const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number } | null>(null);
-  
+
   // Contact dialog state
   const [isContactDialogOpen, setIsContactDialogOpen] = useState(false);
   const [contactName, setContactName] = useState("");
   const [contactPhone, setContactPhone] = useState("");
-  
+
   // File preview state
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [filePreviewUrl, setFilePreviewUrl] = useState<string | null>(null);
@@ -198,13 +229,17 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
   };
 
   const handleAttachmentClick = (type: AttachmentType) => {
+    console.log('🎯 Attachment clicked:', type);
+
     if (type === 'contact') {
+      console.log('🎯 Opening contact dialog');
       setIsContactDialogOpen(true);
       setIsAttachmentMenuOpen(false);
       return;
     }
-    
+
     if (type === 'location') {
+      console.log('🎯 Opening location dialog');
       setIsLocationDialogOpen(true);
       handleGetLocation();
       setIsAttachmentMenuOpen(false);
@@ -212,14 +247,21 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
     }
 
     // For file types, trigger the corresponding file input
+    console.log('🎯 Looking for file input ref for type:', type);
     const inputRef = fileInputRefs.current[type];
+    console.log('🎯 Input ref found:', !!inputRef);
+
     if (inputRef) {
+      console.log('🎯 Clicking file input...');
       inputRef.click();
       setIsAttachmentMenuOpen(false);
+    } else {
+      console.error('🎯 ❌ No input ref found for type:', type);
+      console.log('🎯 Available refs:', Object.keys(fileInputRefs.current));
     }
   };
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, type: AttachmentType) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: AttachmentType) => {
     console.log('📎 File selected, type:', type);
     const files = e.target.files;
     console.log('📎 Files:', files?.length);
@@ -228,70 +270,64 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
       const fileArray = Array.from(files);
       console.log('📎 Opening preview dialog for:', fileArray[0].name);
 
+      // Set files and type first
       setSelectedFiles(fileArray);
       setSelectedFileType(type);
 
-      // Create preview for images and videos
+      // Open dialog immediately
+      console.log('📎 Setting isFilePreviewOpen to:', true);
+      setIsFilePreviewOpen(true);
+
+      // Create preview for images and videos (async)
       if (type === 'image' || type === 'camera' || type === 'video') {
         const reader = new FileReader();
         reader.onloadend = () => {
-          console.log('📎 Preview URL created');
+          console.log('📎 Preview URL created, length:', (reader.result as string)?.length);
           setFilePreviewUrl(reader.result as string);
+        };
+        reader.onerror = (error) => {
+          console.error('📎 Failed to read file:', error);
+          setFilePreviewUrl(null);
         };
         reader.readAsDataURL(fileArray[0]);
       } else {
         setFilePreviewUrl(null);
       }
-
-      // Open preview dialog
-      console.log('📎 Setting isFilePreviewOpen to true');
-      setIsFilePreviewOpen(true);
+    } else {
+      console.log('📎 No files selected');
     }
     // Reset input value to allow selecting the same file again
     e.target.value = '';
   };
 
   const handleSendFile = async () => {
-    if (selectedFiles.length === 0) return;
+    if (selectedFiles.length === 0 || !selectedFileType) return;
 
     try {
       const file = selectedFiles[0];
+      const media_type = selectedFileType === 'camera' ? 'image' : selectedFileType;
 
-      // In a real implementation, you would:
-      // 1. Upload the file to your server/storage (S3, etc.)
-      // 2. Get the URL back
-      // 3. Send that URL via messagesService.sendMediaMessage()
+      if (media_type === 'contact' || media_type === 'location') {
+        console.error('Contact and location are not sent as files');
+        return;
+      }
 
-      // For now, we'll send a placeholder message
-      // You'll need to implement actual file upload endpoint
-      const fileMessage = `📎 ${selectedFileType === 'image' ? '🖼️' : selectedFileType === 'video' ? '🎥' : selectedFileType === 'document' ? '📄' : '🎵'} ${file.name}${fileCaption ? `\n${fileCaption}` : ''}`;
-
-      await sendMessage(fileMessage);
-
-      // TODO: Implement actual media message sending:
-      // const mediaType = selectedFileType === 'camera' ? 'image' : selectedFileType;
-      // await messagesService.sendMediaMessage({
-      //   to: selectedConversation?.phone || conversationId,
-      //   media_type: mediaType as 'image' | 'video' | 'audio' | 'document',
-      //   media_url: uploadedFileUrl,
-      //   caption: fileCaption || undefined,
-      //   filename: file.name
-      // });
-
+      await sendMediaMessage(file, media_type, fileCaption);
+    } catch (error) {
+      console.error('Failed to send file:', error);
+    } finally {
       // Reset state
       setSelectedFiles([]);
       setFilePreviewUrl(null);
       setSelectedFileType(null);
       setFileCaption("");
       setIsFilePreviewOpen(false);
-    } catch (error) {
-      console.error('Failed to send file:', error);
     }
   };
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || isSending) return;
+    if (!input.trim()) return;
 
     const messageText = input.trim();
     setInput("");
@@ -303,14 +339,46 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
     }
   };
 
+  // Scroll to bottom on initial load (instant) and when new messages arrive
+  const prevMessageCountRef = useRef(0);
+  const isInitialLoadRef = useRef(true);
+
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth" });
+    const currentCount = transformedMessages.length;
+    const prevCount = prevMessageCountRef.current;
+
+    if (currentCount > 0) {
+      if (isInitialLoadRef.current) {
+        // Initial load: scroll instantly without animation
+        console.log('📜 Initial load: Scrolling to bottom instantly');
+        messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
+        isInitialLoadRef.current = false;
+      } else if (currentCount > prevCount) {
+        // New message arrived: scroll instantly
+        console.log('📜 New message: Scrolling to bottom instantly');
+        messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
+      }
+      // Don't scroll on status updates (same count)
+    }
+
+    prevMessageCountRef.current = currentCount;
   }, [transformedMessages.length]);
+
+  // Reset initial load flag when conversation changes
+  useEffect(() => {
+    isInitialLoadRef.current = true;
+    prevMessageCountRef.current = 0;
+  }, [conversationId]);
 
   useEffect(() => {
     console.log('📎 isFilePreviewOpen changed:', isFilePreviewOpen);
     console.log('📎 selectedFiles:', selectedFiles.length);
     console.log('📎 selectedFileType:', selectedFileType);
+
+    // Alert for debugging
+    if (isFilePreviewOpen && selectedFiles.length > 0) {
+      console.log('📎 ✅ DIALOG SHOULD BE VISIBLE NOW!');
+    }
   }, [isFilePreviewOpen, selectedFiles, selectedFileType]);
 
   const getInitials = (name: string) => {
@@ -322,10 +390,26 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
       .slice(0, 2);
   };
 
+  const getStatusIcon = (status?: string) => {
+    switch (status) {
+      case 'sent':
+        return <Check className="h-3 w-3" />;
+      case 'delivered':
+        return <CheckCheck className="h-3 w-3" />;
+      case 'read':
+        return <CheckCheck className="h-3 w-3 text-blue-500" />;
+      case 'failed':
+        return <XCircle className="h-3 w-3 text-red-500" />;
+      default:
+        // Default for outgoing messages without status: show single check (sent)
+        return <Check className="h-3 w-3 opacity-50" />;
+    }
+  };
+
   return (
     <div className="flex flex-col h-full w-full bg-background">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 bg-card border-b border-border shrink-0">
+      {/* Fixed Header */}
+      <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 bg-card border-b border-border">
         <div className="flex items-center gap-3 flex-1 min-w-0">
           {isMobile && (
             <Button
@@ -338,7 +422,7 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
             </Button>
           )}
 
-          <Avatar className="h-9 w-9 shrink-0">
+          <Avatar className="h-10 w-10 shrink-0">
             <AvatarImage src="" alt={selectedConversation?.name} />
             <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-sm font-semibold">
               {selectedConversation?.name ? getInitials(selectedConversation.name) : 'U'}
@@ -354,15 +438,6 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
         </div>
 
         <div className="flex items-center gap-1 shrink-0">
-          <Button variant="ghost" size="icon" className="h-9 w-9">
-            <Video className="h-[18px] w-[18px]" />
-          </Button>
-          <Button variant="ghost" size="icon" className="h-9 w-9">
-            <Phone className="h-[18px] w-[18px]" />
-          </Button>
-          <Button variant="ghost" size="icon" className="h-9 w-9">
-            <Search className="h-[18px] w-[18px]" />
-          </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-9 w-9">
@@ -390,9 +465,14 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
         </div>
       </div>
 
-      {/* Messages Area */}
+      {/* Messages Area - Scrollable */}
       <div
-        className="flex-1 overflow-y-auto px-4 py-6 space-y-3 bg-background"
+        ref={messagesContainerRef}
+        className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-4 py-4 space-y-3"
+        style={{
+          backgroundImage: `linear-gradient(to bottom, rgba(0,0,0,0.02) 1px, transparent 1px)`,
+          backgroundSize: '100% 20px',
+        }}
       >
         {isLoading ? (
           <div className="flex items-center justify-center h-full">
@@ -425,39 +505,136 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
               <div
                 key={idx}
                 className={cn(
-                  "flex",
+                  "flex animate-in fade-in slide-in-from-bottom-2 duration-200",
                   msg.from === "me" ? "justify-end" : "justify-start"
                 )}
               >
                 <div
                   className={cn(
-                    "relative max-w-[75%] sm:max-w-[65%] rounded-2xl px-3 py-2 shadow-lg",
+                    "relative max-w-[85%] sm:max-w-[70%] md:max-w-[65%] rounded-lg px-3 py-2 shadow-sm",
                     msg.from === "me"
-                      ? "bg-primary text-primary-foreground rounded-br-md"
-                      : "bg-card text-card-foreground rounded-bl-md border border-border"
+                      ? "bg-primary text-primary-foreground rounded-br-none"
+                      : "bg-card text-card-foreground rounded-bl-none border border-border"
                   )}
                 >
-                  <p className="text-[14px] leading-relaxed break-words whitespace-pre-wrap">{msg.text}</p>
+                  {msg.type === 'image' && (
+                    <div className="relative">
+                      <MediaWithAuth
+                        type="image"
+                        src={getMediaUrl(msg.metadata?.media_id)}
+                        previewSrc={msg.metadata?.file_preview_url}
+                        alt="sent image"
+                        className="rounded-md max-w-full"
+                      />
+                      {msg.metadata?.is_uploading && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {msg.type === 'video' && (
+                    <div className="relative">
+                      <MediaWithAuth
+                        type="video"
+                        src={getMediaUrl(msg.metadata?.media_id)}
+                        previewSrc={msg.metadata?.file_preview_url}
+                        alt="sent video"
+                        className="rounded-md max-w-full"
+                      />
+                      {msg.metadata?.is_uploading && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {msg.type === 'audio' && (
+                    <div className="relative">
+                      <MediaWithAuth
+                        type="audio"
+                        src={getMediaUrl(msg.metadata?.media_id)}
+                        previewSrc={msg.metadata?.file_preview_url}
+                        alt="sent audio"
+                        className="rounded-md max-w-full"
+                      />
+                      {msg.metadata?.is_uploading && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {msg.type === 'document' && (
+                    <div className="relative">
+                      <DocumentWithAuth
+                        src={getMediaUrl(msg.metadata?.media_id)}
+                        filename={msg.text}
+                        className="rounded-md max-w-full"
+                      />
+                      {msg.metadata?.is_uploading && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  <p className="text-sm leading-relaxed break-words whitespace-pre-wrap">{msg.text}</p>
                   <div className={cn(
                     "flex items-center justify-end gap-1 mt-1 text-[10px]",
-                    msg.from === "me" ? "opacity-80" : "text-muted-foreground"
+                    msg.from === "me" ? "opacity-75" : "text-muted-foreground"
                   )}>
                     <span>{msg.time}</span>
-                    {msg.from === "me" && msg.status && (
-                      <CheckCheck className="h-3 w-3" />
+                    {msg.from === "me" && (
+                      <span className="flex items-center">
+                        {getStatusIcon(msg.status)}
+                      </span>
                     )}
                   </div>
                 </div>
               </div>
             ))}
-            <div ref={endRef} />
+            <div ref={messagesEndRef} />
           </>
         )}
       </div>
 
-      {/* Input Area */}
-      <div className="px-4 py-3 bg-card border-t border-border shrink-0">
-        <form onSubmit={handleSendMessage} className="flex items-center gap-2">
+      {/* Hidden file inputs - OUTSIDE popover to persist across renders */}
+      {attachmentOptions.map((option) => (
+        option.accept && (
+          <input
+            key={option.type}
+            ref={(el) => {
+              fileInputRefs.current[option.type] = el;
+              if (el) {
+                console.log('🔧 File input registered for:', option.type);
+              }
+            }}
+            type="file"
+            accept={option.accept}
+            className="hidden"
+            onChange={(e) => {
+              console.log('⚡ onChange fired!', option.type, e.target.files?.length);
+              handleFileChange(e, option.type);
+            }}
+            multiple={option.type === 'image' || option.type === 'video'}
+            capture={option.type === 'camera' ? 'environment' : undefined}
+            onClick={(e) => {
+              console.log('🖱️ Input clicked');
+            }}
+          />
+        )
+      ))}
+
+      {/* Fixed Input Area */}
+      <div className="flex-shrink-0 px-4 py-3 bg-card border-t border-border">
+        {/* Debug indicator */}
+        {isFilePreviewOpen && (
+          <div className="mb-2 p-2 bg-yellow-100 dark:bg-yellow-900 text-yellow-900 dark:text-yellow-100 text-xs rounded">
+            🐛 DEBUG: Dialog state is OPEN. Selected files: {selectedFiles.length}
+          </div>
+        )}
+        <form onSubmit={handleSendMessage} className="flex items-end gap-2">
           {/* Attachment Menu */}
           <Popover open={isAttachmentMenuOpen} onOpenChange={setIsAttachmentMenuOpen}>
             <PopoverTrigger asChild>
@@ -465,7 +642,7 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="h-10 w-10 shrink-0"
+                className="h-10 w-10 shrink-0 rounded-full hover:bg-accent"
               >
                 <Paperclip className="h-5 w-5" />
               </Button>
@@ -480,35 +657,22 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
                 {attachmentOptions.map((option) => {
                   const Icon = option.icon;
                   return (
-                    <div key={option.type}>
-                      <button
-                        type="button"
-                        onClick={() => handleAttachmentClick(option.type)}
-                        className="flex flex-col items-center gap-2 w-full group"
-                      >
-                        <div className={cn(
-                          "w-14 h-14 rounded-full bg-gradient-to-br flex items-center justify-center shadow-lg transition-transform group-hover:scale-110",
-                          option.color
-                        )}>
-                          <Icon className="h-6 w-6 text-white" />
-                        </div>
-                        <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">
-                          {option.label}
-                        </span>
-                      </button>
-                      {/* Hidden file inputs for each type */}
-                      {option.accept && (
-                        <input
-                          ref={(el) => (fileInputRefs.current[option.type] = el)}
-                          type="file"
-                          accept={option.accept}
-                          className="hidden"
-                          onChange={(e) => handleFileChange(e, option.type)}
-                          multiple={option.type === 'image' || option.type === 'video'}
-                          capture={option.type === 'camera' ? 'environment' : undefined}
-                        />
-                      )}
-                    </div>
+                    <button
+                      key={option.type}
+                      type="button"
+                      onClick={() => handleAttachmentClick(option.type)}
+                      className="flex flex-col items-center gap-2 w-full group"
+                    >
+                      <div className={cn(
+                        "w-14 h-14 rounded-full bg-gradient-to-br flex items-center justify-center shadow-lg transition-transform group-hover:scale-110",
+                        option.color
+                      )}>
+                        <Icon className="h-6 w-6 text-white" />
+                      </div>
+                      <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">
+                        {option.label}
+                      </span>
+                    </button>
                   );
                 })}
               </div>
@@ -516,10 +680,10 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
           </Popover>
 
           {/* Input Container */}
-          <div className="flex-1 relative flex items-center bg-background rounded-full overflow-hidden border border-border">
+          <div className="flex-1 flex items-center bg-background rounded-full border border-border min-h-[44px]">
             <Input
               placeholder="Type a message..."
-              className="flex-1 bg-transparent border-0 text-foreground placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0 px-4 py-2.5 text-[14px] h-10"
+              className="flex-1 bg-transparent border-0 text-foreground placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0 px-4 py-2.5 text-sm h-auto"
               value={input}
               onChange={e => setInput(e.target.value)}
             />
@@ -531,9 +695,9 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="shrink-0 rounded-full mr-1 h-8 w-8"
+                  className="shrink-0 rounded-full mr-1 h-8 w-8 hover:bg-accent"
                 >
-                  <Smile className="h-[18px] w-[18px]" />
+                  <Smile className="h-5 w-5" />
                 </Button>
               </PopoverTrigger>
               <PopoverContent
@@ -560,20 +724,17 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
           <Button
             type={input.trim() ? "submit" : "button"}
             size="icon"
-            disabled={isSending}
             className={cn(
-              "shrink-0 rounded-full h-10 w-10 shadow-lg transition-all",
+              "shrink-0 rounded-full h-11 w-11 shadow-lg transition-all",
               input.trim()
                 ? "bg-primary hover:bg-primary/90 text-primary-foreground"
-                : "bg-muted hover:bg-muted/80"
+                : "bg-muted hover:bg-muted/80 text-muted-foreground"
             )}
           >
-            {isSending ? (
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
-            ) : input.trim() ? (
-              <Send className="h-[18px] w-[18px]" />
+            {input.trim() ? (
+              <Send className="h-5 w-5" />
             ) : (
-              <Mic className="h-[18px] w-[18px]" />
+              <Mic className="h-5 w-5" />
             )}
           </Button>
         </form>
@@ -581,7 +742,7 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
 
       {/* Location Dialog */}
       <Dialog open={isLocationDialogOpen} onOpenChange={setIsLocationDialogOpen}>
-        <DialogContent>
+        <DialogContent className="z-[100]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <MapPin className="h-5 w-5 text-teal-500" />
@@ -640,7 +801,7 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
 
       {/* Contact Dialog */}
       <Dialog open={isContactDialogOpen} onOpenChange={setIsContactDialogOpen}>
-        <DialogContent>
+        <DialogContent className="z-[100]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <User className="h-5 w-5 text-green-500" />
@@ -691,8 +852,8 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
       </Dialog>
 
       {/* File Preview Dialog */}
-      <Dialog open={isFilePreviewOpen} onOpenChange={setIsFilePreviewOpen}>
-        <DialogContent className="max-w-2xl">
+      <Dialog open={isFilePreviewOpen} onOpenChange={setIsFilePreviewOpen} modal={true}>
+        <DialogContent className="max-w-2xl z-[100]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {selectedFileType === 'image' || selectedFileType === 'camera' ? (
@@ -712,25 +873,37 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
           </DialogHeader>
           <div className="space-y-4 py-4">
             {/* File Preview */}
-            {filePreviewUrl && (selectedFileType === 'image' || selectedFileType === 'camera') && (
+            {(selectedFileType === 'image' || selectedFileType === 'camera') && (
               <div className="rounded-lg overflow-hidden border border-border bg-muted">
-                <img
-                  src={filePreviewUrl}
-                  alt="Preview"
-                  className="w-full h-auto max-h-96 object-contain"
-                />
+                {filePreviewUrl ? (
+                  <img
+                    src={filePreviewUrl}
+                    alt="Preview"
+                    className="w-full h-auto max-h-96 object-contain"
+                  />
+                ) : (
+                  <div className="flex items-center justify-center h-48">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                  </div>
+                )}
               </div>
             )}
-            {filePreviewUrl && selectedFileType === 'video' && (
+            {selectedFileType === 'video' && (
               <div className="rounded-lg overflow-hidden border border-border bg-muted">
-                <video
-                  src={filePreviewUrl}
-                  controls
-                  className="w-full h-auto max-h-96"
-                />
+                {filePreviewUrl ? (
+                  <video
+                    src={filePreviewUrl}
+                    controls
+                    className="w-full h-auto max-h-96"
+                  />
+                ) : (
+                  <div className="flex items-center justify-center h-48">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                  </div>
+                )}
               </div>
             )}
-            {!filePreviewUrl && (selectedFileType === 'document' || selectedFileType === 'audio') && (
+            {(selectedFileType === 'document' || selectedFileType === 'audio') && (
               <div className="rounded-lg border border-border bg-muted p-8 text-center">
                 <div className="mx-auto w-20 h-20 rounded-full bg-background flex items-center justify-center mb-4">
                   {selectedFileType === 'document' ? (

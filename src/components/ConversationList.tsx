@@ -1,28 +1,33 @@
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Phone, MessageCircle, Home } from "lucide-react";
+import { Phone, MessageCircle, Home, Search } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 type ConversationItem = {
   id: string;
   name: string;
   lastMessage: string;
   time: string;
+  lastTimestamp?: string;
   channel: string;
   unread: boolean;
   unreadCount?: number;
+  windowIsOpen?: boolean;
+  windowExpiresAt?: string | null;
+  timeRemainingLabel?: string | null;
+  requiresTemplate?: boolean;
 };
 
 const channelIcon = (channel: string) => {
   switch (channel) {
     case "whatsapp":
-      return <Phone size={18} style={{ color: "#25D366" }} />;
+      return <Phone size={16} className="text-green-500" />;
     case "instagram":
-      return <MessageCircle size={18} style={{ color: "#E1306C" }} />;
+      return <MessageCircle size={16} className="text-pink-500" />;
     case "website":
-      return <Home size={18} style={{ color: "#0078FF" }} />;
+      return <Home size={16} className="text-blue-500" />;
     default:
       return null;
   }
@@ -42,9 +47,9 @@ export const ConversationList = ({ conversations, selectedId, onSelect, isMobile
   // Filter conversations by tab
   let filtered = conversations;
   if (tab === "mine") {
-    filtered = filtered.filter((c) => parseInt(c.id) % 2 === 0); // Example: "Mine" = even IDs
+    filtered = filtered.filter((c) => parseInt(c.id) % 2 === 0);
   } else if (tab === "unassigned") {
-    filtered = filtered.filter((c) => parseInt(c.id) % 2 !== 0); // Example: "Unassigned" = odd IDs
+    filtered = filtered.filter((c) => parseInt(c.id) % 2 !== 0);
   }
   if (search.trim()) {
     filtered = filtered.filter(
@@ -54,79 +59,148 @@ export const ConversationList = ({ conversations, selectedId, onSelect, isMobile
     );
   }
 
+  const formatDateLabel = (timestamp?: string) => {
+    if (!timestamp) return '';
+    const date = new Date(timestamp);
+    return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+  };
+
   return (
-    <aside className={`flex flex-col ${isMobile ? "w-full" : "w-72"} border-r border-border bg-card overflow-hidden`}>
-      <div className="flex items-center justify-between h-16 border-b border-border px-4 shrink-0">
-        <span className="font-semibold text-lg">Conversations</span>
-        <span className="text-xs text-muted-foreground">{conversations.length}</span>
+    <div className="flex flex-col h-full w-full bg-card">
+      {/* Header - Fixed */}
+      <div className="flex-shrink-0 flex items-center justify-between h-14 border-b border-border px-4 bg-card">
+        <h1 className="font-semibold text-base">Chats</h1>
+        <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary font-medium">
+          {conversations.length}
+        </span>
       </div>
-      <div className="flex flex-col gap-2 p-2 shrink-0">
-        <Input
-          placeholder="Search for messages"
-          className="bg-muted border-0"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-        />
-        <Tabs value={tab} onValueChange={setTab}>
-          <TabsList className="w-full flex bg-muted p-1" style={{ borderRadius: 5 }}>
-            <TabsTrigger
-              value="all"
-              className="flex-1 text-xs px-3 py-1"
-              style={{ borderRadius: 5 }}
-            >
+
+      {/* Search and Filters - Fixed */}
+      <div className="flex-shrink-0 flex flex-col gap-3 p-3 bg-card border-b border-border">
+        {/* Search Input */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search conversations..."
+            className="pl-9 h-10 bg-background border-border focus-visible:ring-1 focus-visible:ring-primary"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+        </div>
+
+        {/* Tabs */}
+        <Tabs value={tab} onValueChange={setTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-3 h-9 bg-muted/50">
+            <TabsTrigger value="all" className="text-xs">
               All
             </TabsTrigger>
-            <TabsTrigger
-              value="mine"
-              className="flex-1 text-xs px-3 py-1"
-              style={{ borderRadius: 5 }}
-            >
+            <TabsTrigger value="mine" className="text-xs">
               Mine
             </TabsTrigger>
-            <TabsTrigger
-              value="unassigned"
-              className="flex-1 text-xs px-3 py-1"
-              style={{ borderRadius: 5 }}
-            >
+            <TabsTrigger value="unassigned" className="text-xs">
               Unassigned
             </TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
-      <div className="flex-1 overflow-hidden">
-        <ScrollArea className="h-full">
-        <ul className="px-2 pb-4">
-          {filtered.length === 0 && (
-            <li className="text-center text-xs text-muted-foreground py-8">No conversations found.</li>
-          )}
-          {filtered.map((c) => (
-            <li
-              key={c.id}
-              className={`flex flex-col gap-1 px-3 py-2 rounded cursor-pointer mb-1 ${
-                selectedId === c.id ? "bg-accent text-accent-foreground" : "hover:bg-accent"
-              }`}
-              onClick={() => onSelect(c.id)}
+
+      {/* Conversations List - Scrollable with native overflow */}
+      <div className="flex-1 overflow-y-auto overflow-x-hidden">
+        {filtered.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 px-4">
+            <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-3">
+              <MessageCircle className="h-8 w-8 text-muted-foreground" />
+            </div>
+            <p className="text-sm text-muted-foreground text-center">
+              No conversations found
+            </p>
+            {search && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="mt-2 text-xs"
+                onClick={() => setSearch("")}
+              >
+                Clear search
+              </Button>
+            )}
+          </div>
+        ) : (
+          filtered.map((conversation) => (
+            <button
+              key={conversation.id}
+              onClick={() => onSelect(conversation.id)}
+              className={cn(
+                "flex items-start gap-3 px-4 py-3 border-b border-border transition-colors hover:bg-accent/50 text-left w-full",
+                selectedId === conversation.id && "bg-accent"
+              )}
             >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  {channelIcon(c.channel)}
-                  <span className="font-medium text-sm">{c.name}</span>
+              {/* Avatar */}
+              <div className="flex-none mt-1 relative">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold text-sm">
+                  {conversation.name.charAt(0).toUpperCase()}
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground">{c.time}</span>
-                  {(c.unreadCount ?? 0) > 0 && (
-                    <span className="inline-flex items-center justify-center min-w-5 h-5 px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-semibold">
-                      {c.unreadCount}
+                {/* Unread indicator badge */}
+                {conversation.unread && conversation.unreadCount && conversation.unreadCount > 0 && (
+                  <div className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 border-2 border-card rounded-full flex items-center justify-center">
+                    <span className="sr-only">Unread messages</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Content */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-2 min-w-0">
+                    {channelIcon(conversation.channel)}
+                    <h3 className={cn(
+                      "text-sm font-medium truncate",
+                      conversation.unread ? "font-semibold" : "font-normal"
+                    )}>
+                      {conversation.name}
+                    </h3>
+                  </div>
+                  <div className="flex items-center gap-2 flex-none ml-2">
+                    <span className={cn(
+                      "text-xs whitespace-nowrap",
+                      conversation.unread ? "text-primary font-medium" : "text-muted-foreground"
+                    )}>
+                      {conversation.time}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <span className="text-[11px] text-muted-foreground">
+                    {formatDateLabel(conversation.lastTimestamp)}
+                  </span>
+                  {conversation.timeRemainingLabel ? (
+                    <span className="text-[11px] text-emerald-600 bg-emerald-100 dark:bg-emerald-900/40 px-2 py-0.5 rounded-full">
+                      Window open · {conversation.timeRemainingLabel}
+                    </span>
+                  ) : conversation.requiresTemplate ? (
+                    <span className="text-[11px] text-amber-600 bg-amber-100 dark:bg-amber-900/40 px-2 py-0.5 rounded-full">
+                      Template required
+                    </span>
+                  ) : null}
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <p className={cn(
+                    "text-xs truncate",
+                    conversation.unread ? "text-foreground font-medium" : "text-muted-foreground"
+                  )}>
+                    {conversation.lastMessage}
+                  </p>
+                  {conversation.unreadCount && conversation.unreadCount > 0 && (
+                    <span className="flex-none inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-primary text-primary-foreground text-[10px] font-semibold">
+                      {conversation.unreadCount > 99 ? '99+' : conversation.unreadCount}
                     </span>
                   )}
                 </div>
               </div>
-              <span className="text-xs text-muted-foreground truncate">{c.lastMessage}</span>
-            </li>
-          ))}
-        </ul>
-        </ScrollArea>
+            </button>
+          ))
+        )}
       </div>
-    </aside>
+    </div>
   );
 };

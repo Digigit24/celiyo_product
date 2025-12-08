@@ -290,6 +290,8 @@ export const API_CONFIG = {
     SEND_TEXT: '/messages/send',
     SEND_MEDIA: '/messages/send/media',
     SEND_LOCATION: '/messages/send/location',
+    UPLOAD_MEDIA: '/messages/upload/media',
+    GET_MEDIA: '/messages/media/:media_id',
     CONVERSATIONS: '/messages/conversations/',
     CONVERSATION_DETAIL: '/messages/conversations/:phone',
     DELETE_CONVERSATION: '/messages/conversations/:phone',

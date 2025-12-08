@@ -10,7 +10,14 @@ export interface WhatsAppMessage {
   type: 'text' | 'image' | 'video' | 'audio' | 'document';
   direction: 'incoming' | 'outgoing';
   timestamp: string;
-  metadata?: Record<string, any>;
+  status?: 'sent' | 'delivered' | 'read' | 'failed';
+  metadata?: {
+    file_preview_url?: string;
+    is_uploading?: boolean;
+    media_id?: string;
+    error?: string;
+    [key: string]: any;
+  };
 }
 
 export interface Conversation {
@@ -19,7 +26,12 @@ export interface Conversation {
   last_message: string;
   last_timestamp: string;
   message_count: number;
+  unread_count?: number;
   direction: 'incoming' | 'outgoing';
+  window_is_open?: boolean;
+  window_expires_at?: string | null;
+  time_remaining_seconds?: number | null;
+  requires_template?: boolean;
 }
 
 export interface ConversationDetail {

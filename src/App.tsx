@@ -32,7 +32,7 @@ import Chats from "./pages/Chats";
 import Groups from "./pages/Groups";
 import Templates from "./pages/Templates";
 import Campaigns from "./pages/Campaigns";
-import { useWhatsappSocket } from "@/hooks/whatsapp/useWhatsappSocket";
+
 import { ThemeSync } from "@/components/ThemeSync";
 import OPDVisits from "./pages/OPDVisits";  // ✅ Updated to new production page
 import OPDBilling from "./pages/opd/Billing";
@@ -52,104 +52,78 @@ import { Transactions } from "./pages/Transactions";
 import { PaymentCategories } from "./pages/PaymentCategories";
 import { AccountingPeriods } from "./pages/AccountingPeriods";
 
+import { WebSocketProvider } from "./context/WebSocketProvider";
+
 const queryClient = new QueryClient();
 
 const AppLayout = () => {
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [sidebarMobileOpen, setSidebarMobileOpen] = useState(false);
   const isMobile = useIsMobile();
-  // Ensure WhatsApp socket stays connected app-wide (persists across route changes)
-  useWhatsappSocket();
+  const [sidebarOpen, setSidebarOpen] = useState(!isMobile);
 
   return (
-    <div className="h-screen flex bg-background text-foreground">
-      {/* Sync user theme preferences with next-themes */}
+    <>
       <ThemeSync />
+      <div className="flex h-screen overflow-hidden bg-background">
+        <UniversalSidebar open={sidebarOpen} onOpenChange={setSidebarOpen} />
+        <div className="flex flex-col flex-1 overflow-hidden">
+          <UniversalHeader onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
+          <main className="flex-1 overflow-auto">
+            <Routes>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/inbox" element={<Inbox />} />
 
-      {/* Universal Sidebar */}
-      {!isMobile && (
-        <UniversalSidebar
-          collapsed={sidebarCollapsed}
-          onCollapse={() => setSidebarCollapsed((v) => !v)}
-        />
-      )}
-      {isMobile && (
-        <UniversalSidebar
-          collapsed={false}
-          onCollapse={() => {}}
-          mobileOpen={sidebarMobileOpen}
-          setMobileOpen={setSidebarMobileOpen}
-        />
-      )}
+              {/* CRM Routes */}
+              <Route path="/crm/leads" element={<CRMLeads />} />
+              <Route path="/crm/activities" element={<CRMActivities />} />
+              <Route path="/crm/statuses" element={<CRMLeadStatuses />} />
+              <Route path="/crm/field-configurations" element={<CRMFieldConfigurations />} />
+              <Route path="/crm/tasks" element={<CRMTasks />} />
+              <Route path="/crm/meetings" element={<Meetings />} />
 
-      {/* Main Content Area with Header */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Universal Header */}
-        <UniversalHeader />
-        
-        {/* Page Content */}
-        <div className="flex-1 overflow-auto">
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/inbox" element={<Inbox />} />
-            <Route path="/opd" element={<Navigate to="/opd/visits" replace />} />  {/* Redirect to visits page */}
+              {/* HMS Routes */}
+              <Route path="/hms/doctors" element={<Doctors />} />
+              <Route path="/hms/doctor-test" element={<DoctorTest />} />
+              <Route path="/hms/specialties" element={<Specialties />} />
+              <Route path="/hms/patients" element={<PatientsTest />} />
+              <Route path="/hms/appointments" element={<AppointmentsTest />} />
 
-            {/* CRM Routes */}
-            <Route path="/crm" element={<CRMLeads />} />
-            <Route path="/crm/leads" element={<CRMLeads />} />
-            <Route path="/crm/activities" element={<CRMActivities />} /> {/* ⬅️ ADDED */}
-            <Route path="/crm/statuses" element={<CRMLeadStatuses />} />
-            <Route path="/crm/settings" element={<CRMFieldConfigurations />} />
-            <Route path="/crm/tasks" element={<CRMTasks />} />
-            <Route path="/crm/meetings" element={<Meetings />} />
+              {/* OPD Routes */}
+              <Route path="/opd/visits" element={<OPDVisits />} />
+              <Route path="/opd/billing" element={<OPDBilling />} />
+              <Route path="/opd/consultation" element={<OPDConsultation />} />
+              <Route path="/opd/opd-bills" element={<OPDBills />} />
+              <Route path="/opd/clinical-notes" element={<ClinicalNotes />} />
+              <Route path="/opd/visit-findings" element={<VisitFindings />} />
+              <Route path="/opd/procedure-masters" element={<ProcedureMasters />} />
+              <Route path="/opd/procedure-packages" element={<ProcedurePackages />} />
+              <Route path="/opd/procedure-bills" element={<ProcedureBills />} />
+              <Route path="/opd/settings" element={<OPDSettings />} />
 
-            {/* HMS Routes */}
-            <Route path="/hms/doctors" element={<Doctors />} />
-            <Route path="/hms/specialties" element={<Specialties />} />
-            <Route path="/doctor" element={<DoctorTest />} />
-            <Route path="/specialties" element={<Specialties />} />
-            <Route path="/patients" element={<PatientsTest />} />
-            <Route path="/appointments" element={<AppointmentsTest />} />
+              {/* Payment Routes */}
+              <Route path="/payments/transactions" element={<Transactions />} />
+              <Route path="/payments/categories" element={<PaymentCategories />} />
+              <Route path="/payments/accounting-periods" element={<AccountingPeriods />} />
 
-            {/* OPD Routes */}
-            <Route path="/opd/visits" element={<OPDVisits />} />
-            <Route path="/opd/billing/:visitId" element={<OPDBilling />} />
-            <Route path="/opd/consultation/:visitId" element={<OPDConsultation />} />
-            <Route path="/opd/bills" element={<OPDBills />} />
-            <Route path="/opd/clinical-notes" element={<ClinicalNotes />} />
-            <Route path="/opd/findings" element={<VisitFindings />} />
-            <Route path="/opd/procedures" element={<ProcedureMasters />} />
-            <Route path="/opd/packages" element={<ProcedurePackages />} />
-            <Route path="/opd/procedure-bills" element={<ProcedureBills />} />
-            <Route path="/opd/settings" element={<Navigate to="/opd/settings/general" replace />} />
-            <Route path="/opd/settings/:tab" element={<OPDSettings />} />
+              {/* WhatsApp Routes */}
+              <Route path="/whatsapp/contacts" element={<Contacts />} />
+              <Route path="/whatsapp/chats" element={<Chats />} />
+              <Route path="/whatsapp/groups" element={<Groups />} />
+              <Route path="/whatsapp/templates" element={<Templates />} />
+              <Route path="/whatsapp/campaigns" element={<Campaigns />} />
 
-            {/* Payments Routes */}
-            <Route path="/payments/transactions" element={<Transactions />} />
-            <Route path="/payments/categories" element={<PaymentCategories />} />
-            <Route path="/payments/periods" element={<AccountingPeriods />} />
+              {/* Admin Routes */}
+              <Route path="/admin/users" element={<Users />} />
+              <Route path="/admin/roles" element={<Roles />} />
+              <Route path="/admin/settings" element={<AdminSettings />} />
+              <Route path="/admin/debug" element={<Debug />} />
 
-            {/* WhatsApp Routes */}
-            <Route path="/whatsapp/contacts" element={<Contacts />} />
-            <Route path="/whatsapp/chats" element={<Chats />} />
-            <Route path="/whatsapp/groups" element={<Groups />} />
-            <Route path="/whatsapp/templates" element={<Templates />} />
-            <Route path="/whatsapp/campaigns" element={<Campaigns />} />
-
-            {/* Admin/User Management Routes */}
-            <Route path="/admin/users" element={<Users />} />
-            <Route path="/users" element={<Users />} />
-            <Route path="/admin/roles" element={<Roles />} />
-            <Route path="/roles" element={<Roles />} />
-            <Route path="/admin/settings" element={<AdminSettings />} />
-            <Route path="/admin/debug" element={<Debug />} />
-            <Route path="/debug" element={<Debug />} />
-
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+              {/* 404 */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </main>
         </div>
       </div>
-    </div>
+    </>
   );
 };
 
@@ -169,28 +143,29 @@ const App = () => {
         <TooltipProvider>
           <Toaster />
           <Sonner />
-          <BrowserRouter>
-            <Routes>
-              {/* Public Routes */}
-              <Route
-                path="/login"
-                element={
-                  isAuthenticated ? <Navigate to="/" replace /> : <Login />
-                }
-              />
+          <WebSocketProvider>
+            <BrowserRouter>
+              <Routes>
+                {/* Public Routes */}
+                <Route
+                  path="/login"
+                  element={
+                    isAuthenticated ? <Navigate to="/" replace /> : <Login />
+                  }
+                />
 
-
-              {/* Protected Routes */}
-              <Route
-                path="/*"
-                element={
-                  <ProtectedRoute>
-                    <AppLayout />
-                  </ProtectedRoute>
-                }
-              />
-            </Routes>
-          </BrowserRouter>
+                {/* Protected Routes */}
+                <Route
+                  path="/*"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout />
+                    </ProtectedRoute>
+                  }
+                />
+              </Routes>
+            </BrowserRouter>
+          </WebSocketProvider>
         </TooltipProvider>
       </QueryClientProvider>
     </SWRConfig>

@@ -1,75 +1,157 @@
 import { useState, useEffect, useCallback } from 'react';
 import { messagesService } from '@/services/whatsapp/messagesService';
-import type { WhatsAppMessage, ConversationDetail } from '@/types/whatsappTypes';
-import { useWhatsappSocket } from '@/hooks/whatsapp/useWhatsappSocket';
+import { uploadMedia, sendMediaMessage as sendMedia } from '@/services/whatsapp';
+import type { WhatsAppMessage } from '@/types/whatsappTypes';
+import { useWebSocket } from '@/context/WebSocketProvider';
 
 export interface UseMessagesReturn {
   messages: WhatsAppMessage[];
   isLoading: boolean;
   error: string | null;
   sendMessage: (text: string) => Promise<void>;
+  sendMediaMessage: (file: File, media_type: "image" | "video" | "audio" | "document", caption?: string) => Promise<void>;
   refreshMessages: () => Promise<void>;
-  isSending: boolean;
 }
 
 export function useMessages(conversationPhone: string | null): UseMessagesReturn {
+  const { messages: allMessages } = useWebSocket();
   const [messages, setMessages] = useState<WhatsAppMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isSending, setIsSending] = useState(false);
 
   const normalizePhone = (p?: string | null) => (p ? String(p).replace(/^\+/, '') : '');
+  const normalizeTimestamp = (ts?: string | null) => {
+    if (!ts) return new Date().toISOString();
+    const trimmed = String(ts).trim();
+    const withT = trimmed.replace(' ', 'T');
+    if (/[+-]\d{2}:?\d{2}$/.test(withT) || withT.endsWith('Z')) {
+      return withT;
+    }
+    return `${withT}Z`;
+  };
 
-  // ✅ Call the hook at the top level of the custom hook (not inside useEffect)
-  const { subscribe } = useWhatsappSocket();
-
-  // Subscribe to persistent WhatsApp socket and append messages for the selected conversation
   useEffect(() => {
-    const phoneSelected = normalizePhone(conversationPhone || undefined);
+    if (!conversationPhone || allMessages.length === 0) {
+      return;
+    }
 
-    const unsubscribe = subscribe((payload: any) => {
-      try {
-        const evt = payload?.event as string;
-        const data = payload?.data;
-        if (!evt || !data) return;
+    const normalizedConvPhone = normalizePhone(conversationPhone);
 
-        if (evt === 'message_incoming' || evt === 'message_outgoing') {
-          const phoneFromEvt = normalizePhone(data.phone);
-          if (phoneSelected && phoneFromEvt !== phoneSelected) return;
+    setMessages((prevMessages) => {
+      const updatedMessages = [...prevMessages];
 
-          const m = data.message || {};
-          const id =
-            m.id ||
-            m.message_id ||
-            `ws-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const isForCurrentConversation = (msg: WhatsAppMessage) => {
+        const normalizedMsgFrom = normalizePhone(msg.from);
+        const normalizedMsgTo = normalizePhone(msg.to);
+        const metaPhone = normalizePhone((msg.metadata as any)?.phone || (msg as any).phone);
 
-          const msg: WhatsAppMessage = {
-            id,
-            from: evt === 'message_outgoing' ? 'me' : (data.phone as string),
-            to: evt === 'message_outgoing' ? (data.phone as string) : null,
-            text: m.text || m.message_text || '',
-            type: (m.type as any) || 'text',
-            direction:
-              (m.direction as any) ||
-              (evt === 'message_outgoing' ? 'outgoing' : 'incoming'),
-            timestamp: m.timestamp || m.created_at || new Date().toISOString(),
-            metadata: m.metadata || m.meta_data || undefined,
-          };
+        return (
+          normalizedMsgFrom === normalizedConvPhone ||
+          normalizedMsgTo === normalizedConvPhone ||
+          metaPhone === normalizedConvPhone
+        );
+      };
 
-          setMessages((prev) => {
-            if (prev.some((x) => x.id === msg.id)) return prev;
-            return [...prev, msg];
-          });
+      const hydrateMessage = (msg: WhatsAppMessage): WhatsAppMessage => {
+        const normalizedMsgFrom = normalizePhone(msg.from);
+        const normalizedMsgTo = normalizePhone(msg.to);
+        const fallbackPhone =
+          msg.from ||
+          msg.to ||
+          (msg.metadata as any)?.phone ||
+          conversationPhone;
+
+        const direction =
+          msg.direction ||
+          (normalizedMsgFrom === normalizedConvPhone
+            ? 'incoming'
+            : normalizedMsgTo === normalizedConvPhone
+              ? 'outgoing'
+              : 'incoming');
+
+        const normalizedTs = normalizeTimestamp(
+          msg.timestamp || (msg.metadata as any)?.timestamp
+        );
+
+        return {
+          ...msg,
+          direction,
+          from: msg.from || (direction === 'incoming' ? fallbackPhone : msg.from || ''),
+          to: msg.to || (direction === 'outgoing' ? fallbackPhone : msg.to || null),
+          timestamp: normalizedTs,
+          metadata: {
+            ...(msg.metadata || {}),
+            timestamp: (msg.metadata as any)?.timestamp || normalizedTs,
+          },
+        };
+      };
+
+      allMessages.forEach((messageFromSocket) => {
+        if (!isForCurrentConversation(messageFromSocket)) {
+          return;
         }
-      } catch (err) {
-        console.error('❌ Failed to handle socket event:', err);
-      }
-    });
 
-    return () => {
-      unsubscribe?.();
-    };
-  }, [conversationPhone, subscribe]);
+        const hydratedMessage = hydrateMessage(messageFromSocket);
+
+        // Replace optimistic media message when server confirms upload
+        if (hydratedMessage.metadata?.media_id) {
+          const optimisticMessageIndex = updatedMessages.findIndex(
+            (m) => m.metadata?.media_id === hydratedMessage.metadata?.media_id && m.metadata?.is_uploading
+          );
+
+          if (optimisticMessageIndex > -1) {
+            updatedMessages[optimisticMessageIndex] = {
+              ...updatedMessages[optimisticMessageIndex],
+              ...hydratedMessage,
+              metadata: {
+                ...(updatedMessages[optimisticMessageIndex].metadata || {}),
+                ...(hydratedMessage.metadata || {}),
+                is_uploading: false,
+              },
+            };
+            return;
+          }
+        }
+
+        // Update existing message (including status updates)
+        const existingMessageIndex = updatedMessages.findIndex(
+          (m) => String(m.id) === String(hydratedMessage.id)
+        );
+        if (existingMessageIndex > -1) {
+          updatedMessages[existingMessageIndex] = {
+            ...updatedMessages[existingMessageIndex],
+            ...hydratedMessage,
+            metadata: hydratedMessage.metadata || updatedMessages[existingMessageIndex].metadata,
+          };
+          return;
+        }
+
+        // Otherwise push new message
+        updatedMessages.push(hydratedMessage);
+      });
+
+      // Sort by timestamp to ensure correct order (especially for rapid messages)
+      updatedMessages.sort((a, b) => {
+        const timeA = Date.parse(normalizeTimestamp(a.timestamp || (a.metadata as any)?.timestamp)) || 0;
+        const timeB = Date.parse(normalizeTimestamp(b.timestamp || (b.metadata as any)?.timestamp)) || 0;
+
+        if (timeA !== timeB) {
+          return timeA - timeB;
+        }
+
+        const wsOrderA = (a.metadata as any)?.ws_received_at || 0;
+        const wsOrderB = (b.metadata as any)?.ws_received_at || 0;
+
+        if (wsOrderA !== wsOrderB) {
+          return wsOrderA - wsOrderB;
+        }
+
+        return String(a.id).localeCompare(String(b.id));
+      });
+
+      return updatedMessages;
+    });
+  }, [allMessages, conversationPhone]);
 
   const loadMessages = useCallback(async () => {
     if (!conversationPhone) {
@@ -82,7 +164,34 @@ export function useMessages(conversationPhone: string | null): UseMessagesReturn
 
     try {
       const conversationDetail = await messagesService.getConversationMessages(conversationPhone);
-      setMessages(conversationDetail.messages);
+
+      // Normalize and sort messages by timestamp (oldest first) to ensure chronological order
+      const sortedMessages = [...conversationDetail.messages]
+        .map((m) => ({
+          ...m,
+          timestamp: normalizeTimestamp(m.timestamp || (m.metadata as any)?.timestamp),
+          metadata: {
+            ...(m.metadata || {}),
+            timestamp: (m.metadata as any)?.timestamp || m.timestamp,
+          },
+        }))
+        .sort((a, b) => {
+          const timeA = Date.parse(a.timestamp) || 0;
+          const timeB = Date.parse(b.timestamp) || 0;
+          return timeA - timeB;
+        });
+
+      console.log('📥 Loaded messages:', {
+        count: sortedMessages.length,
+        withStatus: sortedMessages.filter(m => m.status).length,
+        statuses: sortedMessages.map(m => ({
+          id: String(m.id).substring(0, 10),
+          status: m.status,
+          direction: m.direction
+        }))
+      });
+
+      setMessages(sortedMessages);
     } catch (err: any) {
       console.error('Failed to load messages:', err);
       setError(err.message || 'Failed to load messages');
@@ -93,23 +202,24 @@ export function useMessages(conversationPhone: string | null): UseMessagesReturn
   }, [conversationPhone]);
 
   const sendMessage = useCallback(async (text: string) => {
-    if (!conversationPhone || !text.trim() || isSending) return;
+    if (!conversationPhone || !text.trim()) return;
 
     const messageText = text.trim();
-    const tempMessage: WhatsAppMessage = {
-      id: `temp-${Date.now()}`,
-      from: 'me',
+
+    // Create optimistic message with 'sent' status
+    const tempId = `temp_${Date.now()}`;
+    const optimisticMessage: WhatsAppMessage = {
+      id: tempId,
+      from: '',
       to: conversationPhone,
       text: messageText,
       type: 'text',
       direction: 'outgoing',
       timestamp: new Date().toISOString(),
+      status: 'sent',
     };
 
-    // Optimistically add message to UI
-    setMessages(prev => [...prev, tempMessage]);
-    setIsSending(true);
-    setError(null);
+    setMessages(prev => [...prev, optimisticMessage]);
 
     try {
       const response = await messagesService.sendTextMessage({
@@ -117,36 +227,85 @@ export function useMessages(conversationPhone: string | null): UseMessagesReturn
         text: messageText
       });
 
-      // Replace temp message with actual response
-      setMessages(prev => 
-        prev.map(msg => 
-          msg.id === tempMessage.id 
-            ? {
-                ...tempMessage,
-                id: response.message_id,
-                timestamp: response.timestamp || new Date().toISOString(),
-              }
-            : msg
-        )
-      );
-
-      console.log('✅ Message sent successfully:', response);
+      // Update the optimistic message with the real message ID
+      setMessages(prev => prev.map(m =>
+        m.id === tempId
+          ? { ...m, id: response.message_id, status: 'sent' }
+          : m
+      ));
     } catch (err: any) {
       console.error('❌ Failed to send message:', err);
-      // Remove the optimistic message on error
-      setMessages(prev => prev.filter(msg => msg.id !== tempMessage.id));
+      // Mark message as failed
+      setMessages(prev => prev.map(m =>
+        m.id === tempId
+          ? { ...m, status: 'failed', metadata: { ...m.metadata, error: err.message } }
+          : m
+      ));
       setError(err.message || 'Failed to send message');
       throw err;
-    } finally {
-      setIsSending(false);
     }
-  }, [conversationPhone, isSending]);
+  }, [conversationPhone]);
+
+  const sendMediaMessage = useCallback(async (file: File, media_type: "image" | "video" | "audio" | "document", caption?: string) => {
+    if (!conversationPhone) return;
+
+    const tempId = `temp_${Date.now()}`;
+    const file_preview_url = URL.createObjectURL(file);
+
+    const optimisticMessage: WhatsAppMessage = {
+      id: tempId,
+      from: '', // This will be set to 'me' in the UI
+      to: conversationPhone,
+      text: caption || '',
+      type: media_type,
+      direction: 'outgoing',
+      timestamp: new Date().toISOString(),
+      status: 'sent',
+      metadata: {
+        file_preview_url,
+        is_uploading: true,
+      },
+    };
+
+    setMessages(prev => [...prev, optimisticMessage]);
+
+    try {
+      const uploadResponse = await uploadMedia(file);
+      const media_id = uploadResponse.media_id;
+
+      // Update the optimistic message with the media_id
+      setMessages(prev => prev.map(m => 
+        m.id === tempId 
+          ? { ...m, metadata: { ...m.metadata, media_id: media_id } } 
+          : m
+      ));
+
+      await sendMedia({
+        to: conversationPhone,
+        media_id,
+        media_type,
+        caption,
+      });
+
+      // The websocket will handle replacing the temporary message
+      // with the final one from the server.
+    } catch (err: any) {
+      console.error('❌ Failed to send media message:', err);
+      // On failure, update optimistic message to show error
+      setMessages(prev => prev.map(m => 
+        m.id === tempId 
+          ? { ...m, metadata: { ...m.metadata, is_uploading: false, error: 'Upload failed' } } 
+          : m
+      ));
+      setError(err.message || 'Failed to send media message');
+      throw err;
+    }
+  }, [conversationPhone]);
 
   const refreshMessages = useCallback(async () => {
     await loadMessages();
   }, [loadMessages]);
 
-  // Load messages when conversation changes
   useEffect(() => {
     loadMessages();
   }, [loadMessages]);
@@ -156,7 +315,7 @@ export function useMessages(conversationPhone: string | null): UseMessagesReturn
     isLoading,
     error,
     sendMessage,
+    sendMediaMessage,
     refreshMessages,
-    isSending,
   };
 }

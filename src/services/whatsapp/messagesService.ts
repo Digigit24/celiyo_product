@@ -17,6 +17,18 @@ import {
 } from '@/types/whatsappTypes';
 
 class MessagesService {
+  private normalizeTimestamp(ts?: string | null): string {
+    if (!ts) {
+      return new Date().toISOString();
+    }
+    const trimmed = String(ts).trim();
+    const withT = trimmed.replace(' ', 'T');
+    if (/[+-]\d{2}:?\d{2}$/.test(withT) || withT.endsWith('Z')) {
+      return withT;
+    }
+    return `${withT}Z`;
+  }
+
   /**
    * Send a text message
    */
@@ -129,7 +141,10 @@ class MessagesService {
         const existing = merged.get(key);
 
         if (!existing) {
-          merged.set(key, conv);
+          merged.set(key, {
+            ...conv,
+            last_timestamp: this.normalizeTimestamp(conv.last_timestamp),
+          });
           continue;
         }
 
@@ -155,9 +170,13 @@ class MessagesService {
           phone,
           name,
           last_message: latest.last_message,
-          last_timestamp: latest.last_timestamp,
+          last_timestamp: this.normalizeTimestamp(latest.last_timestamp),
           message_count,
           direction: latest.direction,
+          window_is_open: latest.window_is_open ?? existing.window_is_open,
+          window_expires_at: latest.window_expires_at ?? existing.window_expires_at,
+          time_remaining_seconds: latest.time_remaining_seconds ?? existing.time_remaining_seconds,
+          requires_template: latest.requires_template ?? existing.requires_template,
         };
 
         merged.set(key, mergedConv);
@@ -212,17 +231,21 @@ class MessagesService {
 
       // Transform API messages into WhatsAppMessage
       const messages = rawMessages.map((m: any) => {
-        const id =
+        // Ensure ID is always a string
+        const id = String(
           m.message_id ||
           m.id ||
-          `local-${Math.random().toString(36).slice(2)}`;
+          `local-${Math.random().toString(36).slice(2)}`
+        );
 
         const text = m.text ?? m.message_text ?? '';
 
-        const timestamp =
+        const rawTimestamp =
           m.timestamp ||
+          m.meta_data?.timestamp ||
           m.created_at ||
-          new Date().toISOString();
+          m.updated_at;
+        const timestamp = this.normalizeTimestamp(rawTimestamp);
 
         // Attempt to infer phone/from/to
         const apiPhone = m.phone ?? m.from ?? (Array.isArray(data) ? undefined : data?.phone) ?? phone;
@@ -241,9 +264,13 @@ class MessagesService {
 
         // Type fallback
         const type: 'text' | 'image' | 'video' | 'audio' | 'document' =
-          ['text', 'image', 'video', 'audio', 'document'].includes(m.type)
-            ? m.type
+          ['text', 'image', 'video', 'audio', 'document'].includes(m.message_type)
+            ? m.message_type
             : 'text';
+
+        // Status mapping from API response
+        const status: 'sent' | 'delivered' | 'read' | 'failed' | undefined =
+          m.status || m.delivery_status || (direction === 'outgoing' ? 'sent' : undefined);
 
         return {
           id,
@@ -253,7 +280,14 @@ class MessagesService {
           type,
           direction,
           timestamp,
-          metadata: m.meta_data ?? m.metadata,
+          status,
+          metadata: {
+            ...(m.meta_data ?? m.metadata),
+            created_at: m.created_at,
+            updated_at: m.updated_at,
+            timestamp: this.normalizeTimestamp(m.meta_data?.timestamp || m.timestamp || m.created_at),
+            ws_received_at: Date.parse(m.created_at || m.timestamp || m.meta_data?.timestamp || '') || undefined,
+          },
         } as const;
       });
 

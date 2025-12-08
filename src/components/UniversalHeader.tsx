@@ -1,4 +1,4 @@
-import { Settings, User, LogOut, ChevronDown, Sun, Moon } from "lucide-react";
+import { Settings, User, LogOut, ChevronDown, Sun, Moon, Bell, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -8,10 +8,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "next-themes";
 import { authService } from "@/services/authService";
+import { useWebSocket } from "@/context/WebSocketProvider";
+import { useIsMobile } from "@/hooks/use-is-mobile";
+
 // Map routes to titles
 const routeTitles: Record<string, string> = {
   "/": "Dashboard",
@@ -19,10 +22,17 @@ const routeTitles: Record<string, string> = {
   "/opd": "OPD",
 };
 
-export const UniversalHeader = () => {
+interface UniversalHeaderProps {
+  onMenuClick: () => void;
+}
+
+export const UniversalHeader = ({ onMenuClick }: UniversalHeaderProps) => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { logout, user } = useAuth();
   const { resolvedTheme, setTheme } = useTheme();
+  const { newMessageCount, clearNewMessageCount, socketStatus } = useWebSocket();
+  const isMobile = useIsMobile();
   const pageTitle = routeTitles[location.pathname] || "Chat App";
 
   const handleLogout = () => {
@@ -39,11 +49,26 @@ export const UniversalHeader = () => {
     // Save to user preferences
     authService.updateUserPreferences({ theme: newTheme });
   };
+  
+  const handleNotificationClick = () => {
+    navigate('/whatsapp/chats');
+    clearNewMessageCount();
+  }
 
   return (
     <header className="h-16 border-b border-border bg-background px-4 md:px-6 flex items-center justify-between">
       {/* Left Side - Logo and Title */}
       <div className="flex items-center gap-3">
+        {isMobile && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="rounded-full"
+            onClick={onMenuClick}
+          >
+            <Menu size={20} />
+          </Button>
+        )}
         <div className="rounded-full bg-primary w-10 h-10 flex items-center justify-center text-primary-foreground font-bold text-lg">
           C
         </div>
@@ -52,6 +77,38 @@ export const UniversalHeader = () => {
 
       {/* Right Side - Settings and Profile */}
       <div className="flex items-center gap-2">
+        {/* WebSocket Status Indicator */}
+        <div className="flex items-center gap-2 px-2" title={`WebSocket: ${socketStatus}`}>
+          <div className={`h-2 w-2 rounded-full transition-colors ${
+            socketStatus === 'open' ? 'bg-green-500 animate-pulse' :
+            socketStatus === 'connecting' ? 'bg-yellow-500 animate-pulse' :
+            socketStatus === 'error' ? 'bg-red-500' :
+            'bg-gray-400'
+          }`} />
+          <span className="text-xs text-muted-foreground hidden md:inline">
+            {socketStatus === 'open' ? 'Connected' :
+             socketStatus === 'connecting' ? 'Connecting...' :
+             socketStatus === 'error' ? 'Error' :
+             'Disconnected'}
+          </span>
+        </div>
+
+        {/* Notification Button */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="relative rounded-full"
+          aria-label="Notifications"
+          onClick={handleNotificationClick}
+        >
+          <Bell size={20} className="text-muted-foreground" />
+          {newMessageCount > 0 && (
+            <span className="absolute top-0 right-0 h-4 w-4 rounded-full bg-red-500 text-white text-xs flex items-center justify-center">
+              {newMessageCount}
+            </span>
+          )}
+        </Button>
+
         {/* Settings Button */}
         <Button
           variant="ghost"

@@ -383,13 +383,8 @@ export function UniversalSidebar({
       <div className="h-16 flex items-center justify-between px-4 border-b border-sidebar-border">
         {!collapsed && (
           <div className="flex items-center gap-2">
-              <img
-                src="https://gorehospital.netlify.app/assets/images/logo/logo.jpeg"
-                alt={`${tenantName} logo`}
-                className="w-8 h-8 object-contain rounded-lg"
-                onError={handleLogoError}
-              />
-            <span className="font-bold text-lg">{tenantName}</span>
+            <span className="font-bold text-lg">CELIYO</span>
+            {/* <span className="font-bold text-lg">{tenantName}</span> */}
           </div>
         )}
         {collapsed && (

@@ -22,6 +22,7 @@ import { CRMLeadStatuses } from "./pages/CRMLeadStatuses";
 import { CRMFieldConfigurations } from "./pages/CRMFieldConfigurations";
 import { CRMTasks } from "./pages/CRMTasks";
 import { Meetings } from "./pages/Meetings";
+import { LeadDetailsPage } from "./pages/LeadDetailsPage";
 import { Doctors } from "./pages/Doctors";
 import DoctorTest from "./pages/doctor";
 import { Specialties } from "./pages/Specialties";
@@ -76,6 +77,7 @@ const AppLayout = () => {
 
               {/* CRM Routes */}
               <Route path="/crm/leads" element={<CRMLeads />} />
+              <Route path="/crm/leads/:leadId" element={<LeadDetailsPage />} />
               <Route path="/crm/activities" element={<CRMActivities />} />
               <Route path="/crm/statuses" element={<CRMLeadStatuses />} />
               <Route path="/crm/field-configurations" element={<CRMFieldConfigurations />} />

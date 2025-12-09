@@ -1,5 +1,6 @@
 // src/pages/CRMLeads.tsx
 import { useState, useCallback, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useCRM } from '@/hooks/useCRM';
 import { useAuth } from '@/hooks/useAuth';
 import { DataTable, type DataTableColumn } from '@/components/DataTable';
@@ -20,6 +21,7 @@ type DrawerMode = 'view' | 'edit' | 'create';
 type ViewMode = 'list' | 'kanban';
 
 export const CRMLeads: React.FC = () => {
+  const navigate = useNavigate();
   const { user, hasModuleAccess } = useAuth();
   const { hasCRMAccess, useLeads, useLeadStatuses, useFieldConfigurations, deleteLead, patchLead, updateLeadStatus, deleteLeadStatus } = useCRM();
 
@@ -89,10 +91,8 @@ export const CRMLeads: React.FC = () => {
   }, [handleCreateLead]);
 
   const handleViewLead = useCallback((lead: Lead) => {
-    setSelectedLeadId(lead.id);
-    setDrawerMode('view');
-    setDrawerOpen(true);
-  }, []);
+    navigate(`/crm/leads/${lead.id}`);
+  }, [navigate]);
 
   const handleEditLead = useCallback((lead: Lead) => {
     setSelectedLeadId(lead.id);

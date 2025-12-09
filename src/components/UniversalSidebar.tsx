@@ -47,6 +47,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { useAuth } from "@/hooks/useAuth";
+import { useTenant } from "@/hooks/useTenant";
 
 interface MenuItem {
   id: string;
@@ -323,24 +324,31 @@ export function UniversalSidebar({
 }: UniversalSidebarProps) {
   const location = useLocation();
   const { user } = useAuth();
+  const { useCurrentTenant } = useTenant();
+  const { data: currentTenant, isLoading: isTenantLoading } = useCurrentTenant();
   const [openSections, setOpenSections] = useState<string[]>(["masters"]);
   const [logoError, setLogoError] = useState(false);
 
+  // Get tenant data - prioritize API data, fallback to user context
+  const tenantData = currentTenant || user?.tenant;
+
   // Get tenant logo from settings
   // Logo can be a URL or base64 string (data:image/...;base64,...)
-  const tenantLogo = user?.tenant?.settings?.logo && user?.tenant?.settings?.logo.trim() !== ''
-    ? user.tenant.settings.logo
+  const tenantLogo = tenantData?.settings?.logo && tenantData?.settings?.logo.trim() !== ''
+    ? tenantData.settings.logo
     : undefined;
-  const tenantName = user?.tenant?.name || 'HMS';
+  const tenantName = tenantData?.name || 'HMS';
 
   // Debug logging
   console.log('Tenant data:', {
-    hasTenant: !!user?.tenant,
-    hasSettings: !!user?.tenant?.settings,
-    logoValue: user?.tenant?.settings?.logo,
-    logoLength: user?.tenant?.settings?.logo?.length,
-    tenantName: user?.tenant?.name,
-    isBase64: user?.tenant?.settings?.logo?.startsWith('data:image')
+    hasTenant: !!tenantData,
+    hasSettings: !!tenantData?.settings,
+    logoValue: tenantData?.settings?.logo,
+    logoLength: tenantData?.settings?.logo?.length,
+    tenantName: tenantData?.name,
+    isBase64: tenantData?.settings?.logo?.startsWith('data:image'),
+    fromAPI: !!currentTenant,
+    isLoading: isTenantLoading
   });
 
   // Reset logo error when logo changes
@@ -383,8 +391,11 @@ export function UniversalSidebar({
       <div className="h-16 flex items-center justify-between px-4 border-b border-sidebar-border">
         {!collapsed && (
           <div className="flex items-center gap-2">
-            <span className="font-bold text-lg">CELIYO</span>
-            {/* <span className="font-bold text-lg">{tenantName}</span> */}
+            {isTenantLoading ? (
+              <span className="font-bold text-lg text-muted-foreground">Loading...</span>
+            ) : (
+              <span className="font-bold text-lg">{tenantName}</span>
+            )}
           </div>
         )}
         {collapsed && (

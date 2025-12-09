@@ -1,5 +1,5 @@
 // src/pages/LeadDetailsPage.tsx
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -52,7 +52,7 @@ export const LeadDetailsPage = () => {
   const meetings = meetingsData?.results || [];
 
   // Form ref
-  const [formRef, setFormRef] = useState<LeadFormHandle | null>(null);
+  const formRef = useRef<LeadFormHandle | null>(null);
 
   // Handle back navigation
   const handleBack = useCallback(() => {
@@ -66,11 +66,11 @@ export const LeadDetailsPage = () => {
 
   // Handle save
   const handleSave = useCallback(async () => {
-    if (!lead || !formRef) return;
+    if (!lead || !formRef.current) return;
 
     try {
       setIsSaving(true);
-      const formValues = await formRef.getFormValues();
+      const formValues = await formRef.current.getFormValues();
 
       if (!formValues) {
         toast.error('Please fill in all required fields');
@@ -87,7 +87,7 @@ export const LeadDetailsPage = () => {
     } finally {
       setIsSaving(false);
     }
-  }, [lead, formRef, updateLead, mutateLead]);
+  }, [lead, updateLead, mutateLead]);
 
   // Handle delete
   const handleDelete = useCallback(async () => {
@@ -289,7 +289,7 @@ export const LeadDetailsPage = () => {
                 ref={(ref) => {
                   if (ref && 'getFormValues' in ref) {
                     // @ts-ignore
-                    setFormRef(ref);
+                    formRef.current = ref;
                   }
                 }}
               />

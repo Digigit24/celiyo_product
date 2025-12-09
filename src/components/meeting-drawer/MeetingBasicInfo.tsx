@@ -71,6 +71,7 @@ interface MeetingBasicInfoProps {
   meeting?: Meeting | null;
   mode: 'view' | 'edit' | 'create';
   onSuccess?: () => void;
+  initialLeadId?: number | null;
 }
 
 /**
@@ -96,7 +97,7 @@ const toISOString = (dateTimeLocal: string): string => {
 };
 
 const MeetingBasicInfo = forwardRef<MeetingBasicInfoHandle, MeetingBasicInfoProps>(
-  ({ meeting, mode, onSuccess }, ref) => {
+  ({ meeting, mode, onSuccess, initialLeadId }, ref) => {
     const isReadOnly = mode === 'view';
     const isCreateMode = mode === 'create';
 
@@ -133,7 +134,7 @@ const MeetingBasicInfo = forwardRef<MeetingBasicInfoHandle, MeetingBasicInfoProp
           title: '',
           start_at: getDefaultStartTime(),
           end_at: getDefaultEndTime(),
-          lead: null,
+          lead: initialLeadId || null,
           location: '',
           description: '',
           notes: '',

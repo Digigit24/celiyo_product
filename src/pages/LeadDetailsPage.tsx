@@ -13,6 +13,7 @@ import { useCRM } from '@/hooks/useCRM';
 import { useMeeting } from '@/hooks/useMeeting';
 import LeadDetailsForm from '@/components/lead-drawer/LeadDetailsForm';
 import LeadActivities from '@/components/lead-drawer/LeadActivities';
+import MeetingsFormDrawer from '@/components/MeetingsFormDrawer';
 import type { Lead } from '@/types/crmTypes';
 import type { Meeting } from '@/types/meeting.types';
 import { LeadFormHandle } from '@/components/LeadsFormDrawer';
@@ -24,6 +25,11 @@ export const LeadDetailsPage = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Meeting drawer state
+  const [meetingDrawerOpen, setMeetingDrawerOpen] = useState(false);
+  const [selectedMeetingId, setSelectedMeetingId] = useState<number | null>(null);
+  const [meetingDrawerMode, setMeetingDrawerMode] = useState<'view' | 'edit' | 'create'>('view');
 
   // Hooks
   const { useLead, updateLead, deleteLead, useLeadStatuses } = useCRM();
@@ -47,7 +53,8 @@ export const LeadDetailsPage = () => {
   // Fetch meetings for this lead
   const {
     data: meetingsData,
-    isLoading: meetingsLoading
+    isLoading: meetingsLoading,
+    mutate: mutateMeetings
   } = useMeetingsByLead(leadIdNum);
   const meetings = meetingsData?.results || [];
 
@@ -125,6 +132,23 @@ export const LeadDetailsPage = () => {
       window.location.href = `mailto:${lead.email}`;
     }
   }, [lead]);
+
+  // Handle schedule meeting
+  const handleScheduleMeeting = useCallback(() => {
+    setSelectedMeetingId(null);
+    setMeetingDrawerMode('create');
+    setMeetingDrawerOpen(true);
+  }, []);
+
+  // Handle meeting drawer success
+  const handleMeetingSuccess = useCallback(() => {
+    mutateMeetings();
+  }, [mutateMeetings]);
+
+  // Handle meeting drawer delete
+  const handleMeetingDelete = useCallback(() => {
+    mutateMeetings();
+  }, [mutateMeetings]);
 
   // Get meeting status badge
   const getMeetingStatusBadge = (meeting: Meeting) => {
@@ -371,7 +395,13 @@ export const LeadDetailsPage = () => {
         <TabsContent value="meetings" className="mt-6">
           <Card>
             <CardHeader>
-              <CardTitle>Meetings</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle>Meetings</CardTitle>
+                <Button onClick={handleScheduleMeeting} size="sm">
+                  <Calendar className="h-4 w-4 mr-2" />
+                  Schedule Meeting
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               {meetingsLoading ? (
@@ -379,8 +409,12 @@ export const LeadDetailsPage = () => {
                   <Loader2 className="h-6 w-6 animate-spin" />
                 </div>
               ) : meetings.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  No meetings scheduled for this lead
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground mb-4">No meetings scheduled for this lead</p>
+                  <Button onClick={handleScheduleMeeting} variant="outline">
+                    <Calendar className="h-4 w-4 mr-2" />
+                    Schedule First Meeting
+                  </Button>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -429,6 +463,18 @@ export const LeadDetailsPage = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Meeting Drawer */}
+      <MeetingsFormDrawer
+        open={meetingDrawerOpen}
+        onOpenChange={setMeetingDrawerOpen}
+        meetingId={selectedMeetingId}
+        mode={meetingDrawerMode}
+        onSuccess={handleMeetingSuccess}
+        onDelete={handleMeetingDelete}
+        onModeChange={setMeetingDrawerMode}
+        initialLeadId={leadIdNum}
+      />
     </div>
   );
 };

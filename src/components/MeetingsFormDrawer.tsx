@@ -24,6 +24,7 @@ interface MeetingsFormDrawerProps {
   onSuccess?: () => void;
   onDelete?: (id: number) => void;
   onModeChange?: (mode: 'view' | 'edit' | 'create') => void;
+  initialLeadId?: number | null;
 }
 
 export default function MeetingsFormDrawer({
@@ -34,6 +35,7 @@ export default function MeetingsFormDrawer({
   onSuccess,
   onDelete,
   onModeChange,
+  initialLeadId,
 }: MeetingsFormDrawerProps) {
   const [activeTab, setActiveTab] = useState('basic');
   const [currentMode, setCurrentMode] = useState(mode);
@@ -248,6 +250,7 @@ export default function MeetingsFormDrawer({
             meeting={meeting}
             mode={currentMode}
             onSuccess={handleSuccess}
+            initialLeadId={initialLeadId}
           />
         </TabsContent>
       </Tabs>

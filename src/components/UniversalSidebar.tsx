@@ -36,6 +36,7 @@ import {
   CreditCard,
   TrendingUp,
   Workflow,
+  QrCode,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -113,6 +114,12 @@ const menuItems: MenuItem[] = [
         label: "Flows",
         icon: Workflow,
         path: "/whatsapp/flows",
+      },
+      {
+        id: "whatsapp-qrcode",
+        label: "QR Codes",
+        icon: QrCode,
+        path: "/whatsapp/qrcode",
       },
     ],
   },

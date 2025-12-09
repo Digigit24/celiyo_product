@@ -622,3 +622,46 @@ export interface PublishFlowResponse {
   flow_id: string;
   status: FlowStatus;
 }
+
+// ==================== QR CODE TYPES ====================
+
+export enum ImageType {
+  PNG = "PNG",
+  SVG = "SVG"
+}
+
+export interface QRCode {
+  id: number;
+  tenant_id: string;
+  code: string;
+  prefilled_message: string;
+  image_type: string;
+  image_url?: string | null;
+  deep_link_url?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface QRCodeCreate {
+  prefilled_message: string;
+  image_type?: ImageType;
+}
+
+export interface QRCodeUpdate {
+  prefilled_message: string;
+}
+
+export interface QRCodeResponse extends QRCode {}
+
+export interface QRCodeListResponse {
+  total: number;
+  items: QRCode[];
+  page: number;
+  page_size: number;
+}
+
+export interface QRCodeDeleteResponse {
+  ok: boolean;
+  message: string;
+  code: string;
+}

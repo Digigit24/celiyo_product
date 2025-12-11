@@ -82,9 +82,10 @@ const AppLayout = () => {
               <Route path="/crm/leads/:leadId" element={<LeadDetailsPage />} />
               <Route path="/crm/activities" element={<CRMActivities />} />
               <Route path="/crm/statuses" element={<CRMLeadStatuses />} />
-              <Route path="/crm/field-configurations" element={<CRMFieldConfigurations />} />
+              <Route path="/crm/settings" element={<CRMFieldConfigurations />} />
               <Route path="/crm/tasks" element={<CRMTasks />} />
               <Route path="/crm/meetings" element={<Meetings />} />
+              <Route path="/crm/pipeline" element={<Navigate to="/crm/leads" replace />} />
 
               {/* HMS Routes */}
               <Route path="/hms/doctors" element={<Doctors />} />
@@ -95,8 +96,8 @@ const AppLayout = () => {
 
               {/* OPD Routes */}
               <Route path="/opd/visits" element={<OPDVisits />} />
-              <Route path="/opd/billing" element={<OPDBilling />} />
-              <Route path="/opd/consultation" element={<OPDConsultation />} />
+              <Route path="/opd/billing/:visitId" element={<OPDBilling />} />
+              <Route path="/opd/consultation/:visitId" element={<OPDConsultation />} />
               <Route path="/opd/opd-bills" element={<OPDBills />} />
               <Route path="/opd/clinical-notes" element={<ClinicalNotes />} />
               <Route path="/opd/visit-findings" element={<VisitFindings />} />

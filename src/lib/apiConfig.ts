@@ -11,7 +11,7 @@ export const API_CONFIG = {
   AUTH_BASE_URL: import.meta.env.VITE_AUTH_BASE_URL || 'https://admin.celiyo.com/api',
   CRM_BASE_URL: import.meta.env.VITE_CRM_BASE_URL || 'https://crm.celiyo.com/api',
   HMS_BASE_URL: import.meta.env.VITE_HMS_BASE_URL || 'https://hms.celiyo.com/api',
-  WHATSAPP_BASE_URL: import.meta.env.VITE_WHATSAPP_BASE_URL || 'https://whatsapp.celiyo.com/api',
+  WHATSAPP_BASE_URL: import.meta.env.VITE_WHATSAPP_BASE_URL || 'http://localhost:8000/api',
 
 
   // ✅ WebSocket URL for real-time WhatsApp updates
@@ -352,6 +352,16 @@ export const API_CONFIG = {
     QR_CODE_UPDATE: '/qr-codes/:code',
     QR_CODE_DELETE: '/qr-codes/:code',
     QR_CODE_FETCH: '/qr-codes/fetch',
+
+
+    // Tenant Configuration endpoints
+    TENANT_CONFIG: {
+      ONBOARD_WHATSAPP: '/tenant/onboard/whatsapp-client',
+      CONFIG: '/tenant/config',
+      CONFIG_FULL: '/tenant/config/full',
+      DEACTIVATE: '/tenant/config/deactivate',
+      ACTIVATE: '/tenant/config/activate',
+    },
   },
 };
 

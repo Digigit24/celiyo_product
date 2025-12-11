@@ -37,6 +37,7 @@ import {
   TrendingUp,
   Workflow,
   QrCode,
+  UserPlus,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -79,6 +80,12 @@ const menuItems: MenuItem[] = [
     label: "WhatsApp",
     icon: MessageCircle,
     children: [
+      {
+        id: "whatsapp-onboarding",
+        label: "Onboarding",
+        icon: UserPlus,
+        path: "/whatsapp/onboarding",
+      },
       {
         id: "whatsapp-contacts",
         label: "Contacts",
@@ -172,117 +179,117 @@ const menuItems: MenuItem[] = [
       },
     ],
   },
-  {
-    id: "hms",
-    label: "HMS",
-    icon: Stethoscope,
-    children: [
-      {
-        id: "hms-doctors",
-        label: "Doctors",
-        icon: UserCheck,
-        path: "/hms/doctors",
-      },
-      {
-        id: "hms-specialties",
-        label: "Specialties",
-        icon: Award,
-        path: "/hms/specialties",
-      },
-      {
-        id: "hms-patients",
-        label: "Patients",
-        icon: User,
-        path: "/patients",
-      },
-      {
-        id: "hms-appointments",
-        label: "Appointments",
-        icon: Calendar,
-        path: "/appointments",
-      },
-    ],
-  },
-  {
-    id: "opd",
-    label: "OPD",
-    icon: Stethoscope,
-    children: [
-      {
-        id: "opd-visits",
-        label: "Visits",
-        icon: ClipboardPlus,
-        path: "/opd/visits",
-      },
-      {
-        id: "opd-bills",
-        label: "OPD Bills",
-        icon: FileText,
-        path: "/opd/bills",
-      },
-      {
-        id: "clinical-notes",
-        label: "Clinical Notes",
-        icon: ClipboardList,
-        path: "/opd/clinical-notes",
-      },
-      {
-        id: "visit-findings",
-        label: "Visit Findings",
-        icon: Activity,
-        path: "/opd/findings",
-      },
-      {
-        id: "procedure-masters",
-        label: "Procedures",
-        icon: Microscope,
-        path: "/opd/procedures",
-      },
-      {
-        id: "procedure-packages",
-        label: "Packages",
-        icon: Package,
-        path: "/opd/packages",
-      },
-      {
-        id: "procedure-bills",
-        label: "Procedure Bills",
-        icon: Receipt,
-        path: "/opd/procedure-bills",
-      },
-      {
-        id: "opd-settings",
-        label: "Settings",
-        icon: Settings2,
-        path: "/opd/settings",
-      },
-    ],
-  },
-  {
-    id: "payments",
-    label: "Payments",
-    icon: DollarSign,
-    children: [
-      {
-        id: "payment-transactions",
-        label: "Transactions",
-        icon: CreditCard,
-        path: "/payments/transactions",
-      },
-      {
-        id: "payment-categories",
-        label: "Categories",
-        icon: Package,
-        path: "/payments/categories",
-      },
-      {
-        id: "accounting-periods",
-        label: "Accounting Periods",
-        icon: TrendingUp,
-        path: "/payments/periods",
-      },
-    ],
-  },
+  // {
+  //   id: "hms",
+  //   label: "HMS",
+  //   icon: Stethoscope,
+  //   children: [
+  //     {
+  //       id: "hms-doctors",
+  //       label: "Doctors",
+  //       icon: UserCheck,
+  //       path: "/hms/doctors",
+  //     },
+  //     {
+  //       id: "hms-specialties",
+  //       label: "Specialties",
+  //       icon: Award,
+  //       path: "/hms/specialties",
+  //     },
+  //     {
+  //       id: "hms-patients",
+  //       label: "Patients",
+  //       icon: User,
+  //       path: "/patients",
+  //     },
+  //     {
+  //       id: "hms-appointments",
+  //       label: "Appointments",
+  //       icon: Calendar,
+  //       path: "/appointments",
+  //     },
+  //   ],
+  // },
+  // {
+  //   id: "opd",
+  //   label: "OPD",
+  //   icon: Stethoscope,
+  //   children: [
+  //     {
+  //       id: "opd-visits",
+  //       label: "Visits",
+  //       icon: ClipboardPlus,
+  //       path: "/opd/visits",
+  //     },
+  //     {
+  //       id: "opd-bills",
+  //       label: "OPD Bills",
+  //       icon: FileText,
+  //       path: "/opd/bills",
+  //     },
+  //     {
+  //       id: "clinical-notes",
+  //       label: "Clinical Notes",
+  //       icon: ClipboardList,
+  //       path: "/opd/clinical-notes",
+  //     },
+  //     {
+  //       id: "visit-findings",
+  //       label: "Visit Findings",
+  //       icon: Activity,
+  //       path: "/opd/findings",
+  //     },
+  //     {
+  //       id: "procedure-masters",
+  //       label: "Procedures",
+  //       icon: Microscope,
+  //       path: "/opd/procedures",
+  //     },
+  //     {
+  //       id: "procedure-packages",
+  //       label: "Packages",
+  //       icon: Package,
+  //       path: "/opd/packages",
+  //     },
+  //     {
+  //       id: "procedure-bills",
+  //       label: "Procedure Bills",
+  //       icon: Receipt,
+  //       path: "/opd/procedure-bills",
+  //     },
+  //     {
+  //       id: "opd-settings",
+  //       label: "Settings",
+  //       icon: Settings2,
+  //       path: "/opd/settings",
+  //     },
+  //   ],
+  // },
+  // {
+  //   id: "payments",
+  //   label: "Payments",
+  //   icon: DollarSign,
+  //   children: [
+  //     {
+  //       id: "payment-transactions",
+  //       label: "Transactions",
+  //       icon: CreditCard,
+  //       path: "/payments/transactions",
+  //     },
+  //     {
+  //       id: "payment-categories",
+  //       label: "Categories",
+  //       icon: Package,
+  //       path: "/payments/categories",
+  //     },
+  //     {
+  //       id: "accounting-periods",
+  //       label: "Accounting Periods",
+  //       icon: TrendingUp,
+  //       path: "/payments/periods",
+  //     },
+  //   ],
+  // },
   {
     id: "admin",
     label: "Admin",

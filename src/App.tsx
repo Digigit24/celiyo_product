@@ -36,6 +36,7 @@ import Campaigns from "./pages/Campaigns";
 import Flows from "./pages/Flows";
 import FlowEditor from "./pages/FlowEditor";
 import QRCodes from "./pages/QRCodes";
+import WhatsAppOnboarding from "./pages/WhatsAppOnboarding";
 
 import { ThemeSync } from "@/components/ThemeSync";
 import OPDVisits from "./pages/OPDVisits";  // ✅ Updated to new production page
@@ -110,6 +111,7 @@ const AppLayout = () => {
               <Route path="/payments/accounting-periods" element={<AccountingPeriods />} />
 
               {/* WhatsApp Routes */}
+              <Route path="/whatsapp/onboarding" element={<WhatsAppOnboarding />} />
               <Route path="/whatsapp/contacts" element={<Contacts />} />
               <Route path="/whatsapp/chats" element={<Chats />} />
               <Route path="/whatsapp/groups" element={<Groups />} />

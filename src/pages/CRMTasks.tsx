@@ -236,59 +236,158 @@ export const CRMTasks: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full overflow-hidden">
+    <div className="p-6 max-w-8xl mx-auto space-y-6">
       {/* Header */}
-      <div className="px-6 py-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <CheckSquare className="h-6 w-6" />
-            <h1 className="text-2xl font-bold">Tasks</h1>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => mutate()}
-              disabled={isLoading}
-            >
-              <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-              Refresh
-            </Button>
-            <Button size="sm" onClick={handleCreate}>
-              <Plus className="h-4 w-4 mr-2" />
-              New Task
-            </Button>
-          </div>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
+            <CheckSquare className="h-6 w-6 sm:h-8 sm:w-8" />
+            CRM Tasks
+          </h1>
+          <p className="text-muted-foreground text-sm sm:text-base">
+            Manage and track your CRM tasks
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => mutate()}
+            disabled={isLoading}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+          <Button onClick={handleCreate} size="default" className="w-full sm:w-auto">
+            <Plus className="h-4 w-4 mr-2" />
+            New Task
+          </Button>
         </div>
       </div>
 
-      {/* Content */}
-      <div className="flex-1 overflow-auto p-6">
-        {error ? (
+      {/* Stats Cards */}
+      {tasksData && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <Card>
-            <CardContent className="p-6">
-              <div className="text-center text-destructive">
-                <p>Failed to load tasks</p>
-                <p className="text-sm mt-2">{error}</p>
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <CheckSquare className="h-5 w-5 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Total Tasks</p>
+                  <p className="text-xl sm:text-2xl font-bold">{tasksData.count}</p>
+                </div>
               </div>
             </CardContent>
           </Card>
-        ) : (
-          <DataTable
-            rows={tasks}
-            isLoading={isLoading}
-            columns={columns}
-            renderMobileCard={renderMobileCard}
-            getRowId={(task) => task.id}
-            getRowLabel={(task) => task.title}
-            onView={handleView}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-            emptyTitle="No tasks found"
-            emptySubtitle="Create a new task to get started"
-          />
-        )}
-      </div>
+
+          <Card>
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-green-100 rounded-lg">
+                  <RefreshCw className="h-5 w-5 text-green-600" />
+                </div>
+                <div>
+                  <p className="text-xs sm:text-sm text-muted-foreground">This Page</p>
+                  <p className="text-xl sm:text-2xl font-bold">{tasks.length}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-purple-100 rounded-lg">
+                  <Plus className="h-5 w-5 text-purple-600" />
+                </div>
+                <div>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Total Pages</p>
+                  <p className="text-xl sm:text-2xl font-bold">
+                    {Math.ceil(tasksData.count / (queryParams.page_size || 20))}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-orange-100 rounded-lg">
+                  <CheckSquare className="h-5 w-5 text-orange-600" />
+                </div>
+                <div>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Current Page</p>
+                  <p className="text-xl sm:text-2xl font-bold">{queryParams.page || 1}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Tasks Table */}
+      <Card>
+        <CardContent className="p-0">
+          {error ? (
+            <div className="p-8 text-center">
+              <div className="text-destructive">
+                <p className="font-semibold">Failed to load tasks</p>
+                <p className="text-sm mt-2">{error}</p>
+              </div>
+            </div>
+          ) : (
+            <>
+              <DataTable
+                rows={tasks}
+                isLoading={isLoading}
+                columns={columns}
+                renderMobileCard={renderMobileCard}
+                getRowId={(task) => task.id}
+                getRowLabel={(task) => task.title}
+                onView={handleView}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+                emptyTitle="No tasks found"
+                emptySubtitle="Create a new task to get started"
+              />
+
+              {/* Pagination */}
+              {!isLoading && tasksData && tasksData.count > 0 && (
+                <div className="flex items-center justify-between px-6 py-4 border-t">
+                  <p className="text-sm text-muted-foreground">
+                    Showing {tasks.length} of {tasksData.count} task(s)
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={!tasksData.previous}
+                      onClick={() =>
+                        setQueryParams((prev) => ({ ...prev, page: (prev.page || 1) - 1 }))
+                      }
+                    >
+                      Previous
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={!tasksData.next}
+                      onClick={() =>
+                        setQueryParams((prev) => ({ ...prev, page: (prev.page || 1) + 1 }))
+                      }
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Drawer */}
       <TasksFormDrawer

@@ -360,124 +360,158 @@ export const CRMLeadStatuses: React.FC = () => {
   );
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="p-6 max-w-8xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex-shrink-0 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container mx-auto px-4 sm:px-6 py-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight">Lead Statuses</h1>
-              <p className="text-sm text-muted-foreground mt-1">
-                Manage your CRM pipeline stages and lead statuses
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => mutate()}
-                disabled={isLoading}
-              >
-                <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-                Refresh
-              </Button>
-              <Button onClick={handleCreateStatus} size="sm">
-                <Plus className="h-4 w-4 mr-2" />
-                New Status
-              </Button>
-            </div>
-          </div>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold">Lead Statuses</h1>
+          <p className="text-muted-foreground text-sm sm:text-base">
+            Manage your CRM pipeline stages and lead statuses
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => mutate()}
+            disabled={isLoading}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+          <Button onClick={handleCreateStatus} size="default" className="w-full sm:w-auto">
+            <Plus className="h-4 w-4 mr-2" />
+            New Status
+          </Button>
+        </div>
+      </div>
 
-          {/* Stats */}
-          {statusesData && (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
-              <div className="bg-blue-50 dark:bg-blue-950 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
-                <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                  {statusesData.count}
+      {/* Stats Cards */}
+      {statusesData && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <Card>
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <Badge className="h-5 w-5 text-blue-600" />
                 </div>
-                <div className="text-xs text-blue-800 dark:text-blue-300">Total Statuses</div>
+                <div>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Total Statuses</p>
+                  <p className="text-xl sm:text-2xl font-bold">{statusesData.count}</p>
+                </div>
               </div>
-              <div className="bg-green-50 dark:bg-green-950 p-3 rounded-lg border border-green-200 dark:border-green-800">
-                <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                  {statusesData.results.filter(s => s.is_active).length}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-green-100 rounded-lg">
+                  <RefreshCw className="h-5 w-5 text-green-600" />
                 </div>
-                <div className="text-xs text-green-800 dark:text-green-300">Active</div>
+                <div>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Active</p>
+                  <p className="text-xl sm:text-2xl font-bold">
+                    {statusesData.results.filter(s => s.is_active).length}
+                  </p>
+                </div>
               </div>
-              <div className="bg-purple-50 dark:bg-purple-950 p-3 rounded-lg border border-purple-200 dark:border-purple-800">
-                <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                  {statusesData.results.filter(s => s.is_won).length}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-purple-100 rounded-lg">
+                  <Plus className="h-5 w-5 text-purple-600" />
                 </div>
-                <div className="text-xs text-purple-800 dark:text-purple-300">Won Statuses</div>
+                <div>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Won Statuses</p>
+                  <p className="text-xl sm:text-2xl font-bold">
+                    {statusesData.results.filter(s => s.is_won).length}
+                  </p>
+                </div>
               </div>
-              <div className="bg-orange-50 dark:bg-orange-950 p-3 rounded-lg border border-orange-200 dark:border-orange-800">
-                <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
-                  {statusesData.results.filter(s => s.is_lost).length}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-orange-100 rounded-lg">
+                  <ArrowDown className="h-5 w-5 text-orange-600" />
                 </div>
-                <div className="text-xs text-orange-800 dark:text-orange-300">Lost Statuses</div>
+                <div>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Lost Statuses</p>
+                  <p className="text-xl sm:text-2xl font-bold">
+                    {statusesData.results.filter(s => s.is_lost).length}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Drag and Drop Instructions */}
+      <Card className="bg-muted/50">
+        <CardContent className="p-4">
+          <p className="text-sm text-muted-foreground">
+            💡 <strong>Tip:</strong> Drag and drop statuses to reorder them, or use the arrow buttons.
+            The order determines how they appear in your CRM pipeline.
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* Statuses Table */}
+      <Card>
+        <CardContent className="p-0">
+          <DataTable
+            rows={statusesData?.results || []}
+            isLoading={isLoading}
+            columns={columns}
+            renderMobileCard={renderMobileCard}
+            getRowId={(status) => status.id}
+            getRowLabel={(status) => status.name}
+            onView={handleViewStatus}
+            onEdit={handleEditStatus}
+            onDelete={handleDeleteStatus}
+            emptyTitle="No lead statuses found"
+            emptySubtitle="Get started by creating your first lead status"
+          />
+
+          {/* Pagination */}
+          {!isLoading && statusesData && statusesData.count > 0 && (
+            <div className="flex items-center justify-between px-6 py-4 border-t">
+              <p className="text-sm text-muted-foreground">
+                Showing {statusesData.results.length} of {statusesData.count} status(es)
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={!statusesData.previous}
+                  onClick={() =>
+                    setQueryParams((prev) => ({ ...prev, page: (prev.page || 1) - 1 }))
+                  }
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={!statusesData.next}
+                  onClick={() =>
+                    setQueryParams((prev) => ({ ...prev, page: (prev.page || 1) + 1 }))
+                  }
+                >
+                  Next
+                </Button>
               </div>
             </div>
           )}
-
-          {/* Drag and Drop Instructions */}
-          <div className="mt-4 p-3 bg-muted/50 rounded-lg">
-            <p className="text-xs text-muted-foreground">
-              💡 <strong>Tip:</strong> Drag and drop statuses to reorder them, or use the arrow buttons. 
-              The order determines how they appear in your CRM pipeline.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Data Table */}
-      <div className="flex-1 overflow-hidden">
-        <DataTable
-          rows={statusesData?.results || []}
-          isLoading={isLoading}
-          columns={columns}
-          renderMobileCard={renderMobileCard}
-          getRowId={(status) => status.id}
-          getRowLabel={(status) => status.name}
-          onView={handleViewStatus}
-          onEdit={handleEditStatus}
-          onDelete={handleDeleteStatus}
-          emptyTitle="No lead statuses found"
-          emptySubtitle="Get started by creating your first lead status"
-        />
-      </div>
-
-      {/* Pagination */}
-      {statusesData && statusesData.count > 0 && (
-        <div className="flex-shrink-0 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-          <div className="container mx-auto px-4 sm:px-6 py-3">
-            <div className="flex justify-center gap-2 items-center">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={!statusesData.previous}
-                onClick={() =>
-                  setQueryParams((prev) => ({ ...prev, page: (prev.page || 1) - 1 }))
-                }
-              >
-                Previous
-              </Button>
-              <span className="px-4 py-2 text-sm">
-                Page {queryParams.page || 1} of{' '}
-                {Math.ceil(statusesData.count / (queryParams.page_size || 50))}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={!statusesData.next}
-                onClick={() =>
-                  setQueryParams((prev) => ({ ...prev, page: (prev.page || 1) + 1 }))
-                }
-              >
-                Next
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+        </CardContent>
+      </Card>
 
       {/* Form Drawer */}
       <LeadStatusFormDrawer

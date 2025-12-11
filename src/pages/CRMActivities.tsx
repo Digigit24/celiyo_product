@@ -245,116 +245,144 @@ export const CRMActivities: React.FC = () => {
   );
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="p-6 max-w-8xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex-shrink-0 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="max-w-8xl mx-auto px-6 py-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight">CRM Activities</h1>
-              <p className="text-sm text-muted-foreground mt-1">
-                Track all lead interactions and communications
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => mutate()}
-                disabled={isLoading}
-              >
-                <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-                Refresh
-              </Button>
-              <Button onClick={handleCreateActivity} size="sm">
-                <Plus className="h-4 w-4 mr-2" />
-                New Activity
-              </Button>
-            </div>
-          </div>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold">CRM Activities</h1>
+          <p className="text-muted-foreground text-sm sm:text-base">
+            Track all lead interactions and communications
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => mutate()}
+            disabled={isLoading}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+          <Button onClick={handleCreateActivity} size="default" className="w-full sm:w-auto">
+            <Plus className="h-4 w-4 mr-2" />
+            New Activity
+          </Button>
+        </div>
+      </div>
 
-          {/* Stats */}
-          {activitiesData && (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
-              <div className="bg-blue-50 dark:bg-blue-950 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
-                <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                  {activitiesData.count}
+      {/* Stats Cards */}
+      {activitiesData && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <Card>
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <MessageSquare className="h-5 w-5 text-blue-600" />
                 </div>
-                <div className="text-xs text-blue-800 dark:text-blue-300">Total Activities</div>
+                <div>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Total Activities</p>
+                  <p className="text-xl sm:text-2xl font-bold">{activitiesData.count}</p>
+                </div>
               </div>
-              <div className="bg-green-50 dark:bg-green-950 p-3 rounded-lg border border-green-200 dark:border-green-800">
-                <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                  {activitiesData.results.length}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-green-100 rounded-lg">
+                  <FileText className="h-5 w-5 text-green-600" />
                 </div>
-                <div className="text-xs text-green-800 dark:text-green-300">This Page</div>
+                <div>
+                  <p className="text-xs sm:text-sm text-muted-foreground">This Page</p>
+                  <p className="text-xl sm:text-2xl font-bold">{activitiesData.results.length}</p>
+                </div>
               </div>
-              <div className="bg-purple-50 dark:bg-purple-950 p-3 rounded-lg border border-purple-200 dark:border-purple-800">
-                <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                  {Math.ceil(activitiesData.count / (queryParams.page_size || 20))}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-purple-100 rounded-lg">
+                  <Calendar className="h-5 w-5 text-purple-600" />
                 </div>
-                <div className="text-xs text-purple-800 dark:text-purple-300">Total Pages</div>
+                <div>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Total Pages</p>
+                  <p className="text-xl sm:text-2xl font-bold">
+                    {Math.ceil(activitiesData.count / (queryParams.page_size || 20))}
+                  </p>
+                </div>
               </div>
-              <div className="bg-orange-50 dark:bg-orange-950 p-3 rounded-lg border border-orange-200 dark:border-orange-800">
-                <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
-                  {queryParams.page || 1}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-orange-100 rounded-lg">
+                  <RefreshCw className="h-5 w-5 text-orange-600" />
                 </div>
-                <div className="text-xs text-orange-800 dark:text-orange-300">Current Page</div>
+                <div>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Current Page</p>
+                  <p className="text-xl sm:text-2xl font-bold">{queryParams.page || 1}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Activities Table */}
+      <Card>
+        <CardContent className="p-0">
+          <DataTable
+            rows={activitiesData?.results || []}
+            isLoading={isLoading}
+            columns={columns}
+            renderMobileCard={renderMobileCard}
+            getRowId={(activity) => activity.id}
+            getRowLabel={(activity) => `${activity.type} activity`}
+            onView={handleViewActivity}
+            onEdit={handleEditActivity}
+            onDelete={handleDeleteActivity}
+            emptyTitle="No activities found"
+            emptySubtitle="Get started by creating your first activity"
+          />
+
+          {/* Pagination */}
+          {!isLoading && activitiesData && activitiesData.count > 0 && (
+            <div className="flex items-center justify-between px-6 py-4 border-t">
+              <p className="text-sm text-muted-foreground">
+                Showing {activitiesData.results.length} of {activitiesData.count} activit{activitiesData.count === 1 ? 'y' : 'ies'}
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={!activitiesData.previous}
+                  onClick={() =>
+                    setQueryParams((prev) => ({ ...prev, page: (prev.page || 1) - 1 }))
+                  }
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={!activitiesData.next}
+                  onClick={() =>
+                    setQueryParams((prev) => ({ ...prev, page: (prev.page || 1) + 1 }))
+                  }
+                >
+                  Next
+                </Button>
               </div>
             </div>
           )}
-        </div>
-      </div>
-
-      {/* Data Table */}
-      <div className="flex-1 overflow-hidden">
-        <DataTable
-          rows={activitiesData?.results || []}
-          isLoading={isLoading}
-          columns={columns}
-          renderMobileCard={renderMobileCard}
-          getRowId={(activity) => activity.id}
-          getRowLabel={(activity) => `${activity.type} activity`}
-          onView={handleViewActivity}
-          onEdit={handleEditActivity}
-          onDelete={handleDeleteActivity}
-          emptyTitle="No activities found"
-          emptySubtitle="Get started by creating your first activity"
-        />
-      </div>
-
-      {/* Pagination */}
-      {activitiesData && activitiesData.count > 0 && (
-        <div className="flex-shrink-0 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-          <div className="max-w-8xl mx-auto px-6 py-3">
-            <div className="flex justify-center gap-2 items-center">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={!activitiesData.previous}
-                onClick={() =>
-                  setQueryParams((prev) => ({ ...prev, page: (prev.page || 1) - 1 }))
-                }
-              >
-                Previous
-              </Button>
-              <span className="px-4 py-2 text-sm">
-                Page {queryParams.page || 1} of{' '}
-                {Math.ceil(activitiesData.count / (queryParams.page_size || 20))}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={!activitiesData.next}
-                onClick={() =>
-                  setQueryParams((prev) => ({ ...prev, page: (prev.page || 1) + 1 }))
-                }
-              >
-                Next
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+        </CardContent>
+      </Card>
 
       {/* Form Drawer */}
       <ActivitiesFormDrawer

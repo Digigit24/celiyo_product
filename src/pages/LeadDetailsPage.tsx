@@ -24,7 +24,7 @@ import { LeadFormHandle } from '@/components/LeadsFormDrawer';
 export const LeadDetailsPage = () => {
   const { leadId } = useParams<{ leadId: string }>();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('tasks');
+  const [activeTab, setActiveTab] = useState('details');
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -369,25 +369,11 @@ export const LeadDetailsPage = () => {
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="tasks">Tasks</TabsTrigger>
+          <TabsTrigger value="details">Details</TabsTrigger>
           <TabsTrigger value="activities">Activities</TabsTrigger>
-          <TabsTrigger value="details">Lead Details</TabsTrigger>
+          <TabsTrigger value="tasks">Tasks</TabsTrigger>
           <TabsTrigger value="meetings">Meetings</TabsTrigger>
         </TabsList>
-
-        {/* Tasks Tab */}
-        <TabsContent value="tasks" className="mt-6">
-          <LeadTasks leadId={lead.id} />
-        </TabsContent>
-
-        {/* Activities Tab */}
-        <TabsContent value="activities" className="mt-6">
-          <Card>
-            <CardContent className="pt-6">
-              <LeadActivities leadId={lead.id} />
-            </CardContent>
-          </Card>
-        </TabsContent>
 
         {/* Lead Details Tab */}
         <TabsContent value="details" className="mt-6">
@@ -405,6 +391,20 @@ export const LeadDetailsPage = () => {
               />
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Activities Tab */}
+        <TabsContent value="activities" className="mt-6">
+          <Card>
+            <CardContent className="pt-6">
+              <LeadActivities leadId={lead.id} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Tasks Tab */}
+        <TabsContent value="tasks" className="mt-6">
+          <LeadTasks leadId={lead.id} />
         </TabsContent>
 
         {/* Meetings Tab */}

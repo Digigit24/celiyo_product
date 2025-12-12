@@ -134,24 +134,45 @@ export const CRMLeadStatuses: React.FC = () => {
 
   // Drag and drop handlers
   const handleDragStart = useCallback((e: React.DragEvent, status: LeadStatus) => {
+    e.stopPropagation(); // Prevent row click
     setDraggedItem(status);
     e.dataTransfer.effectAllowed = 'move';
+    // Set drag image
+    if (e.currentTarget instanceof HTMLElement) {
+      const dragImage = e.currentTarget.cloneNode(true) as HTMLElement;
+      dragImage.style.opacity = '0.5';
+      document.body.appendChild(dragImage);
+      e.dataTransfer.setDragImage(dragImage, 0, 0);
+      setTimeout(() => document.body.removeChild(dragImage), 0);
+    }
   }, []);
 
   const handleDragOver = useCallback((e: React.DragEvent, status: LeadStatus) => {
     e.preventDefault();
+    e.stopPropagation(); // Prevent event bubbling
     e.dataTransfer.dropEffect = 'move';
     setDragOverItem(status);
   }, []);
 
-  const handleDragLeave = useCallback(() => {
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    // Only clear if we're leaving the container, not moving between children
+    const relatedTarget = e.relatedTarget as HTMLElement;
+    if (!relatedTarget || !e.currentTarget.contains(relatedTarget)) {
+      setDragOverItem(null);
+    }
+  }, []);
+
+  const handleDragEnd = useCallback(() => {
+    setDraggedItem(null);
     setDragOverItem(null);
   }, []);
 
   const handleDrop = useCallback(
     async (e: React.DragEvent, targetStatus: LeadStatus) => {
       e.preventDefault();
-      
+      e.stopPropagation();
+
       if (!draggedItem || draggedItem.id === targetStatus.id) {
         setDraggedItem(null);
         setDragOverItem(null);
@@ -161,16 +182,16 @@ export const CRMLeadStatuses: React.FC = () => {
       try {
         // Swap order_index values
         await Promise.all([
-          updateLeadStatus(draggedItem.id, { 
-            ...draggedItem, 
-            order_index: targetStatus.order_index 
+          updateLeadStatus(draggedItem.id, {
+            ...draggedItem,
+            order_index: targetStatus.order_index
           }),
-          updateLeadStatus(targetStatus.id, { 
-            ...targetStatus, 
-            order_index: draggedItem.order_index 
+          updateLeadStatus(targetStatus.id, {
+            ...targetStatus,
+            order_index: draggedItem.order_index
           })
         ]);
-        
+
         toast.success('Status order updated successfully');
         mutate(); // Refresh the list
       } catch (error: any) {
@@ -240,16 +261,23 @@ export const CRMLeadStatuses: React.FC = () => {
         const isLast = currentIndex === statuses.length - 1;
 
         return (
-          <div className="flex items-center gap-2">
+          <div
+            className="flex items-center gap-2"
+            onClick={(e) => e.stopPropagation()} // Prevent row click
+          >
             <div
-              className={`cursor-move p-1 rounded hover:bg-muted ${
-                dragOverItem?.id === status.id ? 'bg-blue-100' : ''
-              }`}
-              draggable
+              className={`
+                cursor-move p-1.5 rounded transition-all select-none
+                ${draggedItem?.id === status.id ? 'opacity-50 scale-95 cursor-grabbing' : ''}
+                ${dragOverItem?.id === status.id ? 'bg-primary/20 ring-2 ring-primary' : 'hover:bg-muted'}
+              `}
+              draggable={true}
               onDragStart={(e) => handleDragStart(e, status)}
               onDragOver={(e) => handleDragOver(e, status)}
               onDragLeave={handleDragLeave}
+              onDragEnd={handleDragEnd}
               onDrop={(e) => handleDrop(e, status)}
+              title="Drag to reorder"
             >
               <GripVertical className="h-4 w-4 text-muted-foreground" />
             </div>
@@ -258,7 +286,10 @@ export const CRMLeadStatuses: React.FC = () => {
                 variant="ghost"
                 size="sm"
                 className="h-6 w-6 p-0"
-                onClick={() => handleMoveStatus(status, 'up')}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleMoveStatus(status, 'up');
+                }}
                 disabled={isFirst}
               >
                 <ArrowUp className="h-3 w-3" />
@@ -267,7 +298,10 @@ export const CRMLeadStatuses: React.FC = () => {
                 variant="ghost"
                 size="sm"
                 className="h-6 w-6 p-0"
-                onClick={() => handleMoveStatus(status, 'down')}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleMoveStatus(status, 'down');
+                }}
                 disabled={isLast}
               >
                 <ArrowDown className="h-3 w-3" />
@@ -321,12 +355,18 @@ export const CRMLeadStatuses: React.FC = () => {
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground">#{status.order_index}</span>
           <div
-            className="cursor-move p-1 rounded hover:bg-muted"
-            draggable
+            className={`
+              cursor-move p-1.5 rounded transition-all select-none
+              ${draggedItem?.id === status.id ? 'opacity-50 scale-95 cursor-grabbing' : ''}
+              ${dragOverItem?.id === status.id ? 'bg-primary/20 ring-2 ring-primary' : 'hover:bg-muted'}
+            `}
+            draggable={true}
             onDragStart={(e) => handleDragStart(e, status)}
             onDragOver={(e) => handleDragOver(e, status)}
             onDragLeave={handleDragLeave}
+            onDragEnd={handleDragEnd}
             onDrop={(e) => handleDrop(e, status)}
+            title="Drag to reorder"
           >
             <GripVertical className="h-4 w-4 text-muted-foreground" />
           </div>

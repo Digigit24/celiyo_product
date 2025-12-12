@@ -194,6 +194,35 @@ export interface FieldSchemaResponse {
   custom_fields: LeadFieldConfiguration[];
 }
 
+// Import/Export Types
+export interface LeadImportFailure {
+  row: number;
+  phone: string;
+  name: string;
+  reason: string;
+}
+
+export interface LeadImportResponse {
+  success_count: number;
+  failed_count: number;
+  total_count: number;
+  failures: LeadImportFailure[];
+}
+
+export interface LeadExportResponse {
+  count: number;
+  exported_at: string;
+  leads: Lead[];
+}
+
+export interface LeadExportQueryParams {
+  format?: 'csv' | 'json';
+}
+
+export interface LeadImportPayload {
+  leads: CreateLeadPayload[];
+}
+
 // Query Parameters Types
 export interface LeadsQueryParams {
   page?: number;

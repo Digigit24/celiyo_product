@@ -3,14 +3,15 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { 
-  Building2, 
-  Phone, 
-  Mail, 
-  DollarSign, 
+import {
+  Building2,
+  Phone,
+  Mail,
+  DollarSign,
   Calendar,
   GripVertical,
-  Eye
+  Eye,
+  MessageCircle
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import type { Lead, PriorityEnum } from '@/types/crmTypes';
@@ -18,6 +19,8 @@ import type { Lead, PriorityEnum } from '@/types/crmTypes';
 interface KanbanCardProps {
   lead: Lead;
   onView: (lead: Lead) => void;
+  onCall?: (lead: Lead) => void;
+  onWhatsApp?: (lead: Lead) => void;
   isDragging?: boolean;
   dragHandleProps?: any;
 }
@@ -25,6 +28,8 @@ interface KanbanCardProps {
 export const KanbanCard: React.FC<KanbanCardProps> = ({
   lead,
   onView,
+  onCall,
+  onWhatsApp,
   isDragging = false,
   dragHandleProps
 }) => {
@@ -95,7 +100,7 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({
         )}
 
         {/* Contact Info */}
-        <div className="space-y-1">
+        <div className="space-y-2">
           <div className="flex items-center gap-2 text-xs">
             <Phone className="h-3 w-3 text-muted-foreground flex-shrink-0" />
             <span className="truncate">{lead.phone}</span>
@@ -104,6 +109,39 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Mail className="h-3 w-3 flex-shrink-0" />
               <span className="truncate">{lead.email}</span>
+            </div>
+          )}
+          {/* Call and WhatsApp Buttons */}
+          {(onCall || onWhatsApp) && (
+            <div className="flex items-center gap-2 pt-1">
+              {onCall && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 px-2 text-xs gap-1 flex-1"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onCall(lead);
+                  }}
+                >
+                  <Phone className="h-3 w-3" />
+                  Call
+                </Button>
+              )}
+              {onWhatsApp && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 px-2 text-xs gap-1 flex-1 text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onWhatsApp(lead);
+                  }}
+                >
+                  <MessageCircle className="h-3 w-3" />
+                  WhatsApp
+                </Button>
+              )}
             </div>
           )}
         </div>

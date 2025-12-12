@@ -32,7 +32,11 @@ import {
   CreateTaskPayload,
   UpdateTaskPayload,
   CreateLeadFieldConfigurationPayload,
-  UpdateLeadFieldConfigurationPayload
+  UpdateLeadFieldConfigurationPayload,
+  LeadExportQueryParams,
+  LeadExportResponse,
+  LeadImportResponse,
+  LeadImportPayload
 } from '@/types/crmTypes';
 
 class CRMService {
@@ -156,6 +160,80 @@ class CRMService {
       return results;
     } catch (error: any) {
       throw new Error('Failed to bulk create leads');
+    }
+  }
+
+  // Export leads (CSV or JSON)
+  async exportLeads(params?: LeadExportQueryParams): Promise<Blob | LeadExportResponse> {
+    try {
+      const queryString = buildQueryString(params);
+      const format = params?.format || 'csv';
+
+      if (format === 'csv') {
+        // For CSV, we need to handle blob response
+        const response = await crmClient.get(
+          `${API_CONFIG.CRM.LEAD_EXPORT}${queryString}`,
+          {
+            responseType: 'blob',
+            headers: {
+              'Accept': 'text/csv'
+            }
+          }
+        );
+        return response.data as Blob;
+      } else {
+        // For JSON, return the parsed response
+        const response = await crmClient.get<LeadExportResponse>(
+          `${API_CONFIG.CRM.LEAD_EXPORT}${queryString}`,
+          {
+            headers: {
+              'Accept': 'application/json'
+            }
+          }
+        );
+        return response.data;
+      }
+    } catch (error: any) {
+      const message = error.response?.data?.error ||
+                     error.response?.data?.message ||
+                     'Failed to export leads';
+      throw new Error(message);
+    }
+  }
+
+  // Import leads from CSV file or JSON data
+  async importLeads(file?: File, jsonData?: LeadImportPayload): Promise<LeadImportResponse> {
+    try {
+      if (file) {
+        // Import from CSV file
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const response = await crmClient.post<LeadImportResponse>(
+          API_CONFIG.CRM.LEAD_IMPORT,
+          formData,
+          {
+            headers: {
+              'Content-Type': 'multipart/form-data'
+            }
+          }
+        );
+        return response.data;
+      } else if (jsonData) {
+        // Import from JSON data
+        const response = await crmClient.post<LeadImportResponse>(
+          API_CONFIG.CRM.LEAD_IMPORT,
+          jsonData
+        );
+        return response.data;
+      } else {
+        throw new Error('Either file or jsonData must be provided');
+      }
+    } catch (error: any) {
+      const message = error.response?.data?.error ||
+                     error.response?.data?.message ||
+                     'Failed to import leads';
+      throw new Error(message);
     }
   }
 

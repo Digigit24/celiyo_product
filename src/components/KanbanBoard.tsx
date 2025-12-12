@@ -2,7 +2,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { Button } from '@/components/ui/button';
-import { Plus, Settings } from 'lucide-react';
+import { Plus, Settings, Phone, MessageCircle } from 'lucide-react';
 import { KanbanColumn } from './KanbanColumn';
 import { toast } from 'sonner';
 import type { Lead, LeadStatus } from '@/types/crmTypes';
@@ -11,6 +11,8 @@ interface KanbanBoardProps {
   leads: Lead[];
   statuses: LeadStatus[];
   onViewLead: (lead: Lead) => void;
+  onCallLead?: (lead: Lead) => void;
+  onWhatsAppLead?: (lead: Lead) => void;
   onCreateLead: (statusId?: number) => void;
   onEditStatus: (status: LeadStatus) => void;
   onDeleteStatus: (status: LeadStatus) => void;
@@ -24,6 +26,8 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   leads,
   statuses,
   onViewLead,
+  onCallLead,
+  onWhatsAppLead,
   onCreateLead,
   onEditStatus,
   onDeleteStatus,
@@ -282,11 +286,40 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                                         )}
 
                                         {/* Contact */}
-                                        <div className="text-xs">
-                                          <div>{lead.phone}</div>
-                                          {lead.email && (
-                                            <div className="text-muted-foreground truncate">{lead.email}</div>
-                                          )}
+                                        <div className="space-y-2">
+                                          <div className="text-xs">
+                                            <div>{lead.phone}</div>
+                                            {lead.email && (
+                                              <div className="text-muted-foreground truncate">{lead.email}</div>
+                                            )}
+                                          </div>
+                                          {/* Call and WhatsApp Buttons */}
+                                          <div className="flex items-center gap-2">
+                                            <Button
+                                              variant="outline"
+                                              size="sm"
+                                              className="h-7 px-2 text-xs gap-1 flex-1"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                onCallLead?.(lead);
+                                              }}
+                                            >
+                                              <Phone className="h-3 w-3" />
+                                              Call
+                                            </Button>
+                                            <Button
+                                              variant="outline"
+                                              size="sm"
+                                              className="h-7 px-2 text-xs gap-1 flex-1 text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                onWhatsAppLead?.(lead);
+                                              }}
+                                            >
+                                              <MessageCircle className="h-3 w-3" />
+                                              WhatsApp
+                                            </Button>
+                                          </div>
                                         </div>
 
                                         {/* Value */}

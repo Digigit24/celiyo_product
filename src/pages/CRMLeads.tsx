@@ -12,13 +12,13 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, RefreshCw, Building2, Phone, Mail, DollarSign, LayoutGrid, List, Download, Upload, FileSpreadsheet } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Plus, RefreshCw, Building2, Phone, Mail, DollarSign, LayoutGrid, List, Download, Upload, FileSpreadsheet, ChevronDown, MessageCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 import type { Lead, LeadsQueryParams, PriorityEnum, LeadStatus } from '@/types/crmTypes';
 import type { RowActions } from '@/components/DataTable';
 import type { PatientCreateData } from '@/types/patient.types';
-import { exportLeadsToExcel, importLeadsFromExcel, downloadLeadsTemplate } from '@/utils/excelUtils';
 
 type DrawerMode = 'view' | 'edit' | 'create';
 type ViewMode = 'list' | 'kanban';
@@ -26,7 +26,7 @@ type ViewMode = 'list' | 'kanban';
 export const CRMLeads: React.FC = () => {
   const navigate = useNavigate();
   const { user, hasModuleAccess } = useAuth();
-  const { hasCRMAccess, useLeads, useLeadStatuses, useFieldConfigurations, deleteLead, patchLead, updateLeadStatus, deleteLeadStatus, bulkCreateLeads } = useCRM();
+  const { hasCRMAccess, useLeads, useLeadStatuses, useFieldConfigurations, deleteLead, patchLead, updateLeadStatus, deleteLeadStatus, bulkCreateLeads, exportLeads, importLeads } = useCRM();
   const { hasHMSAccess, createPatient } = usePatient();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -262,6 +262,53 @@ export const CRMLeads: React.FC = () => {
     setStatusDrawerMode(mode);
   }, []);
 
+  // Call and WhatsApp handlers
+  const handleCallLead = useCallback((lead: Lead) => {
+    if (!lead.phone) {
+      toast.error('No phone number available for this lead');
+      return;
+    }
+
+    // Format phone number by removing spaces and special characters except +
+    const cleanPhone = lead.phone.replace(/[^\d+]/g, '');
+
+    // Open phone dialer
+    window.location.href = `tel:${cleanPhone}`;
+
+    toast.success(`Calling ${lead.name}...`, {
+      description: lead.phone,
+      duration: 2000,
+    });
+  }, []);
+
+  const handleWhatsAppLead = useCallback((lead: Lead) => {
+    if (!lead.phone) {
+      toast.error('No phone number available for this lead');
+      return;
+    }
+
+    // Format phone number for WhatsApp (remove all non-digits except +)
+    let cleanPhone = lead.phone.replace(/[^\d+]/g, '');
+
+    // Remove leading + if present for WhatsApp API
+    if (cleanPhone.startsWith('+')) {
+      cleanPhone = cleanPhone.substring(1);
+    }
+
+    // Create pre-filled message
+    const message = `Hi ${lead.name}, I'm reaching out regarding your inquiry.`;
+    const encodedMessage = encodeURIComponent(message);
+
+    // Open WhatsApp with pre-filled message
+    const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodedMessage}`;
+    window.open(whatsappUrl, '_blank');
+
+    toast.success(`Opening WhatsApp for ${lead.name}...`, {
+      description: lead.phone,
+      duration: 2000,
+    });
+  }, []);
+
   const handleMoveStatus = useCallback(
     async (status: LeadStatus, direction: 'up' | 'down') => {
       const statuses = statusesData?.results || [];
@@ -306,37 +353,58 @@ export const CRMLeads: React.FC = () => {
     }));
   }, []);
 
-  // Export leads to Excel
-  const handleExportLeads = useCallback(() => {
+  // Export leads via API
+  const handleExportLeads = useCallback(async (format: 'csv' | 'json' = 'csv') => {
     try {
-      if (!leadsData || leadsData.results.length === 0) {
+      if (!leadsData || leadsData.count === 0) {
         toast.error('No leads to export');
         return;
       }
 
-      exportLeadsToExcel(leadsData.results);
-      toast.success(`Exported ${leadsData.results.length} leads successfully`);
+      toast.info('Exporting leads...');
+
+      const result = await exportLeads({ format });
+
+      if (format === 'csv' && result instanceof Blob) {
+        // Download CSV file
+        const url = window.URL.createObjectURL(result);
+        const link = document.createElement('a');
+        link.href = url;
+        const timestamp = new Date().toISOString().split('T')[0];
+        link.download = `leads_export_${timestamp}.csv`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+
+        toast.success(`Exported leads successfully as CSV`);
+      } else if (format === 'json') {
+        // Download JSON file
+        const jsonResult = result as any;
+        const blob = new Blob([JSON.stringify(jsonResult, null, 2)], { type: 'application/json' });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        const timestamp = new Date().toISOString().split('T')[0];
+        link.download = `leads_export_${timestamp}.json`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+
+        toast.success(`Exported ${jsonResult.count} leads successfully as JSON`);
+      }
     } catch (error: any) {
       toast.error(error.message || 'Failed to export leads');
     }
-  }, [leadsData]);
-
-  // Download import template
-  const handleDownloadTemplate = useCallback(() => {
-    try {
-      downloadLeadsTemplate();
-      toast.success('Template downloaded successfully');
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to download template');
-    }
-  }, []);
+  }, [leadsData, exportLeads]);
 
   // Trigger file input click
   const handleImportClick = useCallback(() => {
     fileInputRef.current?.click();
   }, []);
 
-  // Handle file selection and import
+  // Handle file selection and import via API
   const handleFileChange = useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>) => {
       const file = event.target.files?.[0];
@@ -346,58 +414,52 @@ export const CRMLeads: React.FC = () => {
       const validTypes = [
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         'application/vnd.ms-excel',
+        'text/csv',
       ];
 
-      if (!validTypes.includes(file.type) && !file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
-        toast.error('Please select a valid Excel file (.xlsx or .xls)');
+      if (!validTypes.includes(file.type) && !file.name.endsWith('.xlsx') && !file.name.endsWith('.xls') && !file.name.endsWith('.csv')) {
+        toast.error('Please select a valid CSV or Excel file (.csv, .xlsx, or .xls)');
         event.target.value = '';
         return;
       }
 
       try {
-        toast.info('Processing Excel file...');
+        toast.info('Importing leads...');
 
-        // Parse Excel file with current user ID as default owner
-        const { leads: parsedLeads, errors: parseErrors } = await importLeadsFromExcel(file, user?.id);
+        // Import leads via API
+        const result = await importLeads(file);
 
-        if (parseErrors.length > 0) {
-          toast.warning(`File parsed with ${parseErrors.length} warning(s)`, {
-            description: parseErrors.slice(0, 3).join('; ') + (parseErrors.length > 3 ? '...' : ''),
+        // Show detailed results
+        const { success_count, failed_count, total_count, failures } = result;
+
+        if (success_count > 0 && failed_count === 0) {
+          toast.success(`Successfully imported ${success_count} leads!`, {
             duration: 5000,
           });
-        }
+        } else if (success_count > 0 && failed_count > 0) {
+          const failureMessages = failures.slice(0, 3).map(f =>
+            `Row ${f.row}: ${f.name || f.phone} - ${f.reason}`
+          ).join('\n');
 
-        if (parsedLeads.length === 0) {
-          toast.error('No valid leads found in the file');
-          event.target.value = '';
-          return;
-        }
-
-        toast.info(`Creating ${parsedLeads.length} leads...`);
-
-        // Bulk create leads
-        const results = await bulkCreateLeads(parsedLeads);
-
-        // Show results
-        const successCount = results.created.length;
-        const errorCount = results.errors.length;
-
-        if (successCount > 0 && errorCount === 0) {
-          toast.success(`Successfully created ${successCount} leads!`);
-        } else if (successCount > 0 && errorCount > 0) {
-          toast.warning(`Created ${successCount} leads, ${errorCount} failed`, {
-            description: results.errors.slice(0, 2).map(e => `Row ${e.index + 1}: ${e.error}`).join('; '),
-            duration: 7000,
+          toast.warning(`Imported ${success_count} leads, ${failed_count} failed`, {
+            description: failureMessages + (failures.length > 3 ? `\n... and ${failures.length - 3} more` : ''),
+            duration: 10000,
           });
         } else {
-          toast.error('Failed to create any leads', {
-            description: results.errors.slice(0, 2).map(e => `Row ${e.index + 1}: ${e.error}`).join('; '),
-            duration: 7000,
+          const failureMessages = failures.slice(0, 3).map(f =>
+            `Row ${f.row}: ${f.name || f.phone} - ${f.reason}`
+          ).join('\n');
+
+          toast.error(`Failed to import any leads (${failed_count} total)`, {
+            description: failureMessages + (failures.length > 3 ? `\n... and ${failures.length - 3} more` : ''),
+            duration: 10000,
           });
         }
 
-        // Refresh the leads list
-        mutate();
+        // Refresh the leads list if any succeeded
+        if (success_count > 0) {
+          mutate();
+        }
       } catch (error: any) {
         toast.error(error.message || 'Failed to import leads');
       } finally {
@@ -405,7 +467,7 @@ export const CRMLeads: React.FC = () => {
         event.target.value = '';
       }
     },
-    [bulkCreateLeads, mutate, user]
+    [importLeads, mutate]
   );
 
   // Priority badge helper
@@ -513,6 +575,9 @@ export const CRMLeads: React.FC = () => {
           </div>
         ),
         className: 'w-[200px]',
+        sortable: true,
+        filterable: true,
+        accessor: (lead) => lead.name,
       },
       company: {
         header: 'Company',
@@ -529,12 +594,15 @@ export const CRMLeads: React.FC = () => {
             )}
           </div>
         ),
+        sortable: true,
+        filterable: true,
+        accessor: (lead) => lead.company || '',
       },
       phone: {
         header: 'Contact',
         key: 'contact',
         cell: (lead) => (
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1.5">
             <div className="flex items-center gap-1.5 text-xs">
               <Phone className="h-3 w-3 text-muted-foreground" />
               <span>{lead.phone}</span>
@@ -542,21 +610,67 @@ export const CRMLeads: React.FC = () => {
             {lead.email && standardFieldsMap.has('email') && (
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <Mail className="h-3 w-3" />
-                <span>{lead.email}</span>
+                <span className="truncate">{lead.email}</span>
               </div>
             )}
+            {/* Action Buttons */}
+            <div className="flex items-center gap-1 mt-1">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 px-2 text-xs gap-1"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleCallLead(lead);
+                }}
+              >
+                <Phone className="h-3 w-3" />
+                Call
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 px-2 text-xs gap-1 text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleWhatsAppLead(lead);
+                }}
+              >
+                <MessageCircle className="h-3 w-3" />
+                WhatsApp
+              </Button>
+            </div>
           </div>
         ),
+        sortable: true,
+        filterable: true,
+        accessor: (lead) => `${lead.phone} ${lead.email || ''}`,
       },
       status: {
         header: 'Status',
         key: 'status',
         cell: (lead) => getStatusBadge(lead.status),
+        sortable: true,
+        filterable: false,
+        accessor: (lead) => {
+          const statusId = typeof lead.status === 'number' ? lead.status : lead.status?.id;
+          const statusObj = statusesData?.results.find(s => s.id === statusId);
+          return statusObj?.name || '';
+        },
       },
       priority: {
         header: 'Priority',
         key: 'priority',
         cell: (lead) => getPriorityBadge(lead.priority),
+        sortable: true,
+        filterable: true,
+        accessor: (lead) => lead.priority,
+        sortFn: (a, b, direction) => {
+          const priorityOrder = { HIGH: 3, MEDIUM: 2, LOW: 1 };
+          const aVal = priorityOrder[a.priority] || 0;
+          const bVal = priorityOrder[b.priority] || 0;
+          return direction === 'asc' ? aVal - bVal : bVal - aVal;
+        },
       },
       value_amount: {
         header: 'Value',
@@ -570,6 +684,9 @@ export const CRMLeads: React.FC = () => {
           </div>
         ),
         className: 'text-right',
+        sortable: true,
+        filterable: false,
+        accessor: (lead) => parseFloat(lead.value_amount || '0'),
       },
     };
 
@@ -615,6 +732,9 @@ export const CRMLeads: React.FC = () => {
           {formatDistanceToNow(new Date(lead.updated_at), { addSuffix: true })}
         </span>
       ),
+      sortable: true,
+      filterable: false,
+      accessor: (lead) => new Date(lead.updated_at).getTime(),
     });
 
     return sortedColumns;
@@ -656,7 +776,7 @@ export const CRMLeads: React.FC = () => {
 
       {/* Contact Info */}
       {(isFieldVisible('phone') || isFieldVisible('email')) && (
-        <div className="space-y-1">
+        <div className="space-y-2">
           {isFieldVisible('phone') && (
             <div className="flex items-center gap-1.5 text-sm">
               <Phone className="h-3.5 w-3.5 text-muted-foreground" />
@@ -667,6 +787,35 @@ export const CRMLeads: React.FC = () => {
             <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
               <Mail className="h-3.5 w-3.5" />
               <span className="truncate">{lead.email}</span>
+            </div>
+          )}
+          {/* Call and WhatsApp Buttons */}
+          {isFieldVisible('phone') && (
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 px-3 text-xs gap-1.5 flex-1"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleCallLead(lead);
+                }}
+              >
+                <Phone className="h-3.5 w-3.5" />
+                Call
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 px-3 text-xs gap-1.5 flex-1 text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleWhatsAppLead(lead);
+                }}
+              >
+                <MessageCircle className="h-3.5 w-3.5" />
+                WhatsApp
+              </Button>
             </div>
           )}
         </div>
@@ -737,15 +886,29 @@ export const CRMLeads: React.FC = () => {
             <Upload className="h-4 w-4 mr-2" />
             Import
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleExportLeads}
-            disabled={!leadsData || leadsData.results.length === 0}
-          >
-            <Download className="h-4 w-4 mr-2" />
-            Export
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={!leadsData || leadsData.count === 0}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Export
+                <ChevronDown className="h-4 w-4 ml-1" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => handleExportLeads('csv')}>
+                <FileSpreadsheet className="h-4 w-4 mr-2" />
+                Export as CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExportLeads('json')}>
+                <Download className="h-4 w-4 mr-2" />
+                Export as JSON
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button onClick={handleCreateLeadClick} size="default" className="w-full sm:w-auto">
             <Plus className="h-4 w-4 mr-2" />
             New Lead
@@ -757,7 +920,7 @@ export const CRMLeads: React.FC = () => {
       <input
         ref={fileInputRef}
         type="file"
-        accept=".xlsx,.xls"
+        accept=".csv,.xlsx,.xls"
         onChange={handleFileChange}
         className="hidden"
       />
@@ -900,6 +1063,8 @@ export const CRMLeads: React.FC = () => {
               leads={leadsData?.results || []}
               statuses={statusesData?.results || []}
               onViewLead={handleViewLead}
+              onCallLead={handleCallLead}
+              onWhatsAppLead={handleWhatsAppLead}
               onCreateLead={handleCreateLead}
               onEditStatus={handleEditStatus}
               onDeleteStatus={handleDeleteStatus}

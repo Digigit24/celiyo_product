@@ -33,7 +33,11 @@ import {
   CreateTaskPayload,
   UpdateTaskPayload,
   CreateLeadFieldConfigurationPayload,
-  UpdateLeadFieldConfigurationPayload
+  UpdateLeadFieldConfigurationPayload,
+  LeadExportQueryParams,
+  LeadExportResponse,
+  LeadImportResponse,
+  LeadImportPayload
 } from '@/types/crmTypes';
 import { useAuth } from './useAuth';
 
@@ -182,6 +186,48 @@ export const useCRM = () => {
       return results;
     } catch (err: any) {
       const errorMessage = err.message || 'Failed to bulk create leads';
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [hasCRMAccess]);
+
+  // Export leads
+  const exportLeads = useCallback(async (params?: LeadExportQueryParams) => {
+    if (!hasCRMAccess) {
+      throw new Error('CRM module not enabled for this user');
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const result = await crmService.exportLeads(params);
+      return result;
+    } catch (err: any) {
+      const errorMessage = err.message || 'Failed to export leads';
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [hasCRMAccess]);
+
+  // Import leads
+  const importLeads = useCallback(async (file?: File, jsonData?: LeadImportPayload) => {
+    if (!hasCRMAccess) {
+      throw new Error('CRM module not enabled for this user');
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const results = await crmService.importLeads(file, jsonData);
+      return results;
+    } catch (err: any) {
+      const errorMessage = err.message || 'Failed to import leads';
       setError(errorMessage);
       throw err;
     } finally {
@@ -735,6 +781,8 @@ export const useCRM = () => {
     patchLead,
     deleteLead,
     bulkCreateLeads,
+    exportLeads,
+    importLeads,
 
     // Lead Statuses
     useLeadStatuses,

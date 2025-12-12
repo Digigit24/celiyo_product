@@ -9,7 +9,7 @@ export const API_CONFIG = {
   // You can override these via Vite env vars in .env/.env.local
   // VITE_AUTH_BASE_URL, VITE_CRM_BASE_URL, VITE_WHATSAPP_BASE_URL, VITE_WHATSAPP_WS_URL
   AUTH_BASE_URL: import.meta.env.VITE_AUTH_BASE_URL || 'https://admin.celiyo.com/api',
-  CRM_BASE_URL: import.meta.env.VITE_CRM_BASE_URL || 'https://crm.celiyo.com/api',
+  CRM_BASE_URL: import.meta.env.VITE_CRM_BASE_URL || 'http://127.0.0.1:8000/api',
   HMS_BASE_URL: import.meta.env.VITE_HMS_BASE_URL || 'https://hms.celiyo.com/api',
   WHATSAPP_BASE_URL: import.meta.env.VITE_WHATSAPP_BASE_URL || 'https://whatsapp.celiyo.com/api',
 
@@ -238,6 +238,8 @@ export const API_CONFIG = {
     LEAD_UPDATE: '/crm/leads/:id/',
     LEAD_DELETE: '/crm/leads/:id/',
     LEAD_KANBAN: '/crm/leads/kanban/',
+    LEAD_EXPORT: '/crm/leads/export/',
+    LEAD_IMPORT: '/crm/leads/import_leads/',
 
     // Lead Status endpoints
     LEAD_STATUSES: '/crm/statuses/',

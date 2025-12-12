@@ -26,6 +26,8 @@ interface KanbanColumnProps {
   status: LeadStatus;
   leads: Lead[];
   onViewLead: (lead: Lead) => void;
+  onCallLead?: (lead: Lead) => void;
+  onWhatsAppLead?: (lead: Lead) => void;
   onCreateLead: (statusId: number) => void;
   onEditStatus: (status: LeadStatus) => void;
   onDeleteStatus: (status: LeadStatus) => void;
@@ -43,6 +45,8 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
   status,
   leads,
   onViewLead,
+  onCallLead,
+  onWhatsAppLead,
   onCreateLead,
   onEditStatus,
   onDeleteStatus,
@@ -196,6 +200,8 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
               key={lead.id}
               lead={lead}
               onView={onViewLead}
+              onCall={onCallLead}
+              onWhatsApp={onWhatsAppLead}
               dragHandleProps={dragHandleProps}
             />
           ))

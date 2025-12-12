@@ -1,6 +1,6 @@
 // src/components/DataTable.tsx
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -22,11 +22,24 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { MoreHorizontal, Eye, Edit, Trash2, Stethoscope, DollarSign } from 'lucide-react';
+import { MoreHorizontal, Eye, Edit, Trash2, Stethoscope, DollarSign, ArrowUpDown, ArrowUp, ArrowDown, Filter, X } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 
 // --------------------------------------
 // Types
 // --------------------------------------
+
+export type SortDirection = 'asc' | 'desc' | null;
+
+export interface ColumnSort {
+  key: string;
+  direction: SortDirection;
+}
+
+export interface ColumnFilter {
+  key: string;
+  value: string;
+}
 
 export interface DataTableColumn<T> {
   /** column label in <th> */
@@ -37,6 +50,14 @@ export interface DataTableColumn<T> {
   cell: (row: T) => React.ReactNode;
   /** optional className for <TableHead> & <TableCell> */
   className?: string;
+  /** enable sorting for this column */
+  sortable?: boolean;
+  /** enable filtering for this column */
+  filterable?: boolean;
+  /** custom sort function (if not provided, uses default comparison) */
+  sortFn?: (a: T, b: T, direction: SortDirection) => number;
+  /** accessor function to get the value for filtering/sorting */
+  accessor?: (row: T) => any;
 }
 
 export interface DataTableProps<T> {
@@ -117,6 +138,96 @@ export function DataTable<T>({
   const [rowToDelete, setRowToDelete] = useState<T | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // sorting state
+  const [sortConfig, setSortConfig] = useState<ColumnSort | null>(null);
+
+  // filtering state
+  const [filters, setFilters] = useState<ColumnFilter[]>([]);
+  const [filterMenuOpen, setFilterMenuOpen] = useState<string | null>(null);
+
+  // Handle column sort
+  const handleSort = (column: DataTableColumn<T>) => {
+    if (!column.sortable) return;
+
+    setSortConfig((prev) => {
+      if (prev?.key === column.key) {
+        // Cycle through: asc -> desc -> null
+        if (prev.direction === 'asc') {
+          return { key: column.key, direction: 'desc' };
+        } else if (prev.direction === 'desc') {
+          return null;
+        }
+      }
+      return { key: column.key, direction: 'asc' };
+    });
+  };
+
+  // Handle filter change
+  const handleFilterChange = (columnKey: string, value: string) => {
+    setFilters((prev) => {
+      const existing = prev.find((f) => f.key === columnKey);
+      if (value === '') {
+        return prev.filter((f) => f.key !== columnKey);
+      }
+      if (existing) {
+        return prev.map((f) => (f.key === columnKey ? { ...f, value } : f));
+      }
+      return [...prev, { key: columnKey, value }];
+    });
+  };
+
+  // Clear specific filter
+  const clearFilter = (columnKey: string) => {
+    setFilters((prev) => prev.filter((f) => f.key !== columnKey));
+  };
+
+  // Apply sorting and filtering
+  const processedRows = React.useMemo(() => {
+    let result = [...rows];
+
+    // Apply filters
+    if (filters.length > 0) {
+      result = result.filter((row) => {
+        return filters.every((filter) => {
+          const column = columns.find((col) => col.key === filter.key);
+          if (!column) return true;
+
+          const value = column.accessor ? column.accessor(row) : '';
+          const searchValue = String(value).toLowerCase();
+          const filterValue = filter.value.toLowerCase();
+
+          return searchValue.includes(filterValue);
+        });
+      });
+    }
+
+    // Apply sorting
+    if (sortConfig) {
+      const column = columns.find((col) => col.key === sortConfig.key);
+      if (column) {
+        result.sort((a, b) => {
+          if (column.sortFn) {
+            return column.sortFn(a, b, sortConfig.direction);
+          }
+
+          // Default sorting using accessor
+          const aValue = column.accessor ? column.accessor(a) : '';
+          const bValue = column.accessor ? column.accessor(b) : '';
+
+          if (aValue < bValue) {
+            return sortConfig.direction === 'asc' ? -1 : 1;
+          }
+          if (aValue > bValue) {
+            return sortConfig.direction === 'asc' ? 1 : -1;
+          }
+          return 0;
+        });
+      }
+    }
+
+    return result;
+  }, [rows, filters, sortConfig, columns]);
+
   const handleAskDelete = (row: T) => {
     if (!onDelete) return; // if no delete handler, no dialog
     setRowToDelete(row);
@@ -134,10 +245,30 @@ export function DataTable<T>({
     }
   };
 
+  // Get active filter value for a column
+  const getFilterValue = (columnKey: string) => {
+    return filters.find((f) => f.key === columnKey)?.value || '';
+  };
+
+  // Get sort icon for a column
+  const getSortIcon = (column: DataTableColumn<T>) => {
+    if (!column.sortable) return null;
+
+    if (sortConfig?.key === column.key) {
+      if (sortConfig.direction === 'asc') {
+        return <ArrowUp className="ml-1 h-3.5 w-3.5" />;
+      }
+      if (sortConfig.direction === 'desc') {
+        return <ArrowDown className="ml-1 h-3.5 w-3.5" />;
+      }
+    }
+    return <ArrowUpDown className="ml-1 h-3.5 w-3.5 opacity-0 group-hover:opacity-50" />;
+  };
+
   // ---------------------------
   // LOADING STATE
   // ---------------------------
-  if (isLoading && rows.length === 0) {
+  if (isLoading && processedRows.length === 0) {
     return (
       <div className="flex items-center justify-center h-full p-12 w-full">
         <div className="text-center">
@@ -172,7 +303,7 @@ export function DataTable<T>({
   // ---------------------------
   // EMPTY STATE (no rows, not loading)
   // ---------------------------
-  if (!isLoading && rows.length === 0) {
+  if (!isLoading && processedRows.length === 0) {
     return (
       <>
         <div className="flex items-center justify-center h-full p-8 w-full">
@@ -235,7 +366,7 @@ export function DataTable<T>({
     return (
       <>
         <div className="p-4 space-y-3">
-          {rows.map((row) => {
+          {processedRows.map((row) => {
             const rowActions: RowActions<T> = {
               view: onView ? () => onView(row) : undefined,
               edit: onEdit ? () => onEdit(row) : undefined,
@@ -292,23 +423,92 @@ export function DataTable<T>({
               {columns.map((col) => (
                 <TableHead
                   key={col.key}
-                  className={`font-medium ${col.className || ''}`}
+                  className={`${col.className || ''} p-0`}
                 >
-                  {col.header}
+                  <div className="flex flex-col">
+                    {/* Header row with sort and filter */}
+                    <div className="flex items-center gap-1 px-4 py-3 h-10">
+                      {/* Sort button */}
+                      <button
+                        onClick={() => handleSort(col)}
+                        className={`
+                          group flex items-center gap-1 text-xs font-medium text-muted-foreground
+                          hover:text-foreground transition-colors select-none
+                          ${col.sortable ? 'cursor-pointer' : 'cursor-default'}
+                          ${sortConfig?.key === col.key ? 'text-foreground' : ''}
+                        `}
+                        disabled={!col.sortable}
+                      >
+                        {col.header}
+                        {getSortIcon(col)}
+                      </button>
+
+                      {/* Filter button */}
+                      {col.filterable && (
+                        <DropdownMenu
+                          open={filterMenuOpen === col.key}
+                          onOpenChange={(open) =>
+                            setFilterMenuOpen(open ? col.key : null)
+                          }
+                        >
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className={`h-6 w-6 ml-auto ${
+                                getFilterValue(col.key)
+                                  ? 'text-primary'
+                                  : 'text-muted-foreground opacity-0 group-hover:opacity-100'
+                              }`}
+                            >
+                              <Filter className="h-3.5 w-3.5" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start" className="w-56">
+                            <div className="p-2 space-y-2">
+                              <div className="flex items-center gap-2">
+                                <Input
+                                  placeholder={`Filter ${col.header.toLowerCase()}...`}
+                                  value={getFilterValue(col.key)}
+                                  onChange={(e) =>
+                                    handleFilterChange(col.key, e.target.value)
+                                  }
+                                  className="h-8 text-xs"
+                                  autoFocus
+                                />
+                                {getFilterValue(col.key) && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 flex-shrink-0"
+                                    onClick={() => clearFilter(col.key)}
+                                  >
+                                    <X className="h-3.5 w-3.5" />
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
+                    </div>
+                  </div>
                 </TableHead>
               ))}
 
               {/* Actions header */}
               {(onView || onEdit || onDelete || onConsultation || onBilling || extraActions) && (
-                <TableHead className="font-medium text-right">
-                  Actions
+                <TableHead className="text-right p-0">
+                  <div className="px-4 py-3 h-10 flex items-center justify-end">
+                    <span className="text-xs font-medium text-muted-foreground">Actions</span>
+                  </div>
                 </TableHead>
               )}
             </TableRow>
           </TableHeader>
 
           <TableBody>
-            {rows.map((row) => {
+            {processedRows.map((row) => {
               const id = getRowId(row);
 
               // table row click triggers onRowClick if provided, otherwise onView (for backward compatibility)
@@ -335,18 +535,18 @@ export function DataTable<T>({
               return (
                 <TableRow
                   key={id}
-                  className={`group hover:bg-muted/50 transition-colors align-top ${isRowClickable ? 'cursor-pointer' : ''} ${isSelected ? 'bg-muted/70 border-l-4 border-l-primary' : ''}`}
+                  className={`group hover:bg-muted/50 transition-colors align-top border-b border-border/50 ${isRowClickable ? 'cursor-pointer' : ''} ${isSelected ? 'bg-muted/70 border-l-4 border-l-primary' : ''}`}
                   onClick={isRowClickable ? handleRowClick : undefined}
                 >
                   {columns.map((col) => (
-                    <TableCell key={col.key} className={col.className}>
+                    <TableCell key={col.key} className={`py-2.5 px-4 text-sm ${col.className || ''}`}>
                       {col.cell(row)}
                     </TableCell>
                   ))}
 
                   {(onView || onEdit || onDelete || onConsultation || onBilling || extraActions) && (
                     <TableCell
-                      className="text-right"
+                      className="text-right py-2.5 px-4"
                       onClick={(e) => e.stopPropagation()}
                     >
                       <div className="flex items-center justify-end gap-2">

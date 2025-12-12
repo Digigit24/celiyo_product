@@ -1,7 +1,7 @@
 // src/components/LeadsFormDrawer.tsx
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Pencil, Trash2, Phone, Mail } from 'lucide-react';
+import { Pencil, Trash2, Phone, Mail, MessageCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 import type { Lead, CreateLeadPayload, UpdateLeadPayload } from '@/types/crmTypes';
@@ -9,6 +9,8 @@ import { useCRM } from '@/hooks/useCRM';
 
 import LeadDetailsForm from './lead-drawer/LeadDetailsForm';
 import LeadActivities from './lead-drawer/LeadActivities';
+import { LeadTasks } from './lead-drawer/LeadTasks';
+import { LeadMeetings } from './lead-drawer/LeadMeetings';
 import { SideDrawer, type DrawerActionButton, type DrawerHeaderAction } from '@/components/SideDrawer';
 
 // Form handle interface for collecting form values
@@ -164,6 +166,34 @@ export function LeadsFormDrawer({
       ? `${lead.phone}${lead.company ? ` • ${lead.company}` : ''}`
       : undefined;
 
+  const handleWhatsApp = useCallback(() => {
+    if (!lead?.phone) {
+      toast.error('No phone number available');
+      return;
+    }
+
+    // Format phone number for WhatsApp (remove all non-digits except +)
+    let cleanPhone = lead.phone.replace(/[^\d+]/g, '');
+
+    // Remove leading + if present for WhatsApp API
+    if (cleanPhone.startsWith('+')) {
+      cleanPhone = cleanPhone.substring(1);
+    }
+
+    // Create pre-filled message
+    const message = `Hi ${lead.name}, I'm reaching out regarding your inquiry.`;
+    const encodedMessage = encodeURIComponent(message);
+
+    // Open WhatsApp with pre-filled message
+    const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodedMessage}`;
+    window.open(whatsappUrl, '_blank');
+
+    toast.success(`Opening WhatsApp for ${lead.name}...`, {
+      description: lead.phone,
+      duration: 2000,
+    });
+  }, [lead]);
+
   const headerActions: DrawerHeaderAction[] =
     currentMode === 'view' && lead
       ? [
@@ -171,6 +201,12 @@ export function LeadsFormDrawer({
             icon: Phone,
             onClick: () => window.open(`tel:${lead.phone}`, '_self'),
             label: 'Call lead',
+            variant: 'ghost',
+          },
+          {
+            icon: MessageCircle,
+            onClick: handleWhatsApp,
+            label: 'WhatsApp',
             variant: 'ghost',
           },
           ...(lead.email
@@ -240,10 +276,16 @@ export function LeadsFormDrawer({
   const drawerContent = (
     <div className="space-y-6">
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="details">Lead Details</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="details">Details</TabsTrigger>
           <TabsTrigger value="activities" disabled={currentMode === 'create'}>
             Activities
+          </TabsTrigger>
+          <TabsTrigger value="tasks" disabled={currentMode === 'create'}>
+            Tasks
+          </TabsTrigger>
+          <TabsTrigger value="meetings" disabled={currentMode === 'create'}>
+            Meetings
           </TabsTrigger>
         </TabsList>
 
@@ -253,6 +295,14 @@ export function LeadsFormDrawer({
 
         <TabsContent value="activities" className="mt-6 space-y-6">
           {leadId && <LeadActivities leadId={leadId} />}
+        </TabsContent>
+
+        <TabsContent value="tasks" className="mt-6 space-y-6">
+          {leadId && <LeadTasks leadId={leadId} />}
+        </TabsContent>
+
+        <TabsContent value="meetings" className="mt-6 space-y-6">
+          {leadId && <LeadMeetings leadId={leadId} />}
         </TabsContent>
       </Tabs>
     </div>

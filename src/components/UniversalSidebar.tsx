@@ -556,19 +556,20 @@ export function UniversalSidebar({
     </div>
   );
 
-  // Mobile Sidebar (Drawer)
-  if (mobileOpen !== undefined && setMobileOpen !== undefined) {
-    return (
-      <>
-        {/* Overlay */}
-        {mobileOpen && (
-          <div
-            className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-            onClick={() => setMobileOpen(false)}
-          />
-        )}
+  // Render both mobile and desktop sidebars
+  // CSS classes control which one is visible based on screen size
+  return (
+    <>
+      {/* Mobile Overlay - only show on mobile when drawer is open */}
+      {mobileOpen && setMobileOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
 
-        {/* Mobile Sidebar */}
+      {/* Mobile Sidebar (Drawer) - hidden on desktop (lg:hidden) */}
+      {setMobileOpen && (
         <aside
           className={cn(
             "fixed top-0 left-0 h-full w-72 bg-sidebar text-sidebar-foreground border-r border-sidebar-border z-50 transition-transform duration-300 lg:hidden",
@@ -577,19 +578,17 @@ export function UniversalSidebar({
         >
           <SidebarContent />
         </aside>
-      </>
-    );
-  }
-
-  // Desktop Sidebar
-  return (
-    <aside
-      className={cn(
-        "h-screen bg-sidebar text-sidebar-foreground border-r border-sidebar-border transition-all duration-300 hidden lg:block",
-        collapsed ? "w-16" : "w-64"
       )}
-    >
-      <SidebarContent />
-    </aside>
+
+      {/* Desktop Sidebar - hidden on mobile (hidden lg:block) */}
+      <aside
+        className={cn(
+          "h-screen bg-sidebar text-sidebar-foreground border-r border-sidebar-border transition-all duration-300 hidden lg:block",
+          collapsed ? "w-16" : "w-64"
+        )}
+      >
+        <SidebarContent />
+      </aside>
+    </>
   );
 }

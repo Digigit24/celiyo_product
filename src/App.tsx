@@ -64,12 +64,18 @@ const queryClient = new QueryClient();
 const AppLayout = () => {
   const isMobile = useIsMobile();
   const [sidebarOpen, setSidebarOpen] = useState(!isMobile);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   return (
     <>
       <ThemeSync />
       <div className="flex h-screen overflow-hidden bg-background">
-        <UniversalSidebar mobileOpen={sidebarOpen} setMobileOpen={setSidebarOpen} />
+        <UniversalSidebar
+          mobileOpen={sidebarOpen}
+          setMobileOpen={setSidebarOpen}
+          collapsed={sidebarCollapsed}
+          onCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+        />
         <div className="flex flex-col flex-1 overflow-hidden">
           <UniversalHeader onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
           <main className="flex-1 overflow-auto">

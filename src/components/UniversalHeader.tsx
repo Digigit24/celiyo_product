@@ -50,7 +50,9 @@ export const UniversalHeader = ({ onMenuClick }: UniversalHeaderProps) => {
   const isMobile = useIsMobile();
 
   // Get username from email or use first name if available
-  const username = user?.first_name || user?.email?.split('@')[0] || 'User';
+  const rawUsername = user?.first_name || user?.email?.split('@')[0] || 'User';
+  // Capitalize first letter of username
+  const username = rawUsername.charAt(0).toUpperCase() + rawUsername.slice(1).toLowerCase();
   const greeting = `👋 ${username}, ${getTimeBasedGreeting()}!`;
 
   const pageTitle = routeTitles[location.pathname] || greeting;

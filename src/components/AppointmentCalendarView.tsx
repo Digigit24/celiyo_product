@@ -117,7 +117,7 @@ export const AppointmentCalendarView: React.FC<AppointmentCalendarViewProps> = (
         <CardContent className="p-2 sm:p-4 relative">
           {/* Loading Overlay */}
           {isLoading && (
-            <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-10 flex items-center justify-center rounded-lg">
+            <div className="absolute inset-0 bg-background/95 z-10 flex items-center justify-center rounded-lg">
               <div className="flex items-center gap-2">
                 <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
                 <span className="text-sm text-muted-foreground">Loading appointments...</span>

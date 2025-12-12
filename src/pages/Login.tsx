@@ -42,8 +42,8 @@ const Login = () => {
           <p className="text-gray-600">Sign in to your account to continue</p>
         </div>
 
-        {/* Glassmorphic Login Form */}
-        <div className="glass-card rounded-2xl p-8 backdrop-blur-xl bg-white/70 border border-gray-200 shadow-2xl">
+        {/* Login Form with Abstract Background */}
+        <div className="glass-card rounded-2xl p-8 bg-white/95 border border-gray-200 shadow-2xl">
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Email Field */}
             <div className="space-y-2">
@@ -56,7 +56,7 @@ const Login = () => {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 disabled={isLoading}
-                className="w-full bg-white/50 border-gray-300 text-gray-900 placeholder:text-gray-400 backdrop-blur-sm focus:bg-white/70 focus:border-gray-400"
+                className="w-full bg-white/90 border-gray-300 text-gray-900 placeholder:text-gray-400 focus:bg-white focus:border-gray-400"
                 autoComplete="email"
               />
             </div>
@@ -72,14 +72,14 @@ const Login = () => {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 disabled={isLoading}
-                className="w-full bg-white/50 border-gray-300 text-gray-900 placeholder:text-gray-400 backdrop-blur-sm focus:bg-white/70 focus:border-gray-400"
+                className="w-full bg-white/90 border-gray-300 text-gray-900 placeholder:text-gray-400 focus:bg-white focus:border-gray-400"
                 autoComplete="current-password"
               />
             </div>
 
             {/* Error Message */}
             {error && (
-              <Alert variant="destructive" className="bg-red-50 border-red-300 backdrop-blur-sm">
+              <Alert variant="destructive" className="bg-red-50 border-red-300">
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
@@ -88,7 +88,7 @@ const Login = () => {
             {/* Submit Button */}
             <Button
               type="submit"
-              className="w-full bg-gray-900 text-white hover:bg-gray-800 border border-gray-900 backdrop-blur-sm font-semibold py-6 transition-all duration-300"
+              className="w-full bg-gray-900 text-white hover:bg-gray-800 border border-gray-900 font-semibold py-6 transition-all duration-300"
               disabled={isLoading || !email || !password}
             >
               {isLoading ? (
@@ -117,7 +117,7 @@ const Login = () => {
             <button
               type="button"
               onClick={(e) => e.preventDefault()}
-              className="w-full flex items-center justify-center gap-3 bg-white/50 hover:bg-white/80 border border-gray-300 backdrop-blur-sm text-gray-900 font-medium py-3 px-4 rounded-lg transition-all duration-300"
+              className="w-full flex items-center justify-center gap-3 bg-white/90 hover:bg-white border border-gray-300 text-gray-900 font-medium py-3 px-4 rounded-lg transition-all duration-300"
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24">
                 <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -131,7 +131,7 @@ const Login = () => {
             <button
               type="button"
               onClick={(e) => e.preventDefault()}
-              className="w-full flex items-center justify-center gap-3 bg-white/50 hover:bg-white/80 border border-gray-300 backdrop-blur-sm text-gray-900 font-medium py-3 px-4 rounded-lg transition-all duration-300"
+              className="w-full flex items-center justify-center gap-3 bg-white/90 hover:bg-white border border-gray-300 text-gray-900 font-medium py-3 px-4 rounded-lg transition-all duration-300"
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24">
                 <path fill="currentColor" d="M11.4 24H0V8h11.4v16zm.6-16h12v16H12V8zm0-8h12v7.6H12V0z"/>
@@ -142,7 +142,7 @@ const Login = () => {
             <button
               type="button"
               onClick={(e) => e.preventDefault()}
-              className="w-full flex items-center justify-center gap-3 bg-white/50 hover:bg-white/80 border border-gray-300 backdrop-blur-sm text-gray-900 font-medium py-3 px-4 rounded-lg transition-all duration-300"
+              className="w-full flex items-center justify-center gap-3 bg-white/90 hover:bg-white border border-gray-300 text-gray-900 font-medium py-3 px-4 rounded-lg transition-all duration-300"
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24">
                 <path fill="currentColor" d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701"/>

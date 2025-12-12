@@ -123,7 +123,7 @@ const StatCard = ({ title, value, icon, trend, trendUp, loading, gradient, isDar
           )}
         </div>
         <div className={`p-4 rounded-2xl shadow-sm ${
-          isDark ? 'bg-gray-800/60 backdrop-blur-sm' : 'bg-white/60 backdrop-blur-sm'
+          isDark ? 'bg-gray-800/90' : 'bg-white/90'
         }`}>{icon}</div>
       </div>
     </div>

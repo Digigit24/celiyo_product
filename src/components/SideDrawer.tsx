@@ -273,7 +273,7 @@ export function SideDrawer({
         {/* ===== HEADER ===== */}
         <div
           className={cn(
-            'flex-shrink-0 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60',
+            'flex-shrink-0 border-b bg-background/95',
             headerClassName
           )}
         >
@@ -361,7 +361,7 @@ export function SideDrawer({
         {/* ===== CONTENT ===== */}
         <div className={cn('flex-1 min-h-0 relative', contentClassName)}>
           {isLoading ? (
-            <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+            <div className="absolute inset-0 flex items-center justify-center bg-background/95">
               <div className="flex flex-col items-center gap-3 text-muted-foreground">
                 <Loader2 className="h-8 w-8 animate-spin" />
                 <p className="text-sm font-medium">{loadingText}</p>
@@ -380,7 +380,7 @@ export function SideDrawer({
             <Separator />
             <div
               className={cn(
-                'flex-shrink-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60',
+                'flex-shrink-0 bg-background/95',
                 footerClassName
               )}
             >

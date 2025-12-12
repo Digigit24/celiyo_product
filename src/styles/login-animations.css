@@ -75,13 +75,44 @@
   }
 }
 
-/* Glass card effect */
+/* Card with abstract dotted background - minimal look */
 .glass-card {
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background: rgba(255, 255, 255, 0.95);
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
   border: 1px solid rgba(200, 200, 200, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Abstract dotted pattern for login card */
+.glass-card::before {
+  content: '';
+  position: absolute;
+  top: -30px;
+  right: -30px;
+  width: 150px;
+  height: 150px;
+  background-image:
+    radial-gradient(circle, rgba(0, 0, 0, 0.04) 2px, transparent 2px),
+    radial-gradient(circle, rgba(0, 0, 0, 0.03) 1.5px, transparent 1.5px);
+  background-size: 20px 20px, 15px 15px;
+  background-position: 0 0, 10px 10px;
+  pointer-events: none;
+  border-radius: 50%;
+}
+
+.glass-card::after {
+  content: '';
+  position: absolute;
+  bottom: -40px;
+  left: -40px;
+  width: 180px;
+  height: 180px;
+  background-image:
+    radial-gradient(circle, rgba(0, 0, 0, 0.03) 2.5px, transparent 2.5px);
+  background-size: 25px 25px;
+  pointer-events: none;
+  border-radius: 50%;
 }
 
 /* Additional smooth transitions */
@@ -89,7 +120,7 @@
   transition: all 0.3s ease;
 }
 
-/* Hover effects for glass elements */
+/* Hover effects for elements */
 .glass-card input:focus {
   transform: translateY(-2px);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);

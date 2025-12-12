@@ -99,3 +99,86 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer components {
+  /* Abstract dotted shapes for cards - minimal look */
+  .card-abstract-bg {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .card-abstract-bg::before {
+    content: '';
+    position: absolute;
+    top: -20px;
+    right: -20px;
+    width: 100px;
+    height: 100px;
+    background-image:
+      radial-gradient(circle, currentColor 1px, transparent 1px),
+      radial-gradient(circle, currentColor 1px, transparent 1px);
+    background-size: 15px 15px, 20px 20px;
+    background-position: 0 0, 7px 7px;
+    opacity: 0.03;
+    pointer-events: none;
+    border-radius: 50%;
+  }
+
+  .card-abstract-bg::after {
+    content: '';
+    position: absolute;
+    bottom: -30px;
+    left: -30px;
+    width: 120px;
+    height: 120px;
+    background-image:
+      radial-gradient(circle, currentColor 1.5px, transparent 1.5px);
+    background-size: 18px 18px;
+    background-position: 0 0;
+    opacity: 0.04;
+    pointer-events: none;
+    border-radius: 50%;
+  }
+
+  /* Dark mode - remove glass effect, enhance dotted pattern */
+  .dark .card-abstract-bg::before {
+    opacity: 0.08;
+    background-image:
+      radial-gradient(circle, currentColor 1.5px, transparent 1.5px),
+      radial-gradient(circle, currentColor 1.5px, transparent 1.5px);
+    background-size: 20px 20px, 25px 25px;
+  }
+
+  .dark .card-abstract-bg::after {
+    opacity: 0.10;
+    background-image:
+      radial-gradient(circle, currentColor 2px, transparent 2px);
+    background-size: 22px 22px;
+  }
+
+  /* Alternative card style with center pattern */
+  .card-abstract-center {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .card-abstract-center::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 80%;
+    height: 80%;
+    background-image:
+      radial-gradient(circle at 30% 30%, currentColor 1px, transparent 1px),
+      radial-gradient(circle at 70% 70%, currentColor 1px, transparent 1px);
+    background-size: 25px 25px, 30px 30px;
+    opacity: 0.02;
+    pointer-events: none;
+  }
+
+  .dark .card-abstract-center::before {
+    opacity: 0.06;
+  }
+}

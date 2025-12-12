@@ -91,9 +91,6 @@ export const UniversalHeader = ({ onMenuClick }: UniversalHeaderProps) => {
             <Menu size={20} />
           </Button>
         )}
-        <div className="rounded-full bg-primary w-10 h-10 flex items-center justify-center text-primary-foreground font-bold text-lg">
-          C
-        </div>
         <h1 className="text-xl font-semibold">{pageTitle}</h1>
       </div>
 

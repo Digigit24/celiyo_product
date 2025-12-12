@@ -539,9 +539,9 @@ export function UniversalSidebar({
       </ScrollArea>
 
       {/* Gradient Blob - Bottom Left Corner */}
-      <div className="absolute bottom-0 left-0 w-48 h-48 pointer-events-none overflow-hidden">
+      <div className="absolute bottom-0 left-0 w-80 h-80 pointer-events-none overflow-hidden">
         <div
-          className="absolute -bottom-12 -left-12 w-48 h-48 rounded-full opacity-30 blur-2xl"
+          className="absolute -bottom-20 -left-20 w-80 h-80 rounded-full opacity-30 blur-3xl"
           style={{
             background: 'linear-gradient(135deg, #a78bfa 0%, #60a5fa 50%, #818cf8 100%)',
           }}

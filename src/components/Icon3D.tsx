@@ -57,17 +57,6 @@ export function Icon3D({ icon: Icon, className = '', colors }: Icon3DProps) {
             <stop offset="0%" style={{ stopColor: color1, stopOpacity: 1 }} />
             <stop offset="100%" style={{ stopColor: color2, stopOpacity: 1 }} />
           </linearGradient>
-          <filter id={`shadow-${gradientId}`} x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur in="SourceAlpha" stdDeviation="2" />
-            <feOffset dx="0" dy="2" result="offsetblur" />
-            <feComponentTransfer>
-              <feFuncA type="linear" slope="0.3" />
-            </feComponentTransfer>
-            <feMerge>
-              <feMergeNode />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
         </defs>
       </svg>
 
@@ -76,7 +65,6 @@ export function Icon3D({ icon: Icon, className = '', colors }: Icon3DProps) {
         style={{
           stroke: `url(#${gradientId})`,
           fill: 'none',
-          filter: `url(#shadow-${gradientId}) drop-shadow(0 1px 2px rgba(0,0,0,0.1))`,
           strokeWidth: 2,
         }}
       />

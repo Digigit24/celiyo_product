@@ -292,8 +292,8 @@ export const CRMLeads: React.FC = () => {
       try {
         toast.info('Processing Excel file...');
 
-        // Parse Excel file
-        const { leads: parsedLeads, errors: parseErrors } = await importLeadsFromExcel(file);
+        // Parse Excel file with current user ID as default owner
+        const { leads: parsedLeads, errors: parseErrors } = await importLeadsFromExcel(file, user?.id);
 
         if (parseErrors.length > 0) {
           toast.warning(`File parsed with ${parseErrors.length} warning(s)`, {
@@ -340,7 +340,7 @@ export const CRMLeads: React.FC = () => {
         event.target.value = '';
       }
     },
-    [bulkCreateLeads, mutate]
+    [bulkCreateLeads, mutate, user]
   );
 
   // Priority badge helper

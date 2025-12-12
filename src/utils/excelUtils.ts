@@ -187,7 +187,8 @@ export const downloadLeadsTemplate = () => {
  * Parse Excel file and convert to CreateLeadPayload array
  */
 export const importLeadsFromExcel = async (
-  file: File
+  file: File,
+  defaultOwnerId?: string
 ): Promise<{ leads: CreateLeadPayload[]; errors: string[] }> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -252,6 +253,7 @@ export const importLeadsFromExcel = async (
             postal_code: row['Postal Code'] ? String(row['Postal Code']).trim() : undefined,
             next_follow_up_at: parseExcelDate(row['Next Follow Up At']),
             last_contacted_at: parseExcelDate(row['Last Contacted At']),
+            owner_user_id: defaultOwnerId, // Set owner to current user
           };
 
           leads.push(lead);

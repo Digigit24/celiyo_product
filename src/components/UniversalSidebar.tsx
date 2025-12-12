@@ -50,6 +50,7 @@ import {
 } from "@/components/ui/collapsible";
 import { useAuth } from "@/hooks/useAuth";
 import { useTenant } from "@/hooks/useTenant";
+import { Icon3D } from "@/components/Icon3D";
 
 interface MenuItem {
   id: string;
@@ -400,7 +401,7 @@ export function UniversalSidebar({
   };
 
   const SidebarContent = () => (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full relative">
       {/* Logo Area */}
       <div className="h-16 flex items-center justify-between px-4 border-b border-sidebar-border">
         {!collapsed && (
@@ -422,7 +423,7 @@ export function UniversalSidebar({
             />
           ) : (
             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center mx-auto">
-              <Stethoscope className="w-5 h-5 text-primary-foreground" />
+              <Icon3D icon={Stethoscope} className="w-5 h-5" />
             </div>
           )
         )}
@@ -433,7 +434,7 @@ export function UniversalSidebar({
             onClick={() => setMobileOpen(false)}
             className="lg:hidden"
           >
-            <X className="h-5 w-5" />
+            <Icon3D icon={X} className="h-5 w-5" />
           </Button>
         )}
       </div>
@@ -462,14 +463,14 @@ export function UniversalSidebar({
                         collapsed && "justify-center px-2"
                       )}
                     >
-                      <item.icon className="h-5 w-5 shrink-0" />
+                      <Icon3D icon={item.icon} className="h-5 w-5 shrink-0" />
                       {!collapsed && (
                         <>
                           <span className="flex-1 text-left">{item.label}</span>
                           {isOpen ? (
-                            <ChevronDown className="h-4 w-4 shrink-0" />
+                            <Icon3D icon={ChevronDown} className="h-4 w-4 shrink-0" />
                           ) : (
-                            <ChevronRight className="h-4 w-4 shrink-0" />
+                            <Icon3D icon={ChevronRight} className="h-4 w-4 shrink-0" />
                           )}
                         </>
                       )}
@@ -492,7 +493,7 @@ export function UniversalSidebar({
                                 "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
                             )}
                           >
-                            <child.icon className="h-4 w-4 shrink-0" />
+                            <Icon3D icon={child.icon} className="h-4 w-4 shrink-0" />
                             <span className="text-sm">{child.label}</span>
                           </Button>
                         </Link>
@@ -519,7 +520,7 @@ export function UniversalSidebar({
                     collapsed && "justify-center px-2"
                   )}
                 >
-                  <item.icon className="h-5 w-5 shrink-0" />
+                  <Icon3D icon={item.icon} className="h-5 w-5 shrink-0" />
                   {!collapsed && (
                     <>
                       <span className="flex-1 text-left">{item.label}</span>
@@ -537,9 +538,19 @@ export function UniversalSidebar({
         </nav>
       </ScrollArea>
 
+      {/* Gradient Blob - Bottom Left Corner */}
+      <div className="absolute bottom-0 left-0 w-48 h-48 pointer-events-none overflow-hidden">
+        <div
+          className="absolute -bottom-12 -left-12 w-48 h-48 rounded-full opacity-30 blur-2xl"
+          style={{
+            background: 'linear-gradient(135deg, #a78bfa 0%, #60a5fa 50%, #818cf8 100%)',
+          }}
+        />
+      </div>
+
       {/* Collapse Button (Desktop only) */}
       {!mobileOpen && onCollapse && (
-        <div className="p-3 border-t border-sidebar-border">
+        <div className="p-3 border-t border-sidebar-border relative z-10">
           <Button
             variant="ghost"
             onClick={onCollapse}
@@ -548,7 +559,7 @@ export function UniversalSidebar({
               collapsed && "justify-center"
             )}
           >
-            <Menu className="h-5 w-5 shrink-0" />
+            <Icon3D icon={Menu} className="h-5 w-5 shrink-0" />
             {!collapsed && <span>Collapse</span>}
           </Button>
         </div>

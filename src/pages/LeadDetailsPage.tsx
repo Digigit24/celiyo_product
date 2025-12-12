@@ -11,12 +11,14 @@ import { format, isPast, isFuture, isToday } from 'date-fns';
 
 import { useCRM } from '@/hooks/useCRM';
 import { useMeeting } from '@/hooks/useMeeting';
+import { usePatient } from '@/hooks/usePatient';
 import LeadDetailsForm from '@/components/lead-drawer/LeadDetailsForm';
 import LeadActivities from '@/components/lead-drawer/LeadActivities';
 import LeadTasks from '@/components/lead-drawer/LeadTasks';
 import MeetingsFormDrawer from '@/components/MeetingsFormDrawer';
 import type { Lead } from '@/types/crmTypes';
 import type { Meeting } from '@/types/meeting.types';
+import type { PatientCreateData } from '@/types/patient.types';
 import { LeadFormHandle } from '@/components/LeadsFormDrawer';
 
 export const LeadDetailsPage = () => {
@@ -33,8 +35,9 @@ export const LeadDetailsPage = () => {
   const [meetingDrawerMode, setMeetingDrawerMode] = useState<'view' | 'edit' | 'create'>('view');
 
   // Hooks
-  const { useLead, updateLead, deleteLead } = useCRM();
+  const { useLead, useLeadStatuses, updateLead, deleteLead } = useCRM();
   const { useMeetingsByLead } = useMeeting();
+  const { hasHMSAccess, createPatient } = usePatient();
 
   // Parse leadId to number
   const leadIdNum = leadId ? parseInt(leadId, 10) : null;
@@ -46,6 +49,13 @@ export const LeadDetailsPage = () => {
     isLoading: leadLoading,
     mutate: mutateLead
   } = useLead(leadIdNum);
+
+  // Fetch lead statuses
+  const { data: statusesData } = useLeadStatuses({
+    page_size: 100,
+    ordering: 'order_index',
+    is_active: true
+  });
 
   // Fetch meetings for this lead
   const {
@@ -62,6 +72,34 @@ export const LeadDetailsPage = () => {
   const handleBack = useCallback(() => {
     navigate('/crm/leads');
   }, [navigate]);
+
+  // Helper function to convert lead to patient data
+  const convertLeadToPatient = useCallback((lead: Lead): PatientCreateData => {
+    // Split name into first and last name
+    const nameParts = lead.name.trim().split(' ');
+    const first_name = nameParts[0] || 'Unknown';
+    const last_name = nameParts.slice(1).join(' ') || 'Patient';
+
+    // Use defaults for missing required fields
+    return {
+      create_user: false, // Don't create user account automatically
+      first_name,
+      last_name,
+      date_of_birth: '1990-01-01', // Default date of birth
+      gender: 'other', // Default gender
+      mobile_primary: lead.phone,
+      email: lead.email || undefined,
+      address_line1: lead.address_line1 || 'Not Provided',
+      address_line2: lead.address_line2 || undefined,
+      city: lead.city || 'Not Provided',
+      state: lead.state || 'Not Provided',
+      country: lead.country || 'India',
+      pincode: lead.postal_code || '000000',
+      emergency_contact_name: first_name + ' ' + last_name, // Use patient's own name as default
+      emergency_contact_phone: lead.phone, // Use patient's own phone as default
+      emergency_contact_relation: 'Self',
+    };
+  }, []);
 
   // Handle edit mode toggle
   const handleEditToggle = useCallback(() => {
@@ -81,17 +119,54 @@ export const LeadDetailsPage = () => {
         return;
       }
 
+      // Check if status changed to won
+      const oldStatusId = typeof lead.status === 'number' ? lead.status : lead.status?.id;
+      const newStatusId = formValues.status;
+      const statusChanged = oldStatusId !== newStatusId;
+
+      // Find the new status to check if it's a won status
+      let isWonStatus = false;
+      if (statusChanged && newStatusId) {
+        const newStatus = statusesData?.results.find(s => s.id === newStatusId);
+        isWonStatus = newStatus?.is_won === true;
+      }
+
+      // Update the lead
       await updateLead(lead.id, formValues);
       await mutateLead();
       toast.success('Lead updated successfully');
       setIsEditing(false);
+
+      // If status changed to won and HMS access is available, create patient
+      if (isWonStatus && hasHMSAccess) {
+        try {
+          const patientData = convertLeadToPatient(lead);
+          const patient = await createPatient(patientData);
+          toast.success(`Lead won! Patient "${patient.full_name}" created successfully`, {
+            description: `Patient ID: ${patient.patient_id}`,
+            duration: 5000,
+          });
+        } catch (patientError: any) {
+          // Don't fail the lead update if patient creation fails
+          console.error('Failed to create patient:', patientError);
+          toast.warning('Lead updated, but patient creation failed', {
+            description: patientError?.message || 'Please create patient manually',
+            duration: 5000,
+          });
+        }
+      } else if (isWonStatus && !hasHMSAccess) {
+        toast.info('Lead marked as won!', {
+          description: 'HMS module not enabled - patient not created',
+          duration: 3000,
+        });
+      }
     } catch (error: any) {
       toast.error(error.message || 'Failed to update lead');
       console.error('Failed to update lead:', error);
     } finally {
       setIsSaving(false);
     }
-  }, [lead, updateLead, mutateLead]);
+  }, [lead, updateLead, mutateLead, statusesData, hasHMSAccess, createPatient, convertLeadToPatient]);
 
   // Handle delete
   const handleDelete = useCallback(async () => {

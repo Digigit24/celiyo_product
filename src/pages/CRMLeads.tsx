@@ -3,6 +3,7 @@ import { useState, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCRM } from '@/hooks/useCRM';
 import { useAuth } from '@/hooks/useAuth';
+import { usePatient } from '@/hooks/usePatient';
 import { DataTable, type DataTableColumn } from '@/components/DataTable';
 import { LeadsFormDrawer } from '@/components/LeadsFormDrawer';
 import { LeadStatusFormDrawer } from '@/components/LeadStatusFormDrawer';
@@ -16,6 +17,7 @@ import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 import type { Lead, LeadsQueryParams, PriorityEnum, LeadStatus } from '@/types/crmTypes';
 import type { RowActions } from '@/components/DataTable';
+import type { PatientCreateData } from '@/types/patient.types';
 import { exportLeadsToExcel, importLeadsFromExcel, downloadLeadsTemplate } from '@/utils/excelUtils';
 
 type DrawerMode = 'view' | 'edit' | 'create';
@@ -25,6 +27,7 @@ export const CRMLeads: React.FC = () => {
   const navigate = useNavigate();
   const { user, hasModuleAccess } = useAuth();
   const { hasCRMAccess, useLeads, useLeadStatuses, useFieldConfigurations, deleteLead, patchLead, updateLeadStatus, deleteLeadStatus, bulkCreateLeads } = useCRM();
+  const { hasHMSAccess, createPatient } = usePatient();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // View mode state
@@ -125,6 +128,34 @@ export const CRMLeads: React.FC = () => {
     setDrawerMode(mode);
   }, []);
 
+  // Helper function to convert lead to patient data
+  const convertLeadToPatient = useCallback((lead: Lead): PatientCreateData => {
+    // Split name into first and last name
+    const nameParts = lead.name.trim().split(' ');
+    const first_name = nameParts[0] || 'Unknown';
+    const last_name = nameParts.slice(1).join(' ') || 'Patient';
+
+    // Use defaults for missing required fields
+    return {
+      create_user: false, // Don't create user account automatically
+      first_name,
+      last_name,
+      date_of_birth: '1990-01-01', // Default date of birth
+      gender: 'other', // Default gender
+      mobile_primary: lead.phone,
+      email: lead.email || undefined,
+      address_line1: lead.address_line1 || 'Not Provided',
+      address_line2: lead.address_line2 || undefined,
+      city: lead.city || 'Not Provided',
+      state: lead.state || 'Not Provided',
+      country: lead.country || 'India',
+      pincode: lead.postal_code || '000000',
+      emergency_contact_name: first_name + ' ' + last_name, // Use patient's own name as default
+      emergency_contact_phone: lead.phone, // Use patient's own phone as default
+      emergency_contact_relation: 'Self',
+    };
+  }, []);
+
   // Kanban-specific handlers with optimistic updates
   const handleUpdateLeadStatus = useCallback(
     async (leadId: number, newStatusId: number) => {
@@ -134,23 +165,57 @@ export const CRMLeads: React.FC = () => {
         throw new Error('No leads data available');
       }
 
+      // Find the lead being updated
+      const lead = currentData.results.find(l => l.id === leadId);
+      if (!lead) {
+        throw new Error('Lead not found');
+      }
+
+      // Find the new status to check if it's a won status
+      const newStatus = statusesData?.results.find(s => s.id === newStatusId);
+      const isWonStatus = newStatus?.is_won === true;
+
       // Create optimistic update
       const optimisticData = {
         ...currentData,
-        results: currentData.results.map(lead =>
-          lead.id === leadId
-            ? { ...lead, status: newStatusId, updated_at: new Date().toISOString() }
-            : lead
+        results: currentData.results.map(l =>
+          l.id === leadId
+            ? { ...l, status: newStatusId, updated_at: new Date().toISOString() }
+            : l
         )
       };
 
       try {
         // Optimistically update the cache immediately
         await mutate(optimisticData, false); // false = don't revalidate immediately
-        
+
         // Make the API call
         await patchLead(leadId, { status: newStatusId });
-        
+
+        // If status is won and HMS access is available, create patient
+        if (isWonStatus && hasHMSAccess) {
+          try {
+            const patientData = convertLeadToPatient(lead);
+            const patient = await createPatient(patientData);
+            toast.success(`Lead won! Patient "${patient.full_name}" created successfully`, {
+              description: `Patient ID: ${patient.patient_id}`,
+              duration: 5000,
+            });
+          } catch (patientError: any) {
+            // Don't fail the status update if patient creation fails
+            console.error('Failed to create patient:', patientError);
+            toast.warning('Lead status updated, but patient creation failed', {
+              description: patientError?.message || 'Please create patient manually',
+              duration: 5000,
+            });
+          }
+        } else if (isWonStatus && !hasHMSAccess) {
+          toast.info('Lead marked as won!', {
+            description: 'HMS module not enabled - patient not created',
+            duration: 3000,
+          });
+        }
+
         // Revalidate to get fresh data from server
         await mutate();
       } catch (error: any) {
@@ -159,7 +224,7 @@ export const CRMLeads: React.FC = () => {
         throw new Error(error?.message || 'Failed to update lead status');
       }
     },
-    [patchLead, mutate, leadsData]
+    [patchLead, mutate, leadsData, statusesData, hasHMSAccess, createPatient, convertLeadToPatient]
   );
 
   const handleEditStatus = useCallback((status: LeadStatus) => {

@@ -16,6 +16,23 @@ import { usePatient } from '@/hooks/usePatient';
 import { useOpdVisit } from '@/hooks/useOpdVisit';
 import { useOPDBill } from '@/hooks/useOPDBill';
 
+// ==================== CUSTOM ICONS IMPORT ====================
+// Import your custom PNG icons here
+// Example:
+// import TotalPatientsIcon from '@/assets/icons/total-patients.png';
+// import TodaysVisitsIcon from '@/assets/icons/todays-visits.png';
+// import TotalRevenueIcon from '@/assets/icons/total-revenue.png';
+// import PendingBillsIcon from '@/assets/icons/pending-bills.png';
+
+// After importing, uncomment and use them in the customIcons object below:
+const customIcons = {
+  // totalPatients: TotalPatientsIcon,
+  // todaysVisits: TodaysVisitsIcon,
+  // totalRevenue: TotalRevenueIcon,
+  // pendingBills: PendingBillsIcon,
+};
+// ============================================================
+
 // ==================== TOGGLE BETWEEN DEMO & REAL DATA ====================
 // Set to `true` for demo data, `false` for real API data
 const USE_DEMO_DATA = true;
@@ -84,7 +101,7 @@ const DEMO_DATA = {
 interface StatCardProps {
   title: string;
   value: string | number;
-  icon: React.ReactNode;
+  icon: React.ReactNode | string; // Can be React component or image path
   trend?: string;
   trendUp?: boolean;
   loading?: boolean;
@@ -92,48 +109,59 @@ interface StatCardProps {
   isDark: boolean;
 }
 
-const StatCard = ({ title, value, icon, trend, trendUp, loading, gradient, isDark }: StatCardProps) => (
-  <Card className={`relative overflow-hidden ${isDark ? 'border-gray-700' : 'border-gray-200'} shadow-sm hover:shadow-md transition-all duration-300 ${gradient}`}>
-    <div className="p-6 relative z-10">
-      <div className="flex items-center justify-between">
-        <div className="flex-1">
-          <p className={`text-sm font-medium ${isDark ? 'text-gray-400' : 'text-gray-600/80'}`}>{title}</p>
-          {loading ? (
-            <div className="mt-2">
-              <Loader2 className={`w-6 h-6 animate-spin ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
-            </div>
-          ) : (
-            <h3 className={`text-3xl font-bold mt-2 ${
-              isDark
-                ? 'bg-gradient-to-br from-gray-100 to-gray-300 bg-clip-text text-transparent'
-                : 'bg-gradient-to-br from-gray-900 to-gray-600 bg-clip-text text-transparent'
-            }`}>
-              {value}
-            </h3>
-          )}
-          {trend && !loading && (
-            <p
-              className={`text-xs mt-2 flex items-center gap-1 font-medium ${
-                trendUp ? 'text-emerald-600' : 'text-rose-600'
-              }`}
-            >
-              <TrendingUp className={`w-3 h-3 ${!trendUp && 'rotate-180'}`} />
-              {trend}
-            </p>
-          )}
+const StatCard = ({ title, value, icon, trend, trendUp, loading, gradient, isDark }: StatCardProps) => {
+  // Check if icon is a string (image path) or React component
+  const isImageIcon = typeof icon === 'string';
+
+  return (
+    <Card className={`relative overflow-hidden ${isDark ? 'border-gray-700' : 'border-gray-200'} shadow-sm hover:shadow-md transition-all duration-300 ${gradient}`}>
+      <div className="p-6 relative z-10">
+        <div className="flex items-center justify-between">
+          <div className="flex-1">
+            <p className={`text-sm font-medium ${isDark ? 'text-gray-400' : 'text-gray-600/80'}`}>{title}</p>
+            {loading ? (
+              <div className="mt-2">
+                <Loader2 className={`w-6 h-6 animate-spin ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
+              </div>
+            ) : (
+              <h3 className={`text-3xl font-bold mt-2 ${
+                isDark
+                  ? 'bg-gradient-to-br from-gray-100 to-gray-300 bg-clip-text text-transparent'
+                  : 'bg-gradient-to-br from-gray-900 to-gray-600 bg-clip-text text-transparent'
+              }`}>
+                {value}
+              </h3>
+            )}
+            {trend && !loading && (
+              <p
+                className={`text-xs mt-2 flex items-center gap-1 font-medium ${
+                  trendUp ? 'text-emerald-600' : 'text-rose-600'
+                }`}
+              >
+                <TrendingUp className={`w-3 h-3 ${!trendUp && 'rotate-180'}`} />
+                {trend}
+              </p>
+            )}
+          </div>
+          <div className={`p-4 rounded-2xl shadow-sm ${
+            isDark ? 'bg-gray-800/60 backdrop-blur-sm' : 'bg-white/60 backdrop-blur-sm'
+          }`}>
+            {isImageIcon ? (
+              <img src={icon} alt={title} className="w-12 h-12 object-contain" />
+            ) : (
+              icon
+            )}
+          </div>
         </div>
-        <div className={`p-4 rounded-2xl shadow-sm ${
-          isDark ? 'bg-gray-800/60 backdrop-blur-sm' : 'bg-white/60 backdrop-blur-sm'
-        }`}>{icon}</div>
       </div>
-    </div>
-    <div className={`absolute inset-0 pointer-events-none ${
-      isDark
-        ? 'bg-gradient-to-br from-white/5 to-transparent'
-        : 'bg-gradient-to-br from-white/50 to-transparent'
-    }`} />
-  </Card>
-);
+      <div className={`absolute inset-0 pointer-events-none ${
+        isDark
+          ? 'bg-gradient-to-br from-white/5 to-transparent'
+          : 'bg-gradient-to-br from-white/50 to-transparent'
+      }`} />
+    </Card>
+  );
+};
 
 const Dashboard = () => {
   const { theme } = useTheme();
@@ -545,6 +573,7 @@ const Dashboard = () => {
           <StatCard
             title="Total Patients"
             value={patientStats?.total_patients?.toLocaleString() || '0'}
+            // To use custom icon: icon={customIcons.totalPatients || <Users className="w-7 h-7 text-indigo-600" />}
             icon={<Users className="w-7 h-7 text-indigo-600" />}
             loading={isLoading && !USE_DEMO_DATA}
             gradient={isDark
@@ -557,6 +586,7 @@ const Dashboard = () => {
           <StatCard
             title="Today's Visits"
             value={visitStats?.today_visits?.toLocaleString() || '0'}
+            // To use custom icon: icon={customIcons.todaysVisits || <Calendar className="w-7 h-7 text-emerald-600" />}
             icon={<Calendar className="w-7 h-7 text-emerald-600" />}
             loading={isLoading && !USE_DEMO_DATA}
             gradient={isDark
@@ -569,6 +599,7 @@ const Dashboard = () => {
           <StatCard
             title="Total Revenue"
             value={`₹${parseFloat(billStats?.received_amount || '0').toLocaleString('en-IN', { maximumFractionDigits: 0 })}`}
+            // To use custom icon: icon={customIcons.totalRevenue || <DollarSign className="w-7 h-7 text-amber-600" />}
             icon={<DollarSign className="w-7 h-7 text-amber-600" />}
             loading={isLoading && !USE_DEMO_DATA}
             gradient={isDark
@@ -581,6 +612,7 @@ const Dashboard = () => {
           <StatCard
             title="Pending Bills"
             value={(billStats?.unpaid_bills || 0) + (billStats?.partial_bills || 0)}
+            // To use custom icon: icon={customIcons.pendingBills || <FileText className="w-7 h-7 text-rose-600" />}
             icon={<FileText className="w-7 h-7 text-rose-600" />}
             loading={isLoading && !USE_DEMO_DATA}
             gradient={isDark

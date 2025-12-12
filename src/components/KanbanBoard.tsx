@@ -98,6 +98,14 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     setDraggedLead(lead || null);
   }, [leads]);
 
+  // Helper function to convert hex to rgba
+  const hexToRgba = useCallback((hex: string, alpha: number) => {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  }, []);
+
   // Sort statuses by order_index
   const sortedStatuses = useMemo(() => {
     return [...statuses].sort((a, b) => a.order_index - b.order_index);
@@ -169,9 +177,9 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                         {/* Column Header */}
                         <div className="flex-shrink-0 mb-4">
                           <div
-                            className="rounded-lg px-3 py-2 border border-opacity-20"
+                            className="rounded-lg px-3 py-2 border"
                             style={{
-                              backgroundColor: `${status.color_hex || '#6B7280'}20`,
+                              backgroundColor: hexToRgba(status.color_hex || '#6B7280', 0.15),
                               borderColor: status.color_hex || '#6B7280'
                             }}
                           >

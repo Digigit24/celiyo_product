@@ -168,32 +168,42 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                       <div className="flex flex-col h-full min-w-[280px] max-w-[280px] md:min-w-[320px] md:max-w-[320px]">
                         {/* Column Header */}
                         <div className="flex-shrink-0 mb-4">
-                          <div className="bg-card border rounded-lg p-4">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-3">
+                          <div
+                            className="rounded-lg px-3 py-2 border border-opacity-20"
+                            style={{
+                              backgroundColor: `${status.color_hex || '#6B7280'}20`,
+                              borderColor: status.color_hex || '#6B7280'
+                            }}
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2">
                                 <div
-                                  className="w-4 h-4 rounded-full border border-gray-300"
+                                  className="w-2 h-2 rounded-full"
                                   style={{ backgroundColor: status.color_hex || '#6B7280' }}
                                 />
-                                <div>
-                                  <h3 className="font-semibold text-sm">{status.name}</h3>
-                                  <div className="flex items-center gap-2 mt-1">
-                                    <span className="text-xs text-muted-foreground">
-                                      {statusLeads.length} leads
-                                    </span>
-                                    {status.is_won && (
-                                      <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
-                                        Won
-                                      </span>
-                                    )}
-                                    {status.is_lost && (
-                                      <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded">
-                                        Lost
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
+                                <h3
+                                  className="font-semibold text-sm"
+                                  style={{ color: status.color_hex || '#6B7280' }}
+                                >
+                                  {status.name}
+                                </h3>
+                                {status.is_won && (
+                                  <span className="text-[10px] bg-green-500 text-white px-1.5 py-0.5 rounded">
+                                    Won
+                                  </span>
+                                )}
+                                {status.is_lost && (
+                                  <span className="text-[10px] bg-red-500 text-white px-1.5 py-0.5 rounded">
+                                    Lost
+                                  </span>
+                                )}
                               </div>
+                              <span
+                                className="text-xs font-medium"
+                                style={{ color: status.color_hex || '#6B7280' }}
+                              >
+                                {statusLeads.length}
+                              </span>
                             </div>
                           </div>
                         </div>

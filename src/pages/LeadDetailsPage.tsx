@@ -13,6 +13,7 @@ import { useCRM } from '@/hooks/useCRM';
 import { useMeeting } from '@/hooks/useMeeting';
 import LeadDetailsForm from '@/components/lead-drawer/LeadDetailsForm';
 import LeadActivities from '@/components/lead-drawer/LeadActivities';
+import LeadTasks from '@/components/lead-drawer/LeadTasks';
 import MeetingsFormDrawer from '@/components/MeetingsFormDrawer';
 import type { Lead } from '@/types/crmTypes';
 import type { Meeting } from '@/types/meeting.types';
@@ -32,7 +33,7 @@ export const LeadDetailsPage = () => {
   const [meetingDrawerMode, setMeetingDrawerMode] = useState<'view' | 'edit' | 'create'>('view');
 
   // Hooks
-  const { useLead, updateLead, deleteLead, useLeadStatuses } = useCRM();
+  const { useLead, updateLead, deleteLead } = useCRM();
   const { useMeetingsByLead } = useMeeting();
 
   // Parse leadId to number
@@ -45,10 +46,6 @@ export const LeadDetailsPage = () => {
     isLoading: leadLoading,
     mutate: mutateLead
   } = useLead(leadIdNum);
-
-  // Fetch statuses for status display
-  const { data: statusesData } = useLeadStatuses();
-  const statuses = statusesData?.results || [];
 
   // Fetch meetings for this lead
   const {
@@ -299,7 +296,7 @@ export const LeadDetailsPage = () => {
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="details">Lead Details</TabsTrigger>
           <TabsTrigger value="activities">Activities</TabsTrigger>
-          <TabsTrigger value="status">Status</TabsTrigger>
+          <TabsTrigger value="tasks">Tasks</TabsTrigger>
           <TabsTrigger value="meetings">Meetings</TabsTrigger>
         </TabsList>
 
@@ -330,65 +327,9 @@ export const LeadDetailsPage = () => {
           </Card>
         </TabsContent>
 
-        {/* Status Tab */}
-        <TabsContent value="status" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Lead Status Information</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Current Status</p>
-                    <p className="text-lg font-semibold mt-1">
-                      {statuses.find(s => s.id === lead.status)?.name || 'Unknown'}
-                    </p>
-                  </div>
-                  <Badge
-                    variant="outline"
-                    style={{
-                      backgroundColor: statuses.find(s => s.id === lead.status)?.color + '20',
-                      borderColor: statuses.find(s => s.id === lead.status)?.color,
-                      color: statuses.find(s => s.id === lead.status)?.color,
-                    }}
-                  >
-                    {statuses.find(s => s.id === lead.status)?.name || 'Unknown'}
-                  </Badge>
-                </div>
-
-                <div className="p-4 border rounded-lg">
-                  <p className="text-sm text-muted-foreground">Priority</p>
-                  <p className="text-lg font-semibold mt-1 capitalize">
-                    {lead.priority || 'Not set'}
-                  </p>
-                </div>
-
-                {lead.next_follow_up && (
-                  <div className="p-4 border rounded-lg">
-                    <p className="text-sm text-muted-foreground">Next Follow-up</p>
-                    <p className="text-lg font-semibold mt-1">
-                      {format(new Date(lead.next_follow_up), 'MMM dd, yyyy')}
-                    </p>
-                  </div>
-                )}
-
-                <div className="p-4 border rounded-lg">
-                  <p className="text-sm text-muted-foreground">Last Updated</p>
-                  <p className="text-lg font-semibold mt-1">
-                    {format(new Date(lead.updated_at), 'MMM dd, yyyy hh:mm a')}
-                  </p>
-                </div>
-
-                <div className="p-4 border rounded-lg">
-                  <p className="text-sm text-muted-foreground">Created</p>
-                  <p className="text-lg font-semibold mt-1">
-                    {format(new Date(lead.created_at), 'MMM dd, yyyy hh:mm a')}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        {/* Tasks Tab */}
+        <TabsContent value="tasks" className="mt-6">
+          <LeadTasks leadId={lead.id} />
         </TabsContent>
 
         {/* Meetings Tab */}

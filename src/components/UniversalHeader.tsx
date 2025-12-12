@@ -22,6 +22,21 @@ const routeTitles: Record<string, string> = {
   "/opd": "OPD",
 };
 
+// Get time-based greeting
+const getTimeBasedGreeting = (): string => {
+  const hour = new Date().getHours();
+
+  if (hour >= 5 && hour < 12) {
+    return "Good Morning";
+  } else if (hour >= 12 && hour < 17) {
+    return "Good Afternoon";
+  } else if (hour >= 17 && hour < 21) {
+    return "Good Evening";
+  } else {
+    return "Good Night";
+  }
+};
+
 interface UniversalHeaderProps {
   onMenuClick: () => void;
 }
@@ -33,7 +48,12 @@ export const UniversalHeader = ({ onMenuClick }: UniversalHeaderProps) => {
   const { resolvedTheme, setTheme } = useTheme();
   const { newMessageCount, clearNewMessageCount, socketStatus } = useWebSocket();
   const isMobile = useIsMobile();
-  const pageTitle = routeTitles[location.pathname] || "Chat App";
+
+  // Get username from email or use first name if available
+  const username = user?.first_name || user?.email?.split('@')[0] || 'User';
+  const greeting = `👋 ${username}, ${getTimeBasedGreeting()}!`;
+
+  const pageTitle = routeTitles[location.pathname] || greeting;
 
   const handleLogout = () => {
     logout();

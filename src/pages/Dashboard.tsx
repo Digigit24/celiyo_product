@@ -19,17 +19,17 @@ import { useOPDBill } from '@/hooks/useOPDBill';
 // ==================== CUSTOM ICONS IMPORT ====================
 // Import your custom PNG icons here
 // Example:
-// import TotalPatientsIcon from '@/assets/icons/total-patients.png';
-// import TodaysVisitsIcon from '@/assets/icons/todays-visits.png';
-// import TotalRevenueIcon from '@/assets/icons/total-revenue.png';
-// import PendingBillsIcon from '@/assets/icons/pending-bills.png';
+import TotalPatientsIcon from '@/assets/icons/1.png';
+import TodaysVisitsIcon from '@/assets/icons/2.png';
+import TotalRevenueIcon from '@/assets/icons/3.png';
+import PendingBillsIcon from '@/assets/icons/4.png';
 
 // After importing, uncomment and use them in the customIcons object below:
 const customIcons = {
-  // totalPatients: TotalPatientsIcon,
-  // todaysVisits: TodaysVisitsIcon,
-  // totalRevenue: TotalRevenueIcon,
-  // pendingBills: PendingBillsIcon,
+  totalPatients: TotalPatientsIcon,
+  todaysVisits: TodaysVisitsIcon,
+  totalRevenue: TotalRevenueIcon,
+  pendingBills: PendingBillsIcon,
 };
 // ============================================================
 
@@ -143,11 +143,9 @@ const StatCard = ({ title, value, icon, trend, trendUp, loading, gradient, isDar
               </p>
             )}
           </div>
-          <div className={`p-4 rounded-2xl shadow-sm ${
-            isDark ? 'bg-gray-800/60 backdrop-blur-sm' : 'bg-white/60 backdrop-blur-sm'
-          }`}>
+          <div className={`p-4 rounded-2xl`}>
             {isImageIcon ? (
-              <img src={icon} alt={title} className="w-12 h-12 object-contain" />
+              <img src={icon} alt={title} className="w-20 h-20 object-contain" />
             ) : (
               icon
             )}
@@ -573,8 +571,8 @@ const Dashboard = () => {
           <StatCard
             title="Total Patients"
             value={patientStats?.total_patients?.toLocaleString() || '0'}
-            // To use custom icon: icon={customIcons.totalPatients || <Users className="w-7 h-7 text-indigo-600" />}
-            icon={<Users className="w-7 h-7 text-indigo-600" />}
+            icon={customIcons.totalPatients || <Users className="w-7 h-7 text-indigo-600" />}
+            // icon={<Users className="w-7 h-7 text-indigo-600" />}
             loading={isLoading && !USE_DEMO_DATA}
             gradient={isDark
               ? 'bg-gradient-to-br from-indigo-900/20 via-gray-800 to-indigo-900/10'
@@ -586,8 +584,8 @@ const Dashboard = () => {
           <StatCard
             title="Today's Visits"
             value={visitStats?.today_visits?.toLocaleString() || '0'}
-            // To use custom icon: icon={customIcons.todaysVisits || <Calendar className="w-7 h-7 text-emerald-600" />}
-            icon={<Calendar className="w-7 h-7 text-emerald-600" />}
+            icon={customIcons.todaysVisits || <Calendar className="w-7 h-7 text-emerald-600" />}
+            // icon={<Calendar className="w-7 h-7 text-emerald-600" />}
             loading={isLoading && !USE_DEMO_DATA}
             gradient={isDark
               ? 'bg-gradient-to-br from-emerald-900/20 via-gray-800 to-emerald-900/10'
@@ -599,8 +597,8 @@ const Dashboard = () => {
           <StatCard
             title="Total Revenue"
             value={`₹${parseFloat(billStats?.received_amount || '0').toLocaleString('en-IN', { maximumFractionDigits: 0 })}`}
-            // To use custom icon: icon={customIcons.totalRevenue || <DollarSign className="w-7 h-7 text-amber-600" />}
-            icon={<DollarSign className="w-7 h-7 text-amber-600" />}
+            icon={customIcons.totalRevenue || <DollarSign className="w-7 h-7 text-amber-600" />}
+            // icon={<DollarSign className="w-7 h-7 text-amber-600" />}
             loading={isLoading && !USE_DEMO_DATA}
             gradient={isDark
               ? 'bg-gradient-to-br from-amber-900/20 via-gray-800 to-amber-900/10'
@@ -612,8 +610,8 @@ const Dashboard = () => {
           <StatCard
             title="Pending Bills"
             value={(billStats?.unpaid_bills || 0) + (billStats?.partial_bills || 0)}
-            // To use custom icon: icon={customIcons.pendingBills || <FileText className="w-7 h-7 text-rose-600" />}
-            icon={<FileText className="w-7 h-7 text-rose-600" />}
+            icon={customIcons.pendingBills || <FileText className="w-7 h-7 text-rose-600" />}
+            // icon={<FileText className="w-7 h-7 text-rose-600" />}
             loading={isLoading && !USE_DEMO_DATA}
             gradient={isDark
               ? 'bg-gradient-to-br from-rose-900/20 via-gray-800 to-rose-900/10'

@@ -154,12 +154,12 @@ const menuItems: MenuItem[] = [
         icon: ClipboardList,
         path: "/crm/statuses",
       },
-      {
-        id: "crm-pipeline",
-        label: "Pipeline",
-        icon: Kanban,
-        path: "/crm/pipeline",
-      },
+      // {
+      //   id: "crm-pipeline",
+      //   label: "Pipeline",
+      //   icon: Kanban,
+      //   path: "/crm/pipeline",
+      // },
       {
         id: "crm-tasks",
         label: "Tasks",

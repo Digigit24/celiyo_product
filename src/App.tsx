@@ -91,8 +91,8 @@ const AppLayout = () => {
               <Route path="/hms/doctors" element={<Doctors />} />
               <Route path="/hms/doctor-test" element={<DoctorTest />} />
               <Route path="/hms/specialties" element={<Specialties />} />
-              <Route path="/hms/patients" element={<PatientsTest />} />
-              <Route path="/hms/appointments" element={<AppointmentsTest />} />
+              <Route path="/patients" element={<PatientsTest />} />
+              <Route path="/appointments" element={<AppointmentsTest />} />
 
               {/* OPD Routes */}
               <Route path="/opd/visits" element={<OPDVisits />} />

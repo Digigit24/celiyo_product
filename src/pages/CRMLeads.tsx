@@ -721,14 +721,14 @@ export const CRMLeads: React.FC = () => {
             <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
-          <Button
+          {/* <Button
             variant="outline"
             size="sm"
             onClick={handleDownloadTemplate}
           >
             <FileSpreadsheet className="h-4 w-4 mr-2" />
             Template
-          </Button>
+          </Button> */}
           <Button
             variant="outline"
             size="sm"

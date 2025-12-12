@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 import type { LeadActivity, ActivityTypeEnum } from '@/types/crmTypes';
+import ActivityFormDrawer from '@/components/ActivityFormDrawer';
 
 interface LeadActivitiesProps {
   leadId: number;
@@ -27,13 +28,24 @@ interface LeadActivitiesProps {
 export default function LeadActivities({ leadId }: LeadActivitiesProps) {
   const { useLeadActivities } = useCRM();
   const [showAll, setShowAll] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   // Fetch activities for this lead
-  const { data: activitiesData, isLoading, error } = useLeadActivities({
+  const { data: activitiesData, isLoading, error, mutate: mutateActivities } = useLeadActivities({
     lead: leadId,
     ordering: '-happened_at',
     page_size: showAll ? 100 : 10,
   });
+
+  // Handle add activity
+  const handleAddActivity = () => {
+    setDrawerOpen(true);
+  };
+
+  // Handle drawer success
+  const handleDrawerSuccess = () => {
+    mutateActivities();
+  };
 
   // Activity type icon mapping
   const getActivityIcon = (type: ActivityTypeEnum) => {
@@ -101,7 +113,7 @@ export default function LeadActivities({ leadId }: LeadActivitiesProps) {
             {activitiesData?.count || 0} total activities
           </p>
         </div>
-        <Button variant="outline" size="sm" disabled>
+        <Button variant="outline" size="sm" onClick={handleAddActivity}>
           <Plus className="h-4 w-4 mr-2" />
           Add Activity
         </Button>
@@ -222,6 +234,14 @@ export default function LeadActivities({ leadId }: LeadActivitiesProps) {
           )}
         </ScrollArea>
       )}
+
+      {/* Activity Form Drawer */}
+      <ActivityFormDrawer
+        open={drawerOpen}
+        onOpenChange={setDrawerOpen}
+        leadId={leadId}
+        onSuccess={handleDrawerSuccess}
+      />
     </div>
   );
 }

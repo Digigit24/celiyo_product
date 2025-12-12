@@ -1,24 +1,14 @@
 // src/components/lead-drawer/LeadTasks.tsx
 import { useState, useCallback, useMemo } from 'react';
 import { useCRM } from '@/hooks/useCRM';
-import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Plus, Calendar, Loader2, CheckCircle2, Circle, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import { format, parseISO, isToday, isPast, isFuture, startOfDay, differenceInDays } from 'date-fns';
 import type { Task, TaskStatusEnum, PriorityEnum } from '@/types/crmTypes';
+import TaskFormDrawer from '@/components/TaskFormDrawer';
 
 interface LeadTasksProps {
   leadId: number;
@@ -32,13 +22,12 @@ type TaskGroup = {
 };
 
 export const LeadTasks: React.FC<LeadTasksProps> = ({ leadId }) => {
-  const { user } = useAuth();
-  const { useTasks, createTask, patchTask } = useCRM();
-  const [isCreating, setIsCreating] = useState(false);
-  const [newTaskTitle, setNewTaskTitle] = useState('');
-  const [newTaskDescription, setNewTaskDescription] = useState('');
-  const [newTaskPriority, setNewTaskPriority] = useState<PriorityEnum>('MEDIUM');
-  const [newTaskDueDate, setNewTaskDueDate] = useState('');
+  const { useTasks, patchTask } = useCRM();
+
+  // Drawer state
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
+  const [drawerMode, setDrawerMode] = useState<'view' | 'edit' | 'create'>('view');
 
   // Fetch tasks for this lead
   const {
@@ -115,9 +104,36 @@ export const LeadTasks: React.FC<LeadTasksProps> = ({ leadId }) => {
     return groups;
   }, [tasks]);
 
+  // Handle create task button
+  const handleCreateClick = useCallback(() => {
+    setSelectedTaskId(null);
+    setDrawerMode('create');
+    setDrawerOpen(true);
+  }, []);
+
+  // Handle view task
+  const handleViewTask = useCallback((task: Task) => {
+    setSelectedTaskId(task.id);
+    setDrawerMode('view');
+    setDrawerOpen(true);
+  }, []);
+
+  // Handle drawer success
+  const handleDrawerSuccess = useCallback(() => {
+    mutateTasks();
+  }, [mutateTasks]);
+
+  // Handle drawer delete
+  const handleDrawerDelete = useCallback(() => {
+    mutateTasks();
+  }, [mutateTasks]);
+
   // Handle task completion toggle
   const handleToggleComplete = useCallback(
-    async (task: Task) => {
+    async (task: Task, event: React.MouseEvent) => {
+      // Prevent triggering the card click
+      event.stopPropagation();
+
       try {
         const newStatus: TaskStatusEnum = task.status === 'DONE' ? 'TODO' : 'DONE';
         const updatePayload: any = {
@@ -140,55 +156,6 @@ export const LeadTasks: React.FC<LeadTasksProps> = ({ leadId }) => {
     },
     [patchTask, mutateTasks]
   );
-
-  // Handle create task
-  const handleCreateTask = useCallback(async () => {
-    if (!newTaskTitle.trim()) {
-      toast.error('Please enter a task title');
-      return;
-    }
-
-    try {
-      setIsCreating(true);
-
-      const taskPayload: any = {
-        lead: leadId,
-        title: newTaskTitle.trim(),
-        description: newTaskDescription.trim() || undefined,
-        priority: newTaskPriority,
-        status: 'TODO' as TaskStatusEnum,
-        owner_user_id: user?.id,
-      };
-
-      if (newTaskDueDate) {
-        taskPayload.due_date = new Date(newTaskDueDate).toISOString();
-      }
-
-      await createTask(taskPayload);
-      mutateTasks();
-
-      // Reset form
-      setNewTaskTitle('');
-      setNewTaskDescription('');
-      setNewTaskPriority('MEDIUM');
-      setNewTaskDueDate('');
-
-      toast.success('Task created successfully');
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to create task');
-    } finally {
-      setIsCreating(false);
-    }
-  }, [
-    leadId,
-    newTaskTitle,
-    newTaskDescription,
-    newTaskPriority,
-    newTaskDueDate,
-    createTask,
-    mutateTasks,
-    user,
-  ]);
 
   // Get priority badge color
   const getPriorityColor = (priority: PriorityEnum) => {
@@ -224,81 +191,13 @@ export const LeadTasks: React.FC<LeadTasksProps> = ({ leadId }) => {
 
   return (
     <div className="space-y-6">
-      {/* Create Task Form */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Create New Task</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="task-title">Task Title *</Label>
-            <Input
-              id="task-title"
-              placeholder="Enter task title..."
-              value={newTaskTitle}
-              onChange={(e) => setNewTaskTitle(e.target.value)}
-              disabled={isCreating}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="task-description">Description</Label>
-            <Textarea
-              id="task-description"
-              placeholder="Enter task description..."
-              value={newTaskDescription}
-              onChange={(e) => setNewTaskDescription(e.target.value)}
-              disabled={isCreating}
-              rows={3}
-            />
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="task-priority">Priority</Label>
-              <Select
-                value={newTaskPriority}
-                onValueChange={(value) => setNewTaskPriority(value as PriorityEnum)}
-                disabled={isCreating}
-              >
-                <SelectTrigger id="task-priority">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="LOW">Low</SelectItem>
-                  <SelectItem value="MEDIUM">Medium</SelectItem>
-                  <SelectItem value="HIGH">High</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="task-due-date">Due Date</Label>
-              <Input
-                id="task-due-date"
-                type="date"
-                value={newTaskDueDate}
-                onChange={(e) => setNewTaskDueDate(e.target.value)}
-                disabled={isCreating}
-              />
-            </div>
-          </div>
-
-          <Button onClick={handleCreateTask} disabled={isCreating} className="w-full">
-            {isCreating ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Creating...
-              </>
-            ) : (
-              <>
-                <Plus className="h-4 w-4 mr-2" />
-                Create Task
-              </>
-            )}
-          </Button>
-        </CardContent>
-      </Card>
+      {/* Create Task Button */}
+      <div className="flex justify-end">
+        <Button onClick={handleCreateClick}>
+          <Plus className="h-4 w-4 mr-2" />
+          Create Task
+        </Button>
+      </div>
 
       {/* Tasks List */}
       {tasksLoading ? (
@@ -332,13 +231,15 @@ export const LeadTasks: React.FC<LeadTasksProps> = ({ leadId }) => {
                 {group.tasks.map((task) => (
                   <div
                     key={task.id}
-                    className={`flex items-start gap-3 p-3 border rounded-lg hover:bg-accent transition-colors ${
+                    className={`flex items-start gap-3 p-3 border rounded-lg hover:bg-accent transition-colors cursor-pointer ${
                       task.status === 'DONE' ? 'opacity-60' : ''
                     }`}
+                    onClick={() => handleViewTask(task)}
                   >
                     <Checkbox
                       checked={task.status === 'DONE'}
-                      onCheckedChange={() => handleToggleComplete(task)}
+                      onCheckedChange={(checked, event) => handleToggleComplete(task, event as any)}
+                      onClick={(e) => e.stopPropagation()}
                       className="mt-1"
                     />
 
@@ -392,6 +293,18 @@ export const LeadTasks: React.FC<LeadTasksProps> = ({ leadId }) => {
           ))}
         </div>
       )}
+
+      {/* Task Form Drawer */}
+      <TaskFormDrawer
+        open={drawerOpen}
+        onOpenChange={setDrawerOpen}
+        taskId={selectedTaskId}
+        leadId={leadId}
+        mode={drawerMode}
+        onSuccess={handleDrawerSuccess}
+        onDelete={handleDrawerDelete}
+        onModeChange={setDrawerMode}
+      />
     </div>
   );
 };

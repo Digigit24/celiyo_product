@@ -69,7 +69,7 @@ const AppLayout = () => {
     <>
       <ThemeSync />
       <div className="flex h-screen overflow-hidden bg-background">
-        <UniversalSidebar open={sidebarOpen} onOpenChange={setSidebarOpen} />
+        <UniversalSidebar mobileOpen={sidebarOpen} setMobileOpen={setSidebarOpen} />
         <div className="flex flex-col flex-1 overflow-hidden">
           <UniversalHeader onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
           <main className="flex-1 overflow-auto">

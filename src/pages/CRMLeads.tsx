@@ -1,5 +1,5 @@
 // src/pages/CRMLeads.tsx
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCRM } from '@/hooks/useCRM';
 import { useAuth } from '@/hooks/useAuth';
@@ -11,11 +11,12 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, RefreshCw, Building2, Phone, Mail, DollarSign, LayoutGrid, List } from 'lucide-react';
+import { Plus, RefreshCw, Building2, Phone, Mail, DollarSign, LayoutGrid, List, Download, Upload, FileSpreadsheet } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 import type { Lead, LeadsQueryParams, PriorityEnum, LeadStatus } from '@/types/crmTypes';
 import type { RowActions } from '@/components/DataTable';
+import { exportLeadsToExcel, importLeadsFromExcel, downloadLeadsTemplate } from '@/utils/excelUtils';
 
 type DrawerMode = 'view' | 'edit' | 'create';
 type ViewMode = 'list' | 'kanban';
@@ -23,7 +24,8 @@ type ViewMode = 'list' | 'kanban';
 export const CRMLeads: React.FC = () => {
   const navigate = useNavigate();
   const { user, hasModuleAccess } = useAuth();
-  const { hasCRMAccess, useLeads, useLeadStatuses, useFieldConfigurations, deleteLead, patchLead, updateLeadStatus, deleteLeadStatus } = useCRM();
+  const { hasCRMAccess, useLeads, useLeadStatuses, useFieldConfigurations, deleteLead, patchLead, updateLeadStatus, deleteLeadStatus, bulkCreateLeads } = useCRM();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // View mode state
   const [viewMode, setViewMode] = useState<ViewMode>('list');
@@ -238,6 +240,108 @@ export const CRMLeads: React.FC = () => {
       page_size: newMode === 'kanban' ? 1000 : 20
     }));
   }, []);
+
+  // Export leads to Excel
+  const handleExportLeads = useCallback(() => {
+    try {
+      if (!leadsData || leadsData.results.length === 0) {
+        toast.error('No leads to export');
+        return;
+      }
+
+      exportLeadsToExcel(leadsData.results);
+      toast.success(`Exported ${leadsData.results.length} leads successfully`);
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to export leads');
+    }
+  }, [leadsData]);
+
+  // Download import template
+  const handleDownloadTemplate = useCallback(() => {
+    try {
+      downloadLeadsTemplate();
+      toast.success('Template downloaded successfully');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to download template');
+    }
+  }, []);
+
+  // Trigger file input click
+  const handleImportClick = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
+  // Handle file selection and import
+  const handleFileChange = useCallback(
+    async (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+
+      // Validate file type
+      const validTypes = [
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'application/vnd.ms-excel',
+      ];
+
+      if (!validTypes.includes(file.type) && !file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
+        toast.error('Please select a valid Excel file (.xlsx or .xls)');
+        event.target.value = '';
+        return;
+      }
+
+      try {
+        toast.info('Processing Excel file...');
+
+        // Parse Excel file
+        const { leads: parsedLeads, errors: parseErrors } = await importLeadsFromExcel(file);
+
+        if (parseErrors.length > 0) {
+          toast.warning(`File parsed with ${parseErrors.length} warning(s)`, {
+            description: parseErrors.slice(0, 3).join('; ') + (parseErrors.length > 3 ? '...' : ''),
+            duration: 5000,
+          });
+        }
+
+        if (parsedLeads.length === 0) {
+          toast.error('No valid leads found in the file');
+          event.target.value = '';
+          return;
+        }
+
+        toast.info(`Creating ${parsedLeads.length} leads...`);
+
+        // Bulk create leads
+        const results = await bulkCreateLeads(parsedLeads);
+
+        // Show results
+        const successCount = results.created.length;
+        const errorCount = results.errors.length;
+
+        if (successCount > 0 && errorCount === 0) {
+          toast.success(`Successfully created ${successCount} leads!`);
+        } else if (successCount > 0 && errorCount > 0) {
+          toast.warning(`Created ${successCount} leads, ${errorCount} failed`, {
+            description: results.errors.slice(0, 2).map(e => `Row ${e.index + 1}: ${e.error}`).join('; '),
+            duration: 7000,
+          });
+        } else {
+          toast.error('Failed to create any leads', {
+            description: results.errors.slice(0, 2).map(e => `Row ${e.index + 1}: ${e.error}`).join('; '),
+            duration: 7000,
+          });
+        }
+
+        // Refresh the leads list
+        mutate();
+      } catch (error: any) {
+        toast.error(error.message || 'Failed to import leads');
+      } finally {
+        // Reset file input
+        event.target.value = '';
+      }
+    },
+    [bulkCreateLeads, mutate]
+  );
 
   // Priority badge helper
   const getPriorityBadge = (priority: PriorityEnum) => {
@@ -542,7 +646,7 @@ export const CRMLeads: React.FC = () => {
             Manage your sales leads and pipeline
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="outline"
             size="sm"
@@ -552,12 +656,46 @@ export const CRMLeads: React.FC = () => {
             <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleDownloadTemplate}
+          >
+            <FileSpreadsheet className="h-4 w-4 mr-2" />
+            Template
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleImportClick}
+          >
+            <Upload className="h-4 w-4 mr-2" />
+            Import
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportLeads}
+            disabled={!leadsData || leadsData.results.length === 0}
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Export
+          </Button>
           <Button onClick={handleCreateLeadClick} size="default" className="w-full sm:w-auto">
             <Plus className="h-4 w-4 mr-2" />
             New Lead
           </Button>
         </div>
       </div>
+
+      {/* Hidden file input for import */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".xlsx,.xls"
+        onChange={handleFileChange}
+        className="hidden"
+      />
 
       {/* Stats Cards */}
       {leadsData && (

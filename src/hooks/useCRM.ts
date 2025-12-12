@@ -168,6 +168,27 @@ export const useCRM = () => {
     }
   }, [hasCRMAccess]);
 
+  // Bulk create leads
+  const bulkCreateLeads = useCallback(async (leadsData: CreateLeadPayload[]) => {
+    if (!hasCRMAccess) {
+      throw new Error('CRM module not enabled for this user');
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const results = await crmService.bulkCreateLeads(leadsData);
+      return results;
+    } catch (err: any) {
+      const errorMessage = err.message || 'Failed to bulk create leads';
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [hasCRMAccess]);
+
   // ==================== LEAD STATUSES HOOKS ====================
   
   // Get lead statuses with SWR caching
@@ -713,6 +734,7 @@ export const useCRM = () => {
     updateLead,
     patchLead,
     deleteLead,
+    bulkCreateLeads,
 
     // Lead Statuses
     useLeadStatuses,

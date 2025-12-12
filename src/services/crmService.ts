@@ -124,10 +124,38 @@ class CRMService {
         API_CONFIG.CRM.LEAD_DELETE.replace(':id', id.toString())
       );
     } catch (error: any) {
-      const message = error.response?.data?.error || 
-                     error.response?.data?.message || 
+      const message = error.response?.data?.error ||
+                     error.response?.data?.message ||
                      'Failed to delete lead';
       throw new Error(message);
+    }
+  }
+
+  // Bulk create leads
+  async bulkCreateLeads(leadsData: CreateLeadPayload[]): Promise<{ created: Lead[]; errors: any[] }> {
+    try {
+      const results = {
+        created: [] as Lead[],
+        errors: [] as any[]
+      };
+
+      // Process leads one by one to capture individual errors
+      for (let i = 0; i < leadsData.length; i++) {
+        try {
+          const lead = await this.createLead(leadsData[i]);
+          results.created.push(lead);
+        } catch (error: any) {
+          results.errors.push({
+            index: i,
+            data: leadsData[i],
+            error: error.message || 'Failed to create lead'
+          });
+        }
+      }
+
+      return results;
+    } catch (error: any) {
+      throw new Error('Failed to bulk create leads');
     }
   }
 

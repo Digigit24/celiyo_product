@@ -104,13 +104,14 @@ const AppLayout = () => {
               <Route path="/opd/visits" element={<OPDVisits />} />
               <Route path="/opd/billing/:visitId" element={<OPDBilling />} />
               <Route path="/opd/consultation/:visitId" element={<OPDConsultation />} />
-              <Route path="/opd/opd-bills" element={<OPDBills />} />
+              <Route path="/opd/bills" element={<OPDBills />} />
               <Route path="/opd/clinical-notes" element={<ClinicalNotes />} />
-              <Route path="/opd/visit-findings" element={<VisitFindings />} />
-              <Route path="/opd/procedure-masters" element={<ProcedureMasters />} />
-              <Route path="/opd/procedure-packages" element={<ProcedurePackages />} />
+              <Route path="/opd/findings" element={<VisitFindings />} />
+              <Route path="/opd/procedures" element={<ProcedureMasters />} />
+              <Route path="/opd/packages" element={<ProcedurePackages />} />
               <Route path="/opd/procedure-bills" element={<ProcedureBills />} />
-              <Route path="/opd/settings" element={<OPDSettings />} />
+              <Route path="/opd/settings" element={<Navigate to="/opd/settings/general" replace />} />
+              <Route path="/opd/settings/:tab" element={<OPDSettings />} />
 
               {/* Payment Routes */}
               <Route path="/payments/transactions" element={<Transactions />} />

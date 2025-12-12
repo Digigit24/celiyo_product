@@ -268,12 +268,6 @@ export const Doctors: React.FC = () => {
 
   return (
     <div className="p-6 max-w-8xl mx-auto space-y-6">
-      {/* DEBUG: Confirm render */}
-      <div style={{ padding: '10px', background: '#f0f0f0', border: '2px solid #ff0000' }}>
-        <p style={{ margin: 0 }}>🚨 DEBUG: Doctors component is rendering!</p>
-        <p style={{ margin: 0, fontSize: '12px' }}>Loading: {String(doctorsLoading)} | Doctors count: {doctors.length} | Total: {totalCount}</p>
-      </div>
-
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>

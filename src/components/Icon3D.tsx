@@ -40,7 +40,7 @@ const iconColors: Record<string, [string, string]> = {
   ClipboardList: ['#3b82f6', '#0ea5e9'], // blue to sky
   ChevronDown: ['#94a3b8', '#64748b'], // slate colors
   ChevronRight: ['#94a3b8', '#64748b'], // slate colors
-  Menu: ['#94a3b8', '#64748b'], // slate colors
+  Menu: ['#6366f1', '#8b5cf6'], // indigo to violet for better visibility
   X: ['#ef4444', '#dc2626'], // red colors
 };
 

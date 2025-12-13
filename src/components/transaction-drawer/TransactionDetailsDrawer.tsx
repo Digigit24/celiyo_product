@@ -40,13 +40,13 @@ export default function TransactionDetailsDrawer({
 
   // Hooks
   const {
-    useTransactionById,
+    useTransaction,
     createTransaction,
     updateTransaction,
     deleteTransaction,
   } = usePayment();
 
-  const { data: transaction, isLoading: transactionLoading, mutate: revalidateTransaction } = useTransactionById(transactionId);
+  const { data: transaction, isLoading: transactionLoading, mutate: revalidateTransaction } = useTransaction(transactionId);
 
   // Form ref to collect values
   const formRef = useRef<TransactionBasicInfoHandle | null>(null);

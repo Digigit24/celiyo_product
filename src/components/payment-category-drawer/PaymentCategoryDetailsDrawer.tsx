@@ -40,13 +40,13 @@ export default function PaymentCategoryDetailsDrawer({
 
   // Hooks
   const {
-    usePaymentCategoryById,
+    usePaymentCategory,
     createPaymentCategory,
     updatePaymentCategory,
     deletePaymentCategory,
   } = usePayment();
 
-  const { data: category, isLoading: categoryLoading, mutate: revalidateCategory } = usePaymentCategoryById(categoryId);
+  const { data: category, isLoading: categoryLoading, mutate: revalidateCategory } = usePaymentCategory(categoryId);
 
   // Form ref to collect values
   const formRef = useRef<PaymentCategoryBasicInfoHandle | null>(null);

@@ -42,7 +42,7 @@ export default function AccountingPeriodDetailsDrawer({
 
   // Hooks
   const {
-    useAccountingPeriodById,
+    useAccountingPeriod,
     createAccountingPeriod,
     updateAccountingPeriod,
     deleteAccountingPeriod,
@@ -50,7 +50,7 @@ export default function AccountingPeriodDetailsDrawer({
     closeAccountingPeriod,
   } = usePayment();
 
-  const { data: period, isLoading: periodLoading, mutate: revalidatePeriod } = useAccountingPeriodById(periodId);
+  const { data: period, isLoading: periodLoading, mutate: revalidatePeriod } = useAccountingPeriod(periodId);
 
   // Form ref to collect values
   const formRef = useRef<AccountingPeriodBasicInfoHandle | null>(null);

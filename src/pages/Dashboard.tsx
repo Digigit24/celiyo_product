@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import Chart from 'react-apexcharts';
 import { ApexOptions } from 'apexcharts';
 import { Card } from '@/components/ui/card';
@@ -11,6 +11,7 @@ import {
   TrendingUp,
   FileText,
   Loader2,
+  ChevronDown,
 } from 'lucide-react';
 import { usePatient } from '@/hooks/usePatient';
 import { useOpdVisit } from '@/hooks/useOpdVisit';
@@ -164,6 +165,7 @@ const StatCard = ({ title, value, icon, trend, trendUp, loading, gradient, isDar
 const Dashboard = () => {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
+  const [selectedYear, setSelectedYear] = useState('2023');
 
   const { usePatientStatistics } = usePatient();
   const { useOpdVisitStatistics } = useOpdVisit();
@@ -272,6 +274,67 @@ const Dashboard = () => {
       Math.round(((visitStats.visits_by_status.cancelled || 0) / total) * 100),
     ];
   }, [visitStats]);
+
+  // Sale by gender data (using gender distribution)
+  const saleByGenderData = useMemo(() => {
+    if (!patientStats?.gender_distribution) return [0, 0, 0];
+    return [
+      patientStats.gender_distribution.Male || 0,
+      patientStats.gender_distribution.Female || 0,
+      patientStats.gender_distribution.Other || 0,
+    ];
+  }, [patientStats]);
+
+  const totalSales = useMemo(() => {
+    return saleByGenderData.reduce((sum, val) => sum + val, 0);
+  }, [saleByGenderData]);
+
+  // Yearly sales data (monthly income and expenses)
+  const yearlySalesData = useMemo(() => {
+    const baseIncome = parseFloat(billStats?.received_amount || '10890000');
+    const baseExpense = parseFloat(billStats?.total_amount || '12450000') - baseIncome;
+
+    // Generate monthly data with some variation
+    const monthlyIncome = [
+      baseIncome * 0.06,
+      baseIncome * 0.05,
+      baseIncome * 0.07,
+      baseIncome * 0.08,
+      baseIncome * 0.09,
+      baseIncome * 0.10,
+      baseIncome * 0.09,
+      baseIncome * 0.11,
+      baseIncome * 0.08,
+      baseIncome * 0.09,
+      baseIncome * 0.09,
+      baseIncome * 0.09,
+    ];
+
+    const monthlyExpenses = [
+      baseExpense * 0.07,
+      baseExpense * 0.06,
+      baseExpense * 0.08,
+      baseExpense * 0.09,
+      baseExpense * 0.10,
+      baseExpense * 0.11,
+      baseExpense * 0.10,
+      baseExpense * 0.09,
+      baseExpense * 0.08,
+      baseExpense * 0.07,
+      baseExpense * 0.08,
+      baseExpense * 0.07,
+    ];
+
+    return { income: monthlyIncome, expenses: monthlyExpenses };
+  }, [billStats]);
+
+  const totalYearlyIncome = useMemo(() => {
+    return yearlySalesData.income.reduce((sum, val) => sum + val, 0);
+  }, [yearlySalesData]);
+
+  const totalYearlyExpenses = useMemo(() => {
+    return yearlySalesData.expenses.reduce((sum, val) => sum + val, 0);
+  }, [yearlySalesData]);
 
   // Chart Options with 3D effects and theme support
   const revenueChartOptions: ApexOptions = {
@@ -528,6 +591,137 @@ const Dashboard = () => {
     legend: { show: false },
     tooltip: {
       y: { formatter: (value) => `${value} patients` },
+      theme: isDark ? 'dark' : 'light',
+    },
+  };
+
+  // Sale by Gender Chart Options (Radial/Circular design)
+  const saleByGenderOptions: ApexOptions = {
+    chart: {
+      type: 'radialBar',
+      height: 350,
+      background: 'transparent',
+    },
+    theme: { mode: isDark ? 'dark' : 'light' },
+    plotOptions: {
+      radialBar: {
+        offsetY: 0,
+        startAngle: 0,
+        endAngle: 270,
+        hollow: {
+          margin: 15,
+          size: '40%',
+          background: 'transparent',
+        },
+        dataLabels: {
+          name: {
+            show: false,
+          },
+          value: {
+            show: false,
+          },
+          total: {
+            show: true,
+            label: 'Total',
+            fontSize: '14px',
+            fontWeight: 400,
+            color: colors.text,
+            formatter: () => totalSales.toLocaleString(),
+          },
+        },
+        track: {
+          background: isDark ? '#374151' : '#E5E7EB',
+          strokeWidth: '100%',
+          margin: 8,
+        },
+      },
+    },
+    colors: ['#10B981', '#F59E0B', '#EF4444'], // Green, Yellow/Gold, Orange/Red
+    labels: ['Mens', 'Womens', 'Kids'],
+    legend: {
+      show: true,
+      floating: false,
+      fontSize: '13px',
+      position: 'bottom',
+      offsetY: 0,
+      labels: {
+        colors: colors.text,
+        useSeriesColors: true,
+      },
+      markers: {
+        size: 6,
+      },
+      itemMargin: {
+        horizontal: 10,
+        vertical: 5,
+      },
+    },
+    stroke: {
+      lineCap: 'round',
+    },
+  };
+
+  // Yearly Sales Chart Options (Multi-line chart)
+  const yearlySalesOptions: ApexOptions = {
+    chart: {
+      type: 'area',
+      height: 350,
+      toolbar: { show: false },
+      zoom: { enabled: false },
+      background: 'transparent',
+      animations: {
+        enabled: true,
+      },
+    },
+    theme: { mode: isDark ? 'dark' : 'light' },
+    dataLabels: { enabled: false },
+    stroke: {
+      curve: 'smooth',
+      width: 3,
+    },
+    fill: {
+      type: 'gradient',
+      gradient: {
+        shadeIntensity: 1,
+        opacityFrom: isDark ? 0.4 : 0.3,
+        opacityTo: 0.05,
+        stops: [0, 90, 100],
+      },
+    },
+    xaxis: {
+      categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+      labels: {
+        style: { colors: colors.text, fontSize: '11px' },
+        offsetY: 0,
+      },
+      axisBorder: { show: false },
+      axisTicks: { show: false },
+    },
+    yaxis: {
+      labels: {
+        style: { colors: colors.text, fontSize: '11px' },
+        formatter: (value) => `${(value / 1000).toFixed(0)}`,
+      },
+      min: 0,
+      max: 250,
+    },
+    colors: ['#10B981', '#F59E0B'], // Green for income, Orange/Yellow for expenses
+    grid: {
+      borderColor: isDark ? '#374151' : '#E5E7EB',
+      strokeDashArray: 3,
+      xaxis: {
+        lines: { show: false },
+      },
+    },
+    legend: {
+      show: false,
+    },
+    tooltip: {
+      shared: true,
+      intersect: false,
+      y: {
+        formatter: (value) => `₹${(value / 1000).toFixed(1)}k`,
+      },
       theme: isDark ? 'dark' : 'light',
     },
   };
@@ -791,6 +985,97 @@ const Dashboard = () => {
                 ]}
                 type="bar"
                 height={320}
+              />
+            )}
+          </Card>
+        </div>
+
+        {/* New Charts Row - Sale by Gender & Yearly Sales */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mt-5">
+          {/* Sale by Gender Chart */}
+          <Card className={`p-6 ${isDark ? 'border-gray-700' : 'border-gray-200'} shadow-sm hover:shadow-md transition-shadow duration-300 ${
+            isDark
+              ? 'bg-gradient-to-br from-gray-800 to-gray-900/50'
+              : 'bg-gradient-to-br from-white to-gray-50/30'
+          }`}>
+            <h3 className={`text-lg font-semibold mb-6 ${
+              isDark ? 'text-gray-200' : 'text-gray-700'
+            }`}>
+              Sale by gender
+            </h3>
+            {isLoading && !USE_DEMO_DATA ? (
+              <div className="h-[350px] flex items-center justify-center">
+                <Loader2 className={`w-8 h-8 animate-spin ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
+              </div>
+            ) : (
+              <Chart
+                options={saleByGenderOptions}
+                series={saleByGenderData.map((val) => Math.round((val / totalSales) * 100))}
+                type="radialBar"
+                height={350}
+              />
+            )}
+          </Card>
+
+          {/* Yearly Sales Chart */}
+          <Card className={`p-6 ${isDark ? 'border-gray-700' : 'border-gray-200'} shadow-sm hover:shadow-md transition-shadow duration-300 ${
+            isDark
+              ? 'bg-gradient-to-br from-gray-800 to-gray-900/50'
+              : 'bg-gradient-to-br from-white to-gray-50/30'
+          }`}>
+            <div className="flex items-center justify-between mb-2">
+              <h3 className={`text-lg font-semibold ${
+                isDark ? 'text-gray-200' : 'text-gray-700'
+              }`}>
+                Yearly sales
+              </h3>
+              <button className={`px-3 py-1.5 rounded-lg border flex items-center gap-2 text-sm font-medium ${
+                isDark
+                  ? 'bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700'
+                  : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+              }`}>
+                {selectedYear}
+                <ChevronDown className="w-4 h-4" />
+              </button>
+            </div>
+            <div className={`text-xs mb-4 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+              (+43%) than last year
+            </div>
+
+            <div className="flex items-center gap-6 mb-4">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                <div>
+                  <div className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Total income</div>
+                  <div className={`text-base font-bold ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>
+                    {(totalYearlyIncome / 1000000).toFixed(2)}k
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-amber-500"></div>
+                <div>
+                  <div className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Total expenses</div>
+                  <div className={`text-base font-bold ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>
+                    {(totalYearlyExpenses / 1000000).toFixed(2)}k
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {isLoading && !USE_DEMO_DATA ? (
+              <div className="h-[350px] flex items-center justify-center">
+                <Loader2 className={`w-8 h-8 animate-spin ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
+              </div>
+            ) : (
+              <Chart
+                options={yearlySalesOptions}
+                series={[
+                  { name: 'Total income', data: yearlySalesData.income.map(v => v / 1000) },
+                  { name: 'Total expenses', data: yearlySalesData.expenses.map(v => v / 1000) },
+                ]}
+                type="area"
+                height={280}
               />
             )}
           </Card>

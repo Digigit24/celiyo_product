@@ -51,7 +51,6 @@ export const useOpdVisit = () => {
         shouldRetryOnError: false,
         keepPreviousData: true,
         onError: (err) => {
-          console.error('Failed to fetch OPD visits:', err);
           setError(err.message || 'Failed to fetch OPD visits');
         }
       }
@@ -75,7 +74,6 @@ export const useOpdVisit = () => {
         revalidateOnReconnect: true,
         shouldRetryOnError: false,
         onError: (err) => {
-          console.error('Failed to fetch OPD visit:', err);
           setError(err.message || 'Failed to fetch OPD visit');
         }
       }
@@ -101,7 +99,6 @@ export const useOpdVisit = () => {
         keepPreviousData: true,
         refreshInterval: 30000, // Refresh every 30 seconds
         onError: (err) => {
-          console.error('Failed to fetch today\'s visits:', err);
           setError(err.message || 'Failed to fetch today\'s visits');
         }
       }
@@ -126,7 +123,6 @@ export const useOpdVisit = () => {
         shouldRetryOnError: false,
         refreshInterval: 10000, // Refresh every 10 seconds
         onError: (err) => {
-          console.error('Failed to fetch OPD queue:', err);
           setError(err.message || 'Failed to fetch OPD queue');
         }
       }
@@ -150,7 +146,6 @@ export const useOpdVisit = () => {
         revalidateOnReconnect: true,
         shouldRetryOnError: false,
         onError: (err) => {
-          console.error('Failed to fetch OPD visit statistics:', err);
           setError(err.message || 'Failed to fetch OPD visit statistics');
         }
       }

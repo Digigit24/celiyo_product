@@ -30,7 +30,6 @@ export const useUser = () => {
         revalidateOnReconnect: true,
         shouldRetryOnError: false,
         onError: (err) => {
-          console.error('Failed to fetch users:', err);
           setError(err.message || 'Failed to fetch users');
         }
       }
@@ -49,7 +48,6 @@ export const useUser = () => {
         revalidateOnReconnect: true,
         shouldRetryOnError: false,
         onError: (err) => {
-          console.error('Failed to fetch user:', err);
           setError(err.message || 'Failed to fetch user');
         }
       }
@@ -173,7 +171,6 @@ export const useUser = () => {
         revalidateOnReconnect: true,
         shouldRetryOnError: false,
         onError: (err) => {
-          console.error('Failed to fetch current user:', err);
           setError(err.message || 'Failed to fetch current user');
         }
       }

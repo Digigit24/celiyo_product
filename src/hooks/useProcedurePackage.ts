@@ -46,7 +46,6 @@ export const useProcedurePackage = () => {
         shouldRetryOnError: false,
         keepPreviousData: true,
         onError: (err) => {
-          console.error('Failed to fetch procedure packages:', err);
           setError(err.message || 'Failed to fetch procedure packages');
         },
       }
@@ -70,7 +69,6 @@ export const useProcedurePackage = () => {
         revalidateOnReconnect: true,
         shouldRetryOnError: false,
         onError: (err) => {
-          console.error('Failed to fetch procedure package:', err);
           setError(err.message || 'Failed to fetch procedure package');
         },
       }
@@ -96,7 +94,6 @@ export const useProcedurePackage = () => {
         shouldRetryOnError: false,
         keepPreviousData: true,
         onError: (err) => {
-          console.error('Failed to fetch active procedure packages:', err);
           setError(err.message || 'Failed to fetch active procedure packages');
         },
       }
@@ -122,7 +119,6 @@ export const useProcedurePackage = () => {
         shouldRetryOnError: false,
         keepPreviousData: true,
         onError: (err) => {
-          console.error('Failed to fetch active procedure packages with details:', err);
           setError(err.message || 'Failed to fetch active procedure packages with details');
         },
       }

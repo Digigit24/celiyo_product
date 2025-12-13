@@ -33,7 +33,6 @@ const DocumentWithAuth: React.FC<DocumentWithAuthProps> = ({ src, filename, clas
         const url = URL.createObjectURL(blob);
         setDocSrc(url);
       } catch (err) {
-        console.error('Failed to fetch document:', err);
         setError('Failed to load document');
       } finally {
         setIsLoading(false);

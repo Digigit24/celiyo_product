@@ -113,7 +113,6 @@ export default function Chats() {
       // Normalize phone number for comparison
       const phoneKey = normalize(phone);
 
-      console.log('🔄 Processing WebSocket payload:', {
         phone,
         name,
         is_new: contact?.is_new,
@@ -127,7 +126,6 @@ export default function Chats() {
 
         // If contact exists (idx !== -1), always update it - don't create new
         if (idx !== -1) {
-          console.log('✅ Updating existing conversation:', phoneKey);
           const existing = list[idx];
 
           // Calculate unread count: increment if incoming and not on selected conversation
@@ -138,7 +136,6 @@ export default function Chats() {
             ? currentUnreadCount + 1
             : currentUnreadCount;
 
-          console.log('📊 Unread count calculation:', {
             phoneKey,
             isIncomingMessage,
             isSelectedConversation,
@@ -162,7 +159,6 @@ export default function Chats() {
         } else {
           // Only create new if contact doesn't exist AND is marked as new
           if (contact?.is_new !== false) {
-            console.log('➕ Creating new conversation:', phoneKey);
             const isIncomingMessage = message?.direction === 'incoming';
             list.unshift({
               phone: phone,
@@ -174,7 +170,6 @@ export default function Chats() {
               direction: message?.direction || 'incoming',
             });
           } else {
-            console.log('⚠️ Skipping - contact not in local list but exists on server:', phoneKey);
           }
         }
         return list;

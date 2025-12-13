@@ -181,7 +181,6 @@ export function useMessages(conversationPhone: string | null): UseMessagesReturn
           return timeA - timeB;
         });
 
-      console.log('📥 Loaded messages:', {
         count: sortedMessages.length,
         withStatus: sortedMessages.filter(m => m.status).length,
         statuses: sortedMessages.map(m => ({
@@ -193,7 +192,6 @@ export function useMessages(conversationPhone: string | null): UseMessagesReturn
 
       setMessages(sortedMessages);
     } catch (err: any) {
-      console.error('Failed to load messages:', err);
       setError(err.message || 'Failed to load messages');
       setMessages([]);
     } finally {
@@ -234,7 +232,6 @@ export function useMessages(conversationPhone: string | null): UseMessagesReturn
           : m
       ));
     } catch (err: any) {
-      console.error('❌ Failed to send message:', err);
       // Mark message as failed
       setMessages(prev => prev.map(m =>
         m.id === tempId
@@ -290,7 +287,6 @@ export function useMessages(conversationPhone: string | null): UseMessagesReturn
       // The websocket will handle replacing the temporary message
       // with the final one from the server.
     } catch (err: any) {
-      console.error('❌ Failed to send media message:', err);
       // On failure, update optimistic message to show error
       setMessages(prev => prev.map(m => 
         m.id === tempId 

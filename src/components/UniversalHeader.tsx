@@ -63,7 +63,6 @@ export const UniversalHeader = ({ onMenuClick }: UniversalHeaderProps) => {
 
   const handleThemeToggle = () => {
     const newTheme = resolvedTheme === "dark" ? "light" : "dark";
-    console.log('🎨 Theme toggle:', { current: resolvedTheme, new: newTheme });
 
     // Set theme in next-themes
     setTheme(newTheme);

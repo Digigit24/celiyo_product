@@ -57,7 +57,6 @@ export const useOPDTemplate = () => {
         revalidateOnReconnect: true,
         shouldRetryOnError: false,
         onError: (err) => {
-          console.error('Failed to fetch template groups:', err);
           setError(err.message || 'Failed to fetch template groups');
         },
       }
@@ -75,7 +74,6 @@ export const useOPDTemplate = () => {
         revalidateOnReconnect: true,
         shouldRetryOnError: false,
         onError: (err) => {
-          console.error('Failed to fetch template group:', err);
           setError(err.message || 'Failed to fetch template group');
         },
       }
@@ -148,7 +146,6 @@ export const useOPDTemplate = () => {
         revalidateOnReconnect: true,
         shouldRetryOnError: false,
         onError: (err) => {
-          console.error('Failed to fetch templates:', err);
           setError(err.message || 'Failed to fetch templates');
         },
       }
@@ -163,7 +160,6 @@ export const useOPDTemplate = () => {
       revalidateOnReconnect: true,
       shouldRetryOnError: false,
       onError: (err) => {
-        console.error('Failed to fetch template:', err);
         setError(err.message || 'Failed to fetch template');
       },
     });
@@ -251,7 +247,6 @@ export const useOPDTemplate = () => {
         revalidateOnReconnect: true,
         shouldRetryOnError: false,
         onError: (err) => {
-          console.error('Failed to fetch template fields:', err);
           setError(err.message || 'Failed to fetch template fields');
         },
       }
@@ -269,7 +264,6 @@ export const useOPDTemplate = () => {
         revalidateOnReconnect: true,
         shouldRetryOnError: false,
         onError: (err) => {
-          console.error('Failed to fetch template field:', err);
           setError(err.message || 'Failed to fetch template field');
         },
       }
@@ -342,7 +336,6 @@ export const useOPDTemplate = () => {
         revalidateOnReconnect: true,
         shouldRetryOnError: false,
         onError: (err) => {
-          console.error('Failed to fetch template field options:', err);
           setError(err.message || 'Failed to fetch template field options');
         },
       }
@@ -360,7 +353,6 @@ export const useOPDTemplate = () => {
         revalidateOnReconnect: true,
         shouldRetryOnError: false,
         onError: (err) => {
-          console.error('Failed to fetch template field option:', err);
           setError(err.message || 'Failed to fetch template field option');
         },
       }
@@ -436,7 +428,6 @@ export const useOPDTemplate = () => {
         revalidateOnReconnect: true,
         shouldRetryOnError: false,
         onError: (err) => {
-          console.error('Failed to fetch template responses:', err);
           setError(err.message || 'Failed to fetch template responses');
         },
       }
@@ -454,7 +445,6 @@ export const useOPDTemplate = () => {
         revalidateOnReconnect: true,
         shouldRetryOnError: false,
         onError: (err) => {
-          console.error('Failed to fetch template response:', err);
           setError(err.message || 'Failed to fetch template response');
         },
       }
@@ -527,7 +517,6 @@ export const useOPDTemplate = () => {
         revalidateOnReconnect: true,
         shouldRetryOnError: false,
         onError: (err) => {
-          console.error('Failed to fetch template field responses:', err);
           setError(err.message || 'Failed to fetch template field responses');
         },
       }
@@ -545,7 +534,6 @@ export const useOPDTemplate = () => {
         revalidateOnReconnect: true,
         shouldRetryOnError: false,
         onError: (err) => {
-          console.error('Failed to fetch template field response:', err);
           setError(err.message || 'Failed to fetch template field response');
         },
       }

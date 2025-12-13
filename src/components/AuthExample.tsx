@@ -41,7 +41,6 @@ export const AuthExample: React.FC = () => {
     try {
       await login({ email, password });
     } catch (err) {
-      console.error('Login failed:', err);
     }
   };
 
@@ -49,7 +48,6 @@ export const AuthExample: React.FC = () => {
     try {
       await logout();
     } catch (err) {
-      console.error('Logout failed:', err);
     }
   };
 

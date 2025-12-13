@@ -208,7 +208,6 @@ export default function ContactsTable({
           size="sm"
           onClick={() => {
             // Navigate to chat
-            console.log('Open chat with:', contact.phone);
           }}
           className="flex-1"
         >

@@ -42,7 +42,6 @@ export const usePayment = () => {
         revalidateOnReconnect: true,
         shouldRetryOnError: false,
         onError: (err) => {
-          console.error('Failed to fetch payment categories:', err);
           setError(err.message || 'Failed to fetch payment categories');
         },
       }
@@ -61,7 +60,6 @@ export const usePayment = () => {
         revalidateOnReconnect: true,
         shouldRetryOnError: false,
         onError: (err) => {
-          console.error('Failed to fetch payment category:', err);
           setError(err.message || 'Failed to fetch payment category');
         },
       }
@@ -156,7 +154,6 @@ export const usePayment = () => {
         revalidateOnReconnect: true,
         shouldRetryOnError: false,
         onError: (err) => {
-          console.error('Failed to fetch transactions:', err);
           setError(err.message || 'Failed to fetch transactions');
         },
       }
@@ -175,7 +172,6 @@ export const usePayment = () => {
         revalidateOnReconnect: true,
         shouldRetryOnError: false,
         onError: (err) => {
-          console.error('Failed to fetch transaction:', err);
           setError(err.message || 'Failed to fetch transaction');
         },
       }
@@ -268,7 +264,6 @@ export const usePayment = () => {
         revalidateOnReconnect: true,
         shouldRetryOnError: false,
         onError: (err) => {
-          console.error('Failed to fetch transaction statistics:', err);
           setError(err.message || 'Failed to fetch transaction statistics');
         },
       }
@@ -313,7 +308,6 @@ export const usePayment = () => {
         revalidateOnReconnect: true,
         shouldRetryOnError: false,
         onError: (err) => {
-          console.error('Failed to fetch accounting periods:', err);
           setError(err.message || 'Failed to fetch accounting periods');
         },
       }
@@ -332,7 +326,6 @@ export const usePayment = () => {
         revalidateOnReconnect: true,
         shouldRetryOnError: false,
         onError: (err) => {
-          console.error('Failed to fetch accounting period:', err);
           setError(err.message || 'Failed to fetch accounting period');
         },
       }

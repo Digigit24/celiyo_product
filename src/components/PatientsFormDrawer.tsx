@@ -119,7 +119,6 @@ export default function PatientsFormDrawer({
 
   const handleViewAppointment = useCallback((appointmentId: number) => {
     // You can implement appointment drawer navigation here if needed
-    console.log('View appointment:', appointmentId);
     toast.info('Appointment details coming soon');
   }, []);
 
@@ -135,7 +134,6 @@ export default function PatientsFormDrawer({
           return;
         }
 
-        console.log('Creating patient with values:', values);
 
         await createPatient(values as PatientCreateData);
 
@@ -151,7 +149,6 @@ export default function PatientsFormDrawer({
           return;
         }
 
-        console.log('Updating patient with values:', values);
 
         await updatePatient(patientId, values as PatientUpdateData);
 
@@ -160,7 +157,6 @@ export default function PatientsFormDrawer({
         handleSwitchToView();
       }
     } catch (error: any) {
-      console.error('Save error:', error);
       toast.error(
         error?.response?.data?.error ||
           error?.message ||
@@ -191,7 +187,6 @@ export default function PatientsFormDrawer({
           {
             icon: Phone,
             onClick: () => {
-              console.log('Call patient');
               window.open(`tel:${patient.mobile_primary}`, '_self');
             },
             label: 'Call patient',
@@ -212,7 +207,6 @@ export default function PatientsFormDrawer({
           {
             icon: FileText,
             onClick: () => {
-              console.log('View medical records');
               toast.info('Medical records feature coming soon');
             },
             label: 'View records',

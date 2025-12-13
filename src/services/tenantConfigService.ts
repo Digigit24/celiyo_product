@@ -22,7 +22,6 @@ const getTenantId = (): string | null => {
       return tenant?.id || tenant?.tenant_id || null;
     }
   } catch (error) {
-    console.error('Failed to get tenant ID:', error);
   }
   return null;
 };
@@ -35,7 +34,6 @@ export const onboardWhatsAppClient = async (
 ): Promise<WhatsAppOnboardingResponse> => {
   const tenantId = getTenantId();
 
-  console.log('📤 Onboarding WhatsApp client:', {
     waba_id: request.waba_id,
     phone_number_id: request.phone_number_id,
     tenant_id: tenantId,
@@ -49,7 +47,6 @@ export const onboardWhatsAppClient = async (
     }
   );
 
-  console.log('✅ WhatsApp onboarding successful:', response.data);
   return response.data;
 };
 
@@ -59,13 +56,11 @@ export const onboardWhatsAppClient = async (
 export const getTenantConfig = async (): Promise<TenantConfigResponse> => {
   const tenantId = getTenantId();
 
-  console.log('📤 Fetching tenant config for tenant:', tenantId);
 
   const response = await whatsappClient.get<TenantConfigResponse>(
     API_CONFIG.WHATSAPP.TENANT_CONFIG.CONFIG
   );
 
-  console.log('✅ Tenant config fetched:', response.data);
   return response.data;
 };
 
@@ -75,13 +70,11 @@ export const getTenantConfig = async (): Promise<TenantConfigResponse> => {
 export const getTenantConfigFull = async (): Promise<TenantConfigFullResponse> => {
   const tenantId = getTenantId();
 
-  console.log('📤 Fetching full tenant config for tenant:', tenantId);
 
   const response = await whatsappClient.get<TenantConfigFullResponse>(
     API_CONFIG.WHATSAPP.TENANT_CONFIG.CONFIG_FULL
   );
 
-  console.log('✅ Full tenant config fetched');
   return response.data;
 };
 
@@ -93,7 +86,6 @@ export const createTenantConfig = async (
 ): Promise<TenantConfigResponse> => {
   const tenantId = getTenantId();
 
-  console.log('📤 Creating tenant config:', {
     tenant_id: tenantId,
     waba_id: configData.waba_id,
   });
@@ -106,7 +98,6 @@ export const createTenantConfig = async (
     }
   );
 
-  console.log('✅ Tenant config created:', response.data);
   return response.data;
 };
 
@@ -118,7 +109,6 @@ export const updateTenantConfig = async (
 ): Promise<TenantConfigResponse> => {
   const tenantId = getTenantId();
 
-  console.log('📤 Updating tenant config:', {
     tenant_id: tenantId,
     updates: Object.keys(configUpdate),
   });
@@ -131,7 +121,6 @@ export const updateTenantConfig = async (
     }
   );
 
-  console.log('✅ Tenant config updated:', response.data);
   return response.data;
 };
 
@@ -141,11 +130,9 @@ export const updateTenantConfig = async (
 export const deleteTenantConfig = async (): Promise<void> => {
   const tenantId = getTenantId();
 
-  console.log('📤 Deleting tenant config for tenant:', tenantId);
 
   await whatsappClient.delete(API_CONFIG.WHATSAPP.TENANT_CONFIG.CONFIG);
 
-  console.log('✅ Tenant config deleted');
 };
 
 /**
@@ -154,13 +141,11 @@ export const deleteTenantConfig = async (): Promise<void> => {
 export const deactivateTenantConfig = async (): Promise<TenantConfigResponse> => {
   const tenantId = getTenantId();
 
-  console.log('📤 Deactivating tenant config for tenant:', tenantId);
 
   const response = await whatsappClient.post<TenantConfigResponse>(
     API_CONFIG.WHATSAPP.TENANT_CONFIG.DEACTIVATE
   );
 
-  console.log('✅ Tenant config deactivated');
   return response.data;
 };
 
@@ -170,12 +155,10 @@ export const deactivateTenantConfig = async (): Promise<TenantConfigResponse> =>
 export const activateTenantConfig = async (): Promise<TenantConfigResponse> => {
   const tenantId = getTenantId();
 
-  console.log('📤 Activating tenant config for tenant:', tenantId);
 
   const response = await whatsappClient.post<TenantConfigResponse>(
     API_CONFIG.WHATSAPP.TENANT_CONFIG.ACTIVATE
   );
 
-  console.log('✅ Tenant config activated');
   return response.data;
 };

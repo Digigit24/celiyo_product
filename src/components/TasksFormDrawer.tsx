@@ -118,7 +118,6 @@ export default function TasksFormDrawer({
           return;
         }
 
-        console.log('Creating task with values:', values);
 
         await createTask(values as CreateTaskPayload);
 
@@ -134,7 +133,6 @@ export default function TasksFormDrawer({
           return;
         }
 
-        console.log('Updating task with values:', values);
 
         await updateTask(taskId, values as UpdateTaskPayload);
 
@@ -143,7 +141,6 @@ export default function TasksFormDrawer({
         handleSwitchToView();
       }
     } catch (error: any) {
-      console.error('Save error:', error);
       toast.error(
         error?.response?.data?.error ||
           error?.message ||
@@ -174,7 +171,6 @@ export default function TasksFormDrawer({
           {
             icon: Calendar,
             onClick: () => {
-              console.log('View calendar');
               toast.info('Calendar feature coming soon');
             },
             label: 'View calendar',

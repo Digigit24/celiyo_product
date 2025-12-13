@@ -121,7 +121,6 @@ export function LeadsFormDrawer({
         return;
       }
 
-      console.log('Form values:', formValues);
 
       if (currentMode === 'create') {
         // CREATE FLOW
@@ -143,7 +142,6 @@ export function LeadsFormDrawer({
         handleSwitchToView();
       }
     } catch (error: any) {
-      console.error('Save error:', error);
       toast.error(
         error?.response?.data?.detail ||
           error?.message ||

@@ -49,7 +49,6 @@ export const GeneralSettingsTab: React.FC = () => {
 
   const handleSave = () => {
     // TODO: Implement save functionality
-    console.log({
       hospitalName,
       logo,
       address,

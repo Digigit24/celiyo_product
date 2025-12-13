@@ -112,14 +112,12 @@ export default function WhatsAppOnboarding() {
 
         // Check if this is a WhatsApp Embedded Signup completion event
         if (data.type === 'WA_EMBEDDED_SIGNUP' && data.event === 'FINISH') {
-          console.log('WhatsApp Embedded Signup completed:', data);
 
           // Extract WABA ID and Phone Number ID from the event
           const wabaId = data.data?.waba_id || data.data?.id;
           const phoneNumberId = data.data?.phone_number_id;
 
           if (wabaId && phoneNumberId) {
-            console.log('Captured from postMessage:', { wabaId, phoneNumberId });
 
             setEmbeddedSignupData({
               waba_id: wabaId,
@@ -134,11 +132,9 @@ export default function WhatsAppOnboarding() {
               description: `WABA ID: ${wabaId.substring(0, 10)}...`,
             });
           } else {
-            console.warn('WABA ID or Phone Number ID not found in postMessage data:', data);
           }
         }
       } catch (error) {
-        console.error('Error processing postMessage:', error);
       }
     };
 
@@ -175,7 +171,6 @@ export default function WhatsAppOnboarding() {
         redirect_uri: window.location.href,
       };
 
-      console.log('Starting WhatsApp onboarding with:', request);
 
       const response = await onboardWhatsAppClient(request);
 
@@ -193,7 +188,6 @@ export default function WhatsAppOnboarding() {
       setOauthCode('');
       setEmbeddedSignupData(null);
     } catch (error: any) {
-      console.error('Onboarding failed:', error);
 
       const errorMessage = error.response?.data?.detail || error.message || 'Unknown error';
 
@@ -207,7 +201,6 @@ export default function WhatsAppOnboarding() {
   };
 
   const handleFacebookSuccess = (response: any) => {
-    console.log('Facebook Embedded Signup successful:', response);
 
     // Extract data from Facebook response
     const { authResponse } = response;
@@ -217,7 +210,6 @@ export default function WhatsAppOnboarding() {
 
       // Check if we received an authorization code (Authorization Code Flow)
       if (authResponse.code) {
-        console.log('Authorization Code received:', authResponse.code);
 
         // Store the OAuth code - onboarding will trigger automatically
         // when both code and embedded signup data are available
@@ -229,18 +221,15 @@ export default function WhatsAppOnboarding() {
       }
       // If we got an access token directly (shouldn't happen with response_type: 'code')
       else if (authResponse.accessToken) {
-        console.log('Access Token received:', authResponse.accessToken);
         updateClientData('access_token', authResponse.accessToken);
         toast.success('Access token received!');
       }
 
       // Log the full response for debugging
-      console.log('Full authResponse:', authResponse);
     }
   };
 
   const handleFacebookError = (error: any) => {
-    console.error('Facebook login error:', error);
     toast.error('Failed to connect to Facebook. Please try again.');
   };
 
@@ -295,7 +284,6 @@ export default function WhatsAppOnboarding() {
       // Refresh the configuration after save
       await handleFetchConfiguration();
     } catch (error: any) {
-      console.error('Failed to save configuration:', error);
 
       const errorMessage = error.response?.data?.detail || error.message || 'Unknown error';
 
@@ -325,7 +313,6 @@ export default function WhatsAppOnboarding() {
         updateClientData('phone_number_id', config.phone_number_id);
       }
     } catch (error: any) {
-      console.error('Failed to fetch configuration:', error);
 
       if (error.response?.status === 404) {
         toast.info('No configuration found for this tenant', {
@@ -361,7 +348,6 @@ export default function WhatsAppOnboarding() {
       // Refresh configuration
       await handleFetchConfiguration();
     } catch (error: any) {
-      console.error('Failed to deactivate configuration:', error);
 
       const errorMessage = error.response?.data?.detail || error.message || 'Unknown error';
 
@@ -390,7 +376,6 @@ export default function WhatsAppOnboarding() {
       // Refresh configuration
       await handleFetchConfiguration();
     } catch (error: any) {
-      console.error('Failed to activate configuration:', error);
 
       const errorMessage = error.response?.data?.detail || error.message || 'Unknown error';
 

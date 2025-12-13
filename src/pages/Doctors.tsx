@@ -34,8 +34,6 @@ export const Doctors: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
 
   // Debug logging
-  console.log('Doctors component rendering...');
-  console.log('HMS Access:', hasHMSAccess);
 
   // Drawer state
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -63,7 +61,6 @@ export const Doctors: React.FC = () => {
   const hasPrevious = !!doctorsData?.previous;
 
   // Debug logging
-  console.log('Doctors data:', { doctors, totalCount, isLoading: doctorsLoading, error: doctorsError });
 
   // Handlers
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -99,7 +96,6 @@ export const Doctors: React.FC = () => {
       await deleteDoctor(doctor.id);
       mutateDoctors();
     } catch (error: any) {
-      console.error('Delete failed:', error);
     }
   };
 

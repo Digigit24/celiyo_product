@@ -154,7 +154,6 @@ const LeadCustomFields = forwardRef<PartialLeadFormHandle, LeadCustomFieldsProps
               resolve({ metadata: cleanedData });
             },
             (errors) => {
-              console.error('Custom fields validation errors:', errors);
               resolve(null);
             }
           )();

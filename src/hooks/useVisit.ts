@@ -48,7 +48,6 @@ export const useVisit = () => {
         shouldRetryOnError: false,
         keepPreviousData: true,
         onError: (err) => {
-          console.error('Failed to fetch visits:', err);
           setError(err.message || 'Failed to fetch visits');
         },
       }
@@ -72,7 +71,6 @@ export const useVisit = () => {
         revalidateOnReconnect: true,
         shouldRetryOnError: false,
         onError: (err) => {
-          console.error('Failed to fetch visit:', err);
           setError(err.message || 'Failed to fetch visit');
         },
       }
@@ -97,7 +95,6 @@ export const useVisit = () => {
         shouldRetryOnError: false,
         refreshInterval: 30000, // Refresh every 30 seconds
         onError: (err) => {
-          console.error("Failed to fetch today's visits:", err);
           setError(err.message || "Failed to fetch today's visits");
         },
       }
@@ -126,7 +123,6 @@ export const useVisit = () => {
         shouldRetryOnError: false,
         refreshInterval: 10000, // Refresh every 10 seconds
         onError: (err) => {
-          console.error('Failed to fetch queue:', err);
           setError(err.message || 'Failed to fetch queue');
         },
       }
@@ -150,7 +146,6 @@ export const useVisit = () => {
         revalidateOnReconnect: true,
         shouldRetryOnError: false,
         onError: (err) => {
-          console.error('Failed to fetch visit statistics:', err);
           setError(err.message || 'Failed to fetch visit statistics');
         },
       }

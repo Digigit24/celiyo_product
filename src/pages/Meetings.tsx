@@ -35,8 +35,6 @@ export const Meetings: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
 
   // Debug logging
-  console.log('Meetings component rendering...');
-  console.log('CRM Access:', hasCRMAccess);
 
   // Drawer state
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -87,7 +85,6 @@ export const Meetings: React.FC = () => {
   const hasPrevious = !!meetingsData?.previous;
 
   // Debug logging
-  console.log('Meetings data:', { meetings, totalCount, isLoading: meetingsLoading, error: meetingsError });
 
   // Calculate statistics
   const upcomingCount = meetings.filter(m => isFuture(new Date(m.start_at))).length;
@@ -128,7 +125,6 @@ export const Meetings: React.FC = () => {
       await deleteMeeting(meeting.id);
       mutateMeetings();
     } catch (error: any) {
-      console.error('Delete failed:', error);
     }
   };
 

@@ -99,7 +99,6 @@ export const OPDVisits: React.FC = () => {
       await deleteOpdVisit(visit.id);
       mutateVisits();
     } catch (error: any) {
-      console.error('Delete failed:', error);
     }
   };
 

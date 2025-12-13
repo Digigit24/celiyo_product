@@ -29,7 +29,6 @@ export function FacebookLoginButton({
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   const handleStatusChange = (response: any) => {
-    console.log('Facebook login status:', response);
 
     if (response.status === 'connected') {
       toast.success('Successfully connected to Facebook!');
@@ -42,7 +41,6 @@ export function FacebookLoginButton({
         onError({ message: 'User did not authorize the app' });
       }
     } else {
-      console.log('User is not logged into Facebook');
     }
   };
 
@@ -66,20 +64,15 @@ export function FacebookLoginButton({
     login((response) => {
       setIsLoggingIn(false);
 
-      console.log('Facebook Embedded Signup response:', response);
 
       if (response.status === 'connected') {
-        console.log('Login successful!');
-        console.log('Auth Response:', response.authResponse);
 
         // Check if we got an authorization code (for token exchange)
         if (response.authResponse?.code) {
-          console.log('Authorization Code:', response.authResponse.code);
           toast.success('Authorization code received! Exchange it for a long-lived token.');
         }
         // Or if we got an access token directly
         else if (response.authResponse?.accessToken) {
-          console.log('Access Token:', response.authResponse.accessToken);
           toast.success('Access token received!');
         }
 
@@ -87,14 +80,12 @@ export function FacebookLoginButton({
           onSuccess(response);
         }
       } else if (response.status === 'not_authorized') {
-        console.log('User did not authorize the app');
         const errorMessage = 'Please authorize the app to continue';
         toast.error(errorMessage);
         if (onError) {
           onError({ message: errorMessage });
         }
       } else {
-        console.log('Login cancelled or failed:', response);
         const errorMessage = 'Login was cancelled or failed';
         toast.error(errorMessage);
         if (onError) {

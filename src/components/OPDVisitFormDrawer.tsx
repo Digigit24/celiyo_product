@@ -134,7 +134,6 @@ export default function OPDVisitFormDrawer({
           return;
         }
 
-        console.log('Creating OPD visit with values:', values);
 
         await createOpdVisit(values as OpdVisitCreateData);
 
@@ -150,7 +149,6 @@ export default function OPDVisitFormDrawer({
           return;
         }
 
-        console.log('Updating OPD visit with values:', values);
 
         await updateOpdVisit(visitId, values as OpdVisitUpdateData);
 
@@ -159,7 +157,6 @@ export default function OPDVisitFormDrawer({
         handleSwitchToView();
       }
     } catch (error: any) {
-      console.error('Save error:', error);
       toast.error(
         error?.response?.data?.error ||
           error?.message ||
@@ -196,7 +193,6 @@ export default function OPDVisitFormDrawer({
           {
             icon: FileText,
             onClick: () => {
-              console.log('Generate report');
               toast.info('Report generation coming soon');
             },
             label: 'Generate report',
@@ -205,7 +201,6 @@ export default function OPDVisitFormDrawer({
           {
             icon: DollarSign,
             onClick: () => {
-              console.log('Process payment');
               toast.info('Payment feature coming soon');
             },
             label: 'Process payment',

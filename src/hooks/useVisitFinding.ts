@@ -47,7 +47,6 @@ export const useVisitFinding = () => {
         shouldRetryOnError: false,
         keepPreviousData: true,
         onError: (err) => {
-          console.error('Failed to fetch visit findings:', err);
           setError(err.message || 'Failed to fetch visit findings');
         },
       }
@@ -71,7 +70,6 @@ export const useVisitFinding = () => {
         revalidateOnReconnect: true,
         shouldRetryOnError: false,
         onError: (err) => {
-          console.error('Failed to fetch visit finding:', err);
           setError(err.message || 'Failed to fetch visit finding');
         },
       }
@@ -96,7 +94,6 @@ export const useVisitFinding = () => {
         revalidateOnReconnect: true,
         shouldRetryOnError: false,
         onError: (err) => {
-          console.error('Failed to fetch visit findings:', err);
           setError(err.message || 'Failed to fetch visit findings');
         },
       }
@@ -132,7 +129,6 @@ export const useVisitFinding = () => {
         revalidateOnReconnect: true,
         shouldRetryOnError: false,
         onError: (err) => {
-          console.error('Failed to fetch latest vitals:', err);
           setError(err.message || 'Failed to fetch latest vitals');
         },
       }

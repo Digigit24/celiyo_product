@@ -76,15 +76,12 @@ export const swrConfig: SWRConfiguration = {
   onError: (error: AxiosError) => {
     // Handle specific error codes globally
     if (error.response?.status === 401) {
-      console.error('Authentication error - token may be invalid');
     }
     
     if (error.response?.status === 403) {
-      console.error('Permission denied');
     }
     
     if (error.response?.status === 500) {
-      console.error('Server error');
     }
   },
 };

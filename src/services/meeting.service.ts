@@ -28,7 +28,6 @@ class MeetingService {
       );
       return response.data;
     } catch (error: any) {
-      console.error('Error fetching meetings:', error);
       throw new Error(error?.response?.data?.detail || 'Failed to fetch meetings');
     }
   }
@@ -45,7 +44,6 @@ class MeetingService {
       // Handle both direct response and nested data response
       return response.data?.data || response.data;
     } catch (error: any) {
-      console.error(`Error fetching meeting ${id}:`, error);
       throw new Error(error?.response?.data?.detail || 'Failed to fetch meeting');
     }
   }
@@ -80,7 +78,6 @@ class MeetingService {
       );
       return response.data?.data || response.data;
     } catch (error: any) {
-      console.error('Error creating meeting:', error);
       const errorMessage = error?.response?.data?.detail
         || error?.response?.data?.message
         || error?.message
@@ -110,7 +107,6 @@ class MeetingService {
       );
       return response.data?.data || response.data;
     } catch (error: any) {
-      console.error(`Error updating meeting ${id}:`, error);
       const errorMessage = error?.response?.data?.detail
         || error?.response?.data?.message
         || error?.message
@@ -131,7 +127,6 @@ class MeetingService {
       );
       return response.data?.data || response.data;
     } catch (error: any) {
-      console.error(`Error patching meeting ${id}:`, error);
       const errorMessage = error?.response?.data?.detail
         || error?.response?.data?.message
         || error?.message
@@ -150,7 +145,6 @@ class MeetingService {
         API_CONFIG.CRM.MEETING_DELETE.replace(':id', id.toString())
       );
     } catch (error: any) {
-      console.error(`Error deleting meeting ${id}:`, error);
       throw new Error(error?.response?.data?.detail || 'Failed to delete meeting');
     }
   }
@@ -168,7 +162,6 @@ class MeetingService {
       );
       return response.data;
     } catch (error: any) {
-      console.error('Error fetching calendar data:', error);
       throw new Error(error?.response?.data?.detail || 'Failed to fetch calendar data');
     }
   }

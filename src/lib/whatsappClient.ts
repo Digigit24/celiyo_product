@@ -19,7 +19,6 @@ whatsappClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     const token = tokenManager.getAccessToken();
     
-    console.log('📤 WhatsApp API Request:', {
       url: config.url,
       method: config.method?.toUpperCase(),
       hasToken: !!token
@@ -27,9 +26,7 @@ whatsappClient.interceptors.request.use(
     
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
-      console.log('🔑 Added Bearer token to WhatsApp request');
     } else {
-      console.warn('⚠️ No access token found for WhatsApp request!');
     }
 
     // Multi-tenant header propagation (read from stored user)
@@ -47,7 +44,6 @@ whatsappClient.interceptors.request.use(
             config.headers['X-Tenant-Id'] = tenantId;
             config.headers['tenanttoken'] = tenantId; // Your API uses 'tenanttoken' header
             
-            console.log('🏢 Added tenant headers to WhatsApp request:', {
               'X-Tenant-Id': tenantId,
               'tenanttoken': tenantId
             });
@@ -57,13 +53,10 @@ whatsappClient.interceptors.request.use(
             config.headers['X-Tenant-Slug'] = tenant.slug;
           }
         } else {
-          console.warn('⚠️ No tenant found in user object');
         }
       } else {
-        console.warn('⚠️ No user found in localStorage');
       }
     } catch (error) {
-      console.error('❌ Failed to parse user or attach tenant headers:', error);
     }
     
     return config;
@@ -76,7 +69,6 @@ whatsappClient.interceptors.request.use(
 // Response interceptor for WhatsApp client
 whatsappClient.interceptors.response.use(
   (response) => {
-    console.log('✅ WhatsApp API response:', {
       status: response.status,
       url: response.config.url
     });
@@ -85,7 +77,6 @@ whatsappClient.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    console.error('❌ WhatsApp API error:', {
       status: error.response?.status,
       url: error.config?.url,
       data: error.response?.data
@@ -95,7 +86,6 @@ whatsappClient.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
-      console.log('🔄 Attempting to refresh token for WhatsApp request...');
 
       try {
         const refreshToken = tokenManager.getRefreshToken();
@@ -116,21 +106,18 @@ whatsappClient.interceptors.response.use(
             tokenManager.setRefreshToken(refresh);
           }
 
-          console.log('✅ Token refreshed, retrying WhatsApp request');
 
           // Retry the original request with new token
           originalRequest.headers.Authorization = `Bearer ${access}`;
           return whatsappClient(originalRequest);
         }
       } catch (refreshError) {
-        console.error('❌ Token refresh failed:', refreshError);
         
         // Refresh failed, clear tokens and redirect to login
         tokenManager.removeTokens();
         localStorage.removeItem(USER_KEY);
         
         if (!window.location.pathname.includes('/login')) {
-          console.log('↪️ Redirecting to login...');
           window.location.href = '/login';
         }
         return Promise.reject(refreshError);
@@ -139,17 +126,14 @@ whatsappClient.interceptors.response.use(
 
     // Handle 403 Forbidden - WhatsApp module not enabled
     if (error.response?.status === 403) {
-      console.error('🚫 WhatsApp access forbidden:', error.response.data);
       
       // Check if it's a module access issue
       if (error.response.data?.detail?.includes('whatsapp module not enabled')) {
-        console.error('❌ WhatsApp module is not enabled for this tenant');
       }
     }
     
     // Handle network errors
     if (!error.response) {
-      console.error('🌐 Network error:', error.message);
     }
     
     return Promise.reject(error);

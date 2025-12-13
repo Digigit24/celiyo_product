@@ -48,7 +48,6 @@ export const useOPDBill = () => {
         shouldRetryOnError: false,
         keepPreviousData: true,
         onError: (err) => {
-          console.error('Failed to fetch OPD bills:', err);
           setError(err.message || 'Failed to fetch OPD bills');
         },
       }
@@ -72,7 +71,6 @@ export const useOPDBill = () => {
         revalidateOnReconnect: true,
         shouldRetryOnError: false,
         onError: (err) => {
-          console.error('Failed to fetch OPD bill:', err);
           setError(err.message || 'Failed to fetch OPD bill');
         },
       }
@@ -96,7 +94,6 @@ export const useOPDBill = () => {
         revalidateOnReconnect: true,
         shouldRetryOnError: false,
         onError: (err) => {
-          console.error('Failed to fetch bill statistics:', err);
           setError(err.message || 'Failed to fetch bill statistics');
         },
       }

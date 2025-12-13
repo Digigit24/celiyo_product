@@ -46,8 +46,6 @@ export const Appointments: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'appointments' | 'types'>('appointments');
 
   // Debug logging
-  console.log('Appointments component rendering...');
-  console.log('HMS Access:', hasHMSAccess);
 
   // Drawer state
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -78,7 +76,6 @@ export const Appointments: React.FC = () => {
   const hasPrevious = !!appointmentsData?.previous;
 
   // Debug logging
-  console.log('Appointments data:', { appointments, totalCount, isLoading: appointmentsLoading, error: appointmentsError });
 
   // Handlers
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -114,7 +111,6 @@ export const Appointments: React.FC = () => {
       await deleteAppointment(appointment.id);
       mutateAppointments();
     } catch (error: any) {
-      console.error('Delete failed:', error);
     }
   };
 

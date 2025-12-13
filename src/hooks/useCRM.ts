@@ -63,7 +63,6 @@ export const useCRM = () => {
         revalidateOnReconnect: true,
         shouldRetryOnError: false,
         onError: (err) => {
-          console.error('Failed to fetch leads:', err);
           setError(err.message || 'Failed to fetch leads');
         }
       }
@@ -82,7 +81,6 @@ export const useCRM = () => {
         revalidateOnReconnect: true,
         shouldRetryOnError: false,
         onError: (err) => {
-          console.error('Failed to fetch lead:', err);
           setError(err.message || 'Failed to fetch lead');
         }
       }
@@ -249,7 +247,6 @@ export const useCRM = () => {
         revalidateOnReconnect: true,
         shouldRetryOnError: false,
         onError: (err) => {
-          console.error('Failed to fetch lead statuses:', err);
           setError(err.message || 'Failed to fetch lead statuses');
         }
       }
@@ -268,7 +265,6 @@ export const useCRM = () => {
         revalidateOnReconnect: true,
         shouldRetryOnError: false,
         onError: (err) => {
-          console.error('Failed to fetch lead status:', err);
           setError(err.message || 'Failed to fetch lead status');
         }
       }
@@ -351,7 +347,6 @@ export const useCRM = () => {
         revalidateOnReconnect: true,
         shouldRetryOnError: false,
         onError: (err) => {
-          console.error('Failed to fetch lead activities:', err);
           setError(err.message || 'Failed to fetch lead activities');
         }
       }
@@ -434,7 +429,6 @@ export const useCRM = () => {
         revalidateOnReconnect: true,
         shouldRetryOnError: false,
         onError: (err) => {
-          console.error('Failed to fetch lead orders:', err);
           setError(err.message || 'Failed to fetch lead orders');
         }
       }
@@ -517,7 +511,6 @@ export const useCRM = () => {
         revalidateOnReconnect: true,
         shouldRetryOnError: false,
         onError: (err) => {
-          console.error('Failed to fetch tasks:', err);
           setError(err.message || 'Failed to fetch tasks');
         }
       }
@@ -536,7 +529,6 @@ export const useCRM = () => {
         revalidateOnReconnect: true,
         shouldRetryOnError: false,
         onError: (err) => {
-          console.error('Failed to fetch task:', err);
           setError(err.message || 'Failed to fetch task');
         }
       }
@@ -640,7 +632,6 @@ export const useCRM = () => {
         revalidateOnReconnect: true,
         shouldRetryOnError: false,
         onError: (err) => {
-          console.error('Failed to fetch field configurations:', err);
           setError(err.message || 'Failed to fetch field configurations');
         }
       }
@@ -659,7 +650,6 @@ export const useCRM = () => {
         revalidateOnReconnect: true,
         shouldRetryOnError: false,
         onError: (err) => {
-          console.error('Failed to fetch field configuration:', err);
           setError(err.message || 'Failed to fetch field configuration');
         }
       }
@@ -678,7 +668,6 @@ export const useCRM = () => {
         revalidateOnReconnect: true,
         shouldRetryOnError: false,
         onError: (err) => {
-          console.error('Failed to fetch field schema:', err);
           setError(err.message || 'Failed to fetch field schema');
         }
       }

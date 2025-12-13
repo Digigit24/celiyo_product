@@ -54,7 +54,6 @@ export const AppointmentCalendarView: React.FC<AppointmentCalendarViewProps> = (
         }
         grouped[dateKey].push(appointment);
       } catch (error) {
-        console.error('Error parsing appointment date:', error);
       }
     });
 

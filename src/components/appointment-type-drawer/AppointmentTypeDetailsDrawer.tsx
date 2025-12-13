@@ -116,7 +116,6 @@ export default function AppointmentTypeDetailsDrawer({
           return;
         }
 
-        console.log('Creating appointment type with values:', values);
 
         await createAppointmentType(values as AppointmentTypeCreateData);
 
@@ -132,7 +131,6 @@ export default function AppointmentTypeDetailsDrawer({
           return;
         }
 
-        console.log('Updating appointment type with values:', values);
 
         await updateAppointmentType(appointmentTypeId, values as AppointmentTypeUpdateData);
 
@@ -141,7 +139,6 @@ export default function AppointmentTypeDetailsDrawer({
         handleSwitchToView();
       }
     } catch (error: any) {
-      console.error('Save error:', error);
       toast.error(
         error?.response?.data?.error ||
           error?.message ||

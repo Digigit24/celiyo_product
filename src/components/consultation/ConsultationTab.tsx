@@ -80,7 +80,6 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
   // Debug: Log template data changes
   useEffect(() => {
     if (selectedTemplate) {
-      console.log('📊 Template data status:', {
         selectedTemplate,
         hasTemplateData: !!templateData,
         isLoadingTemplate,
@@ -97,14 +96,12 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
 
       setIsLoadingResponse(true);
       try {
-        console.log('🔍 Fetching existing response for visit:', visit.id);
         const responses = await opdTemplateService.getVisitTemplateResponses(visit.id);
 
         // Find response for current template
         const response = responses.find(r => r.template === parseInt(selectedTemplate));
 
         if (response) {
-          console.log('✅ Found existing response:', response);
           setExistingResponse(response);
 
           // Populate form data from existing response
@@ -131,15 +128,12 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
             });
 
             setFormData(populatedData);
-            console.log('✅ Form data populated from existing response:', populatedData);
             toast.info('Loaded existing consultation data');
           }
         } else {
-          console.log('ℹ️ No existing response found for this template');
           setExistingResponse(null);
         }
       } catch (error: any) {
-        console.error('❌ Failed to fetch existing response:', error);
         // Don't show error toast - it's ok if there's no existing response
       } finally {
         setIsLoadingResponse(false);
@@ -157,7 +151,6 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
         const preferences = authService.getUserPreferences();
         const defaultTemplateId = preferences?.defaultOPDTemplate;
 
-        console.log('🔍 Checking for default template...', {
           preferences,
           defaultTemplateId,
           serviceAvailable: !!opdTemplateService,
@@ -165,8 +158,6 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
         });
 
         if (defaultTemplateId) {
-          console.log('📋 Loading default template:', defaultTemplateId);
-          console.log('Service object:', opdTemplateService);
 
           // Fetch the default template to get its group using hmsClient directly
           const { hmsClient } = await import('@/lib/client');
@@ -179,7 +170,6 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
             setSelectedTemplate(String(defaultTemplate.id));
             setHasDefaultTemplate(true);
             setIsDefaultTemplateLoaded(true);
-            console.log('✅ Default template loaded:', {
               id: defaultTemplate.id,
               name: defaultTemplate.name,
               group: defaultTemplate.group
@@ -187,11 +177,9 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
             toast.success(`Default template loaded: ${defaultTemplate.name}`);
           }
         } else {
-          console.log('ℹ️ No default template set in preferences');
           setHasDefaultTemplate(false);
         }
       } catch (error: any) {
-        console.error('❌ Failed to load default template:', error);
         toast.error(error.message || 'Failed to load default template');
         setHasDefaultTemplate(false);
       } finally {
@@ -222,23 +210,18 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
   // Log fetched data
   useEffect(() => {
     if (groupsData) {
-      console.log('Template Groups:', groupsData);
     }
   }, [groupsData]);
 
   useEffect(() => {
     if (templatesData) {
-      console.log('Templates:', templatesData);
     }
   }, [templatesData]);
 
   useEffect(() => {
     if (fieldsData) {
-      console.log('Template Fields:', fieldsData);
-      console.log('First field with options check:', fieldsData[0]);
       if (fieldsData.length > 0) {
         fieldsData.forEach((field, idx) => {
-          console.log(`Field ${idx} (${field.field_label}):`, {
             type: field.field_type,
             hasOptions: !!field.options,
             optionsCount: field.options?.length || 0,
@@ -264,7 +247,6 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
 
     setIsSaving(true);
     try {
-      console.log('💾 Saving consultation...', { formData, fieldsData });
 
       // Build field_responses array from formData
       const fieldResponses: FieldResponsePayload[] = fieldsData.map((field) => {
@@ -328,7 +310,6 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
         return response;
       });
 
-      console.log('📤 Submitting field responses:', fieldResponses);
 
       const payload = {
         template: parseInt(selectedTemplate),
@@ -340,7 +321,6 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
 
       if (existingResponse) {
         // Update existing response
-        console.log('🔄 Updating existing response:', existingResponse.id);
         savedResponse = await opdTemplateService.updateTemplateResponse(
           existingResponse.id,
           payload
@@ -350,7 +330,6 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
         toast.success('Consultation updated successfully');
       } else {
         // Create new response
-        console.log('✨ Creating new response');
         savedResponse = await opdTemplateService.createVisitTemplateResponse(
           visit.id,
           payload
@@ -359,9 +338,7 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
         toast.success('Consultation saved successfully');
       }
 
-      console.log('✅ Response saved:', savedResponse);
     } catch (error: any) {
-      console.error('❌ Failed to save consultation:', error);
       toast.error(error.message || 'Failed to save consultation');
     } finally {
       setIsSaving(false);
@@ -418,7 +395,6 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
       pdf.save(filename);
       toast.success('PDF downloaded successfully');
     } catch (error) {
-      console.error('Error generating PDF:', error);
       toast.error('Failed to generate PDF');
       // Make sure to remove the class even if there's an error
       element.classList.remove('pdf-mode');

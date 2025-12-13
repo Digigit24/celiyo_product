@@ -90,7 +90,6 @@ export const Roles: React.FC = () => {
       await deleteRole(role.id);
       mutateRoles();
     } catch (error: any) {
-      console.error('Delete failed:', error);
     }
   };
 

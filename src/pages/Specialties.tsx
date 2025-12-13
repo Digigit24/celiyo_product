@@ -88,7 +88,6 @@ export const Specialties: React.FC = () => {
       await deleteSpecialty(specialty.id);
       mutateSpecialties();
     } catch (error: any) {
-      console.error('Delete failed:', error);
     }
   };
 

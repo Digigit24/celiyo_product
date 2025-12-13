@@ -116,7 +116,6 @@ export default function RolesFormDrawer({
           return;
         }
 
-        console.log('Creating role with values:', values);
 
         await createRole(values as RoleCreateData);
 
@@ -132,7 +131,6 @@ export default function RolesFormDrawer({
           return;
         }
 
-        console.log('Updating role with values:', values);
 
         await updateRole(roleId, values as RoleUpdateData);
 
@@ -141,7 +139,6 @@ export default function RolesFormDrawer({
         handleSwitchToView();
       }
     } catch (error: any) {
-      console.error('Save error:', error);
       toast.error(
         error?.response?.data?.error ||
           error?.message ||
@@ -172,7 +169,6 @@ export default function RolesFormDrawer({
           {
             icon: Users,
             onClick: () => {
-              console.log('View role members');
               toast.info('Members view coming soon');
             },
             label: 'View members',

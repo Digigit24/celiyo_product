@@ -266,7 +266,6 @@ export default function OPDBilling() {
 
   // Debug: Log tenant data
   useEffect(() => {
-    console.log('Billing - Tenant data:', {
       hasTenantData: !!tenantData,
       tenantName: tenantData?.name,
       hasSettings: !!tenantSettings,
@@ -628,7 +627,6 @@ export default function OPDBilling() {
 
       setIsPackageDialogOpen(false);
     } catch (error) {
-      console.error('Error loading package:', error);
       alert('Failed to load package details. Please try again.');
     } finally {
       setLoadingPackageId(null);
@@ -689,7 +687,6 @@ export default function OPDBilling() {
         alert('Bill created successfully!');
       }
     } catch (error) {
-      console.error('Failed to save bill:', error);
       alert('Failed to save bill. Please try again.');
     }
   };
@@ -1649,7 +1646,6 @@ export default function OPDBilling() {
                 )}
                 getRowId={(bill: OPDBill) => bill.id.toString()}
                 getRowLabel={(bill: OPDBill) => bill.bill_number}
-                onView={(bill: OPDBill) => console.log('View bill:', bill.id)}
                 extraActions={(bill: OPDBill) => (
                   <>
                     <DropdownMenuItem onClick={handlePrint}>

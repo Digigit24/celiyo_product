@@ -15,14 +15,12 @@ export const ThemeSync = () => {
     const user = authService.getUser();
     const userTheme = user?.preferences?.theme;
 
-    console.log('🎨 ThemeSync: Checking user theme preference', {
       userTheme,
       currentTheme: resolvedTheme,
     });
 
     // If user has a theme preference, apply it
     if (userTheme && userTheme !== resolvedTheme) {
-      console.log(`🎨 ThemeSync: Setting theme to ${userTheme}`);
       setTheme(userTheme);
     }
   }, [setTheme, resolvedTheme]);

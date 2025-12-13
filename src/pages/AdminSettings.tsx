@@ -188,7 +188,6 @@ export const AdminSettings: React.FC = () => {
       setUserPreferencesData(response.data);
       // Initialize editedPreferences with current preferences or empty object
       setEditedPreferences(response.data?.preferences || {});
-      console.log('User preferences data:', response.data);
     } catch (err: any) {
       const errorMessage = err.response?.data?.error || err.message || 'Failed to fetch user preferences';
       setUserPreferencesError(errorMessage);

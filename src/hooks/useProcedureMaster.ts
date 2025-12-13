@@ -47,7 +47,6 @@ export const useProcedureMaster = () => {
         shouldRetryOnError: false,
         keepPreviousData: true,
         onError: (err) => {
-          console.error('Failed to fetch procedure masters:', err);
           setError(err.message || 'Failed to fetch procedure masters');
         },
       }
@@ -71,7 +70,6 @@ export const useProcedureMaster = () => {
         revalidateOnReconnect: true,
         shouldRetryOnError: false,
         onError: (err) => {
-          console.error('Failed to fetch procedure master:', err);
           setError(err.message || 'Failed to fetch procedure master');
         },
       }
@@ -99,7 +97,6 @@ export const useProcedureMaster = () => {
         shouldRetryOnError: false,
         keepPreviousData: true,
         onError: (err) => {
-          console.error('Failed to fetch active procedure masters:', err);
           setError(err.message || 'Failed to fetch active procedure masters');
         },
       }

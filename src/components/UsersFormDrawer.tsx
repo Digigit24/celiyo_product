@@ -116,7 +116,6 @@ export default function UsersFormDrawer({
           return;
         }
 
-        console.log('Creating user with values:', values);
 
         await createUser(values as UserCreateData);
 
@@ -132,7 +131,6 @@ export default function UsersFormDrawer({
           return;
         }
 
-        console.log('Updating user with values:', values);
 
         await updateUser(userId, values as UserUpdateData);
 
@@ -141,7 +139,6 @@ export default function UsersFormDrawer({
         handleSwitchToView();
       }
     } catch (error: any) {
-      console.error('Save error:', error);
       toast.error(
         error?.response?.data?.error ||
           error?.message ||
@@ -172,7 +169,6 @@ export default function UsersFormDrawer({
           {
             icon: Phone,
             onClick: () => {
-              console.log('Call user');
               toast.info('Phone feature coming soon');
             },
             label: 'Call user',

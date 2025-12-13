@@ -35,7 +35,6 @@ export const useDoctor = () => {
         revalidateOnReconnect: true,
         shouldRetryOnError: false,
         onError: (err) => {
-          console.error('Failed to fetch doctors:', err);
           setError(err.message || 'Failed to fetch doctors');
         }
       }
@@ -54,7 +53,6 @@ export const useDoctor = () => {
         revalidateOnReconnect: true,
         shouldRetryOnError: false,
         onError: (err) => {
-          console.error('Failed to fetch doctor:', err);
           setError(err.message || 'Failed to fetch doctor');
         }
       }
@@ -179,7 +177,6 @@ export const useDoctor = () => {
         revalidateOnReconnect: true,
         shouldRetryOnError: false,
         onError: (err) => {
-          console.error('Failed to fetch doctor availability:', err);
           setError(err.message || 'Failed to fetch doctor availability');
         }
       }
@@ -221,7 +218,6 @@ export const useDoctor = () => {
         revalidateOnReconnect: true,
         shouldRetryOnError: false,
         onError: (err) => {
-          console.error('Failed to fetch doctor statistics:', err);
           setError(err.message || 'Failed to fetch doctor statistics');
         }
       }
@@ -242,7 +238,6 @@ export const useDoctor = () => {
         revalidateOnReconnect: true,
         shouldRetryOnError: false,
         onError: (err) => {
-          console.error('Failed to fetch specialties:', err);
           setError(err.message || 'Failed to fetch specialties');
         }
       }
@@ -261,7 +256,6 @@ export const useDoctor = () => {
         revalidateOnReconnect: true,
         shouldRetryOnError: false,
         onError: (err) => {
-          console.error('Failed to fetch specialty:', err);
           setError(err.message || 'Failed to fetch specialty');
         }
       }

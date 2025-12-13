@@ -116,7 +116,6 @@ export default function SpecialtiesFormDrawer({
           return;
         }
 
-        console.log('Creating specialty with values:', values);
 
         await createSpecialty(values as SpecialtyCreateData);
 
@@ -132,7 +131,6 @@ export default function SpecialtiesFormDrawer({
           return;
         }
 
-        console.log('Updating specialty with values:', values);
 
         await updateSpecialty(specialtyId, values as SpecialtyUpdateData);
 
@@ -141,7 +139,6 @@ export default function SpecialtiesFormDrawer({
         handleSwitchToView();
       }
     } catch (error: any) {
-      console.error('Save error:', error);
       toast.error(
         error?.response?.data?.error ||
           error?.message ||
@@ -172,7 +169,6 @@ export default function SpecialtiesFormDrawer({
           {
             icon: Users,
             onClick: () => {
-              console.log('View doctors in specialty');
               toast.info('Doctors view feature coming soon');
             },
             label: 'View doctors',

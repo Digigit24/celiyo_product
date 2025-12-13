@@ -137,7 +137,6 @@ export function SideDrawer({
         }
       }
     } catch (e) {
-      console.warn('Failed to load drawer width from localStorage:', e);
     }
     
     return SIZE_MAP[size];
@@ -162,7 +161,6 @@ export function SideDrawer({
     try {
       localStorage.setItem(effectiveStorageKey, width.toString());
     } catch (e) {
-      console.warn('Failed to save drawer width to localStorage:', e);
     }
   }, [effectiveStorageKey]);
 

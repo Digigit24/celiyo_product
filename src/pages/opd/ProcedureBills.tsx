@@ -201,7 +201,6 @@ const { data, isLoading } = useProcedureBills({
 });
 
 // data will contain only unpaid bills
-console.log(data?.results);`}
         </pre>
         <p>Example 3: Record a payment</p>
         <pre style={{ background: '#f5f5f5', padding: '10px', overflow: 'auto' }}>
@@ -221,7 +220,6 @@ await recordPayment(123, {
 {`const { printBill } = useProcedureBill();
 
 const result = await printBill(123);
-console.log(result.pdf_url); // URL to download PDF`}
         </pre>
       </div>
 

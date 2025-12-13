@@ -48,7 +48,6 @@ export const useSpecialty = () => {
         shouldRetryOnError: false,
         keepPreviousData: true,
         onError: (err) => {
-          console.error('Failed to fetch specialties:', err);
           setError(err.message || 'Failed to fetch specialties');
         }
       }
@@ -72,7 +71,6 @@ export const useSpecialty = () => {
         revalidateOnReconnect: true,
         shouldRetryOnError: false,
         onError: (err) => {
-          console.error('Failed to fetch specialty:', err);
           setError(err.message || 'Failed to fetch specialty');
         }
       }

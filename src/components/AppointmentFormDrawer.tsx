@@ -116,7 +116,6 @@ export default function AppointmentFormDrawer({
           return;
         }
 
-        console.log('Creating appointment with values:', values);
 
         await createAppointment(values as AppointmentCreateData);
 
@@ -132,7 +131,6 @@ export default function AppointmentFormDrawer({
           return;
         }
 
-        console.log('Updating appointment with values:', values);
 
         await updateAppointment(appointmentId, values as AppointmentUpdateData);
 
@@ -141,7 +139,6 @@ export default function AppointmentFormDrawer({
         handleSwitchToView();
       }
     } catch (error: any) {
-      console.error('Save error:', error);
       toast.error(
         error?.response?.data?.error ||
           error?.message ||
@@ -172,7 +169,6 @@ export default function AppointmentFormDrawer({
           {
             icon: Calendar,
             onClick: () => {
-              console.log('Reschedule appointment');
               toast.info('Reschedule feature coming soon');
             },
             label: 'Reschedule',
@@ -181,7 +177,6 @@ export default function AppointmentFormDrawer({
           {
             icon: DollarSign,
             onClick: () => {
-              console.log('Process payment');
               toast.info('Payment feature coming soon');
             },
             label: 'Process payment',

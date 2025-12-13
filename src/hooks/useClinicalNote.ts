@@ -46,7 +46,6 @@ export const useClinicalNote = () => {
         shouldRetryOnError: false,
         keepPreviousData: true,
         onError: (err) => {
-          console.error('Failed to fetch clinical notes:', err);
           setError(err.message || 'Failed to fetch clinical notes');
         },
       }
@@ -70,7 +69,6 @@ export const useClinicalNote = () => {
         revalidateOnReconnect: true,
         shouldRetryOnError: false,
         onError: (err) => {
-          console.error('Failed to fetch clinical note:', err);
           setError(err.message || 'Failed to fetch clinical note');
         },
       }
@@ -95,7 +93,6 @@ export const useClinicalNote = () => {
         revalidateOnReconnect: true,
         shouldRetryOnError: false,
         onError: (err) => {
-          console.error('Failed to fetch clinical note by visit:', err);
           setError(err.message || 'Failed to fetch clinical note by visit');
         },
       }

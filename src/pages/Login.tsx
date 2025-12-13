@@ -23,7 +23,6 @@ const Login = () => {
       await login({ email, password });
     } catch (err) {
       // Error is handled by useAuth hook
-      console.error("Login error:", err);
     }
   };
 

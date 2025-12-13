@@ -203,7 +203,6 @@ export const CRMLeads: React.FC = () => {
             });
           } catch (patientError: any) {
             // Don't fail the status update if patient creation fails
-            console.error('Failed to create patient:', patientError);
             toast.warning('Lead status updated, but patient creation failed', {
               description: patientError?.message || 'Please create patient manually',
               duration: 5000,

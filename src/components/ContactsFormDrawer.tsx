@@ -118,7 +118,6 @@ export default function ContactsFormDrawer({
           return;
         }
 
-        console.log('Creating contact with values:', values);
 
         await createContact(values);
 
@@ -134,7 +133,6 @@ export default function ContactsFormDrawer({
           return;
         }
 
-        console.log('Updating contact with values:', values);
 
         // Convert CreateContactPayload to UpdateContactPayload (exclude phone)
         const { phone, ...updatePayload } = values;
@@ -145,7 +143,6 @@ export default function ContactsFormDrawer({
         handleSwitchToView();
       }
     } catch (error: any) {
-      console.error('Save error:', error);
       toast.error(
         error?.response?.data?.detail ||
           error?.message ||
@@ -179,7 +176,6 @@ export default function ContactsFormDrawer({
             icon: MessageCircle,
             onClick: () => {
               // Navigate to chat with this contact
-              console.log('Open chat with:', contact.phone);
             },
             label: 'Message contact',
             variant: 'ghost',

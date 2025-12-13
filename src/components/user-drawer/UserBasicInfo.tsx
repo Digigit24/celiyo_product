@@ -162,7 +162,6 @@ const UserBasicInfo = forwardRef<UserBasicInfoHandle, UserBasicInfoProps>(
         return new Promise((resolve) => {
           handleSubmit(
             (data) => {
-              console.log('Form validation passed:', data);
 
               if (isCreateMode) {
                 const createData: UserCreateData = {
@@ -190,7 +189,6 @@ const UserBasicInfo = forwardRef<UserBasicInfoHandle, UserBasicInfoProps>(
               }
             },
             (errors) => {
-              console.error('Form validation failed:', errors);
               resolve(null);
             }
           )();

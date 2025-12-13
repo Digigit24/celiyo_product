@@ -48,7 +48,6 @@ export const usePatient = () => {
         shouldRetryOnError: false,
         keepPreviousData: true,
         onError: (err) => {
-          console.error('Failed to fetch patients:', err);
           setError(err.message || 'Failed to fetch patients');
         }
       }
@@ -72,7 +71,6 @@ export const usePatient = () => {
         revalidateOnReconnect: true,
         shouldRetryOnError: false,
         onError: (err) => {
-          console.error('Failed to fetch patient:', err);
           setError(err.message || 'Failed to fetch patient');
         }
       }
@@ -96,7 +94,6 @@ export const usePatient = () => {
         revalidateOnReconnect: true,
         shouldRetryOnError: false,
         onError: (err) => {
-          console.error('Failed to fetch patient statistics:', err);
           setError(err.message || 'Failed to fetch patient statistics');
         }
       }

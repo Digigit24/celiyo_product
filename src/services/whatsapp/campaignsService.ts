@@ -28,14 +28,12 @@ class CampaignsService {
         group_ids: payload.group_ids?.length || 0
       };
 
-      console.log('📤 Sending broadcast campaign:', recipientInfo);
 
       const response = await whatsappClient.post<BroadcastCampaignResponse>(
         API_CONFIG.WHATSAPP.CAMPAIGN_BROADCAST,
         payload
       );
 
-      console.log('✅ Broadcast sent:', {
         campaign_id: response.data.campaign_id,
         sent: response.data.sent,
         failed: response.data.failed
@@ -43,7 +41,6 @@ class CampaignsService {
 
       return response.data;
     } catch (error: any) {
-      console.error('❌ Failed to send broadcast:', error);
 
       if (error.response?.status === 403) {
         throw new Error('WhatsApp module not enabled');
@@ -66,21 +63,18 @@ class CampaignsService {
         group_ids: payload.group_ids?.length || 0
       };
 
-      console.log('📤 Creating broadcast (backend-aligned):', recipientInfo);
 
       const response = await whatsappClient.post<WACampaign>(
         API_CONFIG.WHATSAPP.CAMPAIGN_BROADCAST,
         payload
       );
 
-      console.log('✅ Broadcast created:', {
         campaign_id: response.data.campaign_id,
         total_recipients: response.data.total_recipients
       });
 
       return response.data;
     } catch (error: any) {
-      console.error('❌ Failed to create broadcast:', error);
       const message = error.response?.data?.detail || 'Failed to create broadcast';
       throw new Error(message);
     }
@@ -98,10 +92,8 @@ class CampaignsService {
 
       const raw = response?.data;
       const arr: WACampaign[] = Array.isArray(raw) ? raw : Array.isArray(raw?.campaigns) ? raw.campaigns : [];
-      console.log('✅ Campaigns fetched (backend-aligned):', { count: arr.length });
       return arr;
     } catch (error: any) {
-      console.error('❌ Failed to list campaigns:', error);
       const message = error.response?.data?.detail || 'Failed to fetch campaigns';
       throw new Error(message);
     }
@@ -114,10 +106,8 @@ class CampaignsService {
     try {
       const url = buildUrl(API_CONFIG.WHATSAPP.CAMPAIGN_DETAIL, { id }, 'whatsapp');
       const response = await whatsappClient.get<WACampaign>(url);
-      console.log('✅ Campaign fetched (backend-aligned):', { campaign_id: response.data.campaign_id });
       return response.data;
     } catch (error: any) {
-      console.error('❌ Failed to fetch campaign (backend-aligned):', error);
       if (error.response?.status === 404) {
         throw new Error('Campaign not found');
       }
@@ -131,7 +121,6 @@ class CampaignsService {
    */
   async getCampaigns(query?: CampaignsListQuery): Promise<CampaignsListResponse> {
     try {
-      console.log('📋 Fetching campaigns:', query);
       
       const queryString = buildQueryString(query as unknown as Record<string, string | number | boolean>);
       const url = `${API_CONFIG.WHATSAPP.CAMPAIGNS}${queryString}`;
@@ -147,14 +136,12 @@ class CampaignsService {
             ? { total: raw.length, campaigns: raw }
             : { total: Number(raw?.total) || 0, campaigns: Array.isArray(raw?.campaigns) ? raw.campaigns : [] };
 
-      console.log('✅ Campaigns fetched:', {
         total: data.total ?? 0,
         count: data.campaigns?.length ?? 0
       });
       
       return data;
     } catch (error: any) {
-      console.error('❌ Failed to fetch campaigns:', error);
       const message = error.response?.data?.detail || 'Failed to fetch campaigns';
       throw new Error(message);
     }
@@ -165,7 +152,6 @@ class CampaignsService {
    */
   async getCampaign(id: string): Promise<CampaignDetail> {
     try {
-      console.log('📋 Fetching campaign:', id);
       
       const url = buildUrl(
         API_CONFIG.WHATSAPP.CAMPAIGN_DETAIL,
@@ -175,7 +161,6 @@ class CampaignsService {
       
       const response = await whatsappClient.get<CampaignDetail>(url);
       
-      console.log('✅ Campaign fetched:', {
         campaign_id: response.data?.campaign_id,
         sent: response.data?.sent,
         failed: response.data?.failed
@@ -183,7 +168,6 @@ class CampaignsService {
       
       return response.data;
     } catch (error: any) {
-      console.error('❌ Failed to fetch campaign:', error);
       
       if (error.response?.status === 404) {
         throw new Error('Campaign not found');
@@ -268,7 +252,6 @@ class CampaignsService {
         throw new Error('No failed messages to retry');
       }
       
-      console.log('🔄 Retrying failed messages:', {
         original_campaign: campaignId,
         failed_count: failedRecipients.length
       });
@@ -280,7 +263,6 @@ class CampaignsService {
         message_text: message,
       });
     } catch (error: any) {
-      console.error('❌ Failed to retry messages:', error);
       throw error;
     }
   }

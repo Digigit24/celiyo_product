@@ -8,6 +8,7 @@ import {
   Database,
   ChevronDown,
   ChevronRight,
+  ChevronLeft,
   Users,
   Calendar,
   ClipboardList,
@@ -354,25 +355,12 @@ export function UniversalSidebar({
     : undefined;
   const tenantName = tenantData?.name || 'HMS';
 
-  // Debug logging
-  console.log('Tenant data:', {
-    hasTenant: !!tenantData,
-    hasSettings: !!tenantData?.settings,
-    logoValue: tenantData?.settings?.logo,
-    logoLength: tenantData?.settings?.logo?.length,
-    tenantName: tenantData?.name,
-    isBase64: tenantData?.settings?.logo?.startsWith('data:image'),
-    fromAPI: !!currentTenant,
-    isLoading: isTenantLoading
-  });
-
   // Reset logo error when logo changes
   useEffect(() => {
     setLogoError(false);
   }, [tenantLogo]);
 
   const handleLogoError = () => {
-    console.error('Failed to load tenant logo:', tenantLogo);
     setLogoError(true);
   };
 
@@ -555,12 +543,15 @@ export function UniversalSidebar({
             variant="ghost"
             onClick={onCollapse}
             className={cn(
-              "w-full justify-start gap-3 h-10",
+              "w-full justify-start gap-3 h-10 hover:bg-sidebar-accent transition-colors",
               collapsed && "justify-center"
             )}
           >
-            <Icon3D icon={Menu} className="h-5 w-5 shrink-0" />
-            {!collapsed && <span>Collapse</span>}
+            <Icon3D
+              icon={collapsed ? ChevronRight : ChevronLeft}
+              className="h-5 w-5 shrink-0 text-sidebar-foreground"
+            />
+            {!collapsed && <span className="text-sm font-medium">Collapse Sidebar</span>}
           </Button>
         </div>
       )}

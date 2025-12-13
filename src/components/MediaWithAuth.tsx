@@ -34,7 +34,6 @@ const MediaWithAuth: React.FC<MediaWithAuthProps> = ({ src, alt, className, prev
         const url = URL.createObjectURL(blob);
         setMediaSrc(url);
       } catch (err) {
-        console.error('Failed to fetch media:', err);
         setError('Failed to load media');
       } finally {
         setIsLoading(false);

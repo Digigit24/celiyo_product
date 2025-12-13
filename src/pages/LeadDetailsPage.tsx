@@ -148,7 +148,6 @@ export const LeadDetailsPage = () => {
           });
         } catch (patientError: any) {
           // Don't fail the lead update if patient creation fails
-          console.error('Failed to create patient:', patientError);
           toast.warning('Lead updated, but patient creation failed', {
             description: patientError?.message || 'Please create patient manually',
             duration: 5000,
@@ -162,7 +161,6 @@ export const LeadDetailsPage = () => {
       }
     } catch (error: any) {
       toast.error(error.message || 'Failed to update lead');
-      console.error('Failed to update lead:', error);
     } finally {
       setIsSaving(false);
     }
@@ -185,7 +183,6 @@ export const LeadDetailsPage = () => {
       navigate('/crm/leads');
     } catch (error: any) {
       toast.error(error.message || 'Failed to delete lead');
-      console.error('Failed to delete lead:', error);
     } finally {
       setIsDeleting(false);
     }

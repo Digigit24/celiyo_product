@@ -80,7 +80,6 @@ export const CRMTasks: React.FC = () => {
       await deleteTask(task.id);
       mutate();
     } catch (error: any) {
-      console.error('Delete failed:', error);
     }
   };
 

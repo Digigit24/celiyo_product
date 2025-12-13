@@ -272,7 +272,6 @@ export function TemplateFieldEditor({
           }));
         }
 
-        console.log('Creating field with payload:', createPayload);
         const createdField = await createTemplateField(createPayload);
         savedFieldId = createdField.id;
         fieldOperationSuccess = true;
@@ -295,7 +294,6 @@ export function TemplateFieldEditor({
           display_order: formData.display_order,
           is_active: formData.is_active,
         };
-        console.log('Updating field with payload:', updatePayload);
         await updateTemplateField(fieldId, updatePayload);
         savedFieldId = fieldId;
         fieldOperationSuccess = true;

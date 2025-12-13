@@ -111,7 +111,6 @@ export default function GroupsFormDrawer({
           return;
         }
 
-        console.log('Creating group with values:', values);
 
         await createGroup(values);
 
@@ -127,7 +126,6 @@ export default function GroupsFormDrawer({
           return;
         }
 
-        console.log('Updating group with values:', values);
 
         // Convert CreateGroupPayload to UpdateGroupPayload (exclude group_id)
         const { group_id, ...updatePayload } = values;
@@ -138,7 +136,6 @@ export default function GroupsFormDrawer({
         handleSwitchToView();
       }
     } catch (error: any) {
-      console.error('Save error:', error);
       toast.error(
         error?.response?.data?.detail ||
           error?.message ||
@@ -166,7 +163,6 @@ export default function GroupsFormDrawer({
             icon: MessageCircle,
             onClick: () => {
               // Navigate to group chat
-              console.log('Open group chat:', group.group_id);
             },
             label: 'Message group',
             variant: 'ghost',
@@ -175,7 +171,6 @@ export default function GroupsFormDrawer({
             icon: UserPlus,
             onClick: () => {
               // Add participants
-              console.log('Add participants to group:', group.group_id);
             },
             label: 'Add participants',
             variant: 'ghost',

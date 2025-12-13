@@ -48,7 +48,6 @@ export const useProcedureBill = () => {
         shouldRetryOnError: false,
         keepPreviousData: true,
         onError: (err) => {
-          console.error('Failed to fetch procedure bills:', err);
           setError(err.message || 'Failed to fetch procedure bills');
         },
       }
@@ -72,7 +71,6 @@ export const useProcedureBill = () => {
         revalidateOnReconnect: true,
         shouldRetryOnError: false,
         onError: (err) => {
-          console.error('Failed to fetch procedure bill:', err);
           setError(err.message || 'Failed to fetch procedure bill');
         },
       }
@@ -96,7 +94,6 @@ export const useProcedureBill = () => {
         revalidateOnReconnect: true,
         shouldRetryOnError: false,
         onError: (err) => {
-          console.error('Failed to fetch procedure bill items:', err);
           setError(err.message || 'Failed to fetch procedure bill items');
         },
       }
@@ -120,7 +117,6 @@ export const useProcedureBill = () => {
         revalidateOnReconnect: true,
         shouldRetryOnError: false,
         onError: (err) => {
-          console.error('Failed to fetch procedure bill item:', err);
           setError(err.message || 'Failed to fetch procedure bill item');
         },
       }

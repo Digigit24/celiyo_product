@@ -54,7 +54,6 @@ export const useAuth = () => {
     try {
       await authService.logout();
     } catch (err) {
-      console.error('Logout error:', err);
     } finally {
       // Update local state
       setUser(null);
@@ -74,7 +73,6 @@ export const useAuth = () => {
       setUser(currentUser);
       return currentUser;
     } catch (err) {
-      console.error('Failed to refresh user:', err);
       return null;
     }
   }, []);
@@ -105,7 +103,6 @@ export const useAuth = () => {
       }
       return true;
     } catch (err) {
-      console.error('Token verification failed:', err);
       await logout();
       return false;
     }

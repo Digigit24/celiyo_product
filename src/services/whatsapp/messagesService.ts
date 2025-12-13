@@ -34,22 +34,13 @@ class MessagesService {
    */
   async sendTextMessage(payload: SendTextMessagePayload): Promise<SendTextMessageResponse> {
     try {
-      console.log('📤 Sending text message to:', payload.to);
-
       const response = await whatsappClient.post<SendTextMessageResponse>(
         API_CONFIG.WHATSAPP.SEND_TEXT,
         payload
       );
 
-      console.log('✅ Message sent:', {
-        message_id: response.data.message_id,
-        status: response.data.status
-      });
-
       return response.data;
     } catch (error: any) {
-      console.error('❌ Failed to send message:', error);
-
       if (error.response?.status === 403) {
         throw new Error('WhatsApp module not enabled');
       }
@@ -64,23 +55,13 @@ class MessagesService {
    */
   async sendMediaMessage(payload: SendMediaMessagePayload): Promise<SendMediaMessageResponse> {
     try {
-      console.log('📤 Sending media message to:', payload.to, 'type:', payload.media_type);
-
       const response = await whatsappClient.post<SendMediaMessageResponse>(
         API_CONFIG.WHATSAPP.SEND_MEDIA,
         payload
       );
 
-      console.log('✅ Media message sent:', {
-        message_id: response.data.message_id,
-        status: response.data.status,
-        media_type: response.data.media_type
-      });
-
       return response.data;
     } catch (error: any) {
-      console.error('❌ Failed to send media message:', error);
-
       if (error.response?.status === 403) {
         throw new Error('WhatsApp module not enabled');
       }
@@ -95,23 +76,13 @@ class MessagesService {
    */
   async sendLocationMessage(payload: SendLocationMessagePayload): Promise<SendLocationMessageResponse> {
     try {
-      console.log('📤 Sending location message to:', payload.to);
-
       const response = await whatsappClient.post<SendLocationMessageResponse>(
         API_CONFIG.WHATSAPP.SEND_LOCATION,
         payload
       );
 
-      console.log('✅ Location message sent:', {
-        message_id: response.data.message_id,
-        status: response.data.status,
-        coordinates: `${response.data.latitude}, ${response.data.longitude}`
-      });
-
       return response.data;
     } catch (error: any) {
-      console.error('❌ Failed to send location message:', error);
-
       if (error.response?.status === 403) {
         throw new Error('WhatsApp module not enabled');
       }
@@ -126,14 +97,12 @@ class MessagesService {
    */
   async getConversations(): Promise<Conversation[]> {
     try {
-      console.log('📋 Fetching conversations');
-      
       const response = await whatsappClient.get<Conversation[]>(
         API_CONFIG.WHATSAPP.CONVERSATIONS
       );
 
       const raw = response.data || [];
-      
+
       // Deduplicate by phone number ignoring leading '+'
       const merged = new Map<string, Conversation>();
       for (const conv of raw) {
@@ -183,11 +152,9 @@ class MessagesService {
       }
 
       const deduped = Array.from(merged.values());
-      console.log('✅ Conversations fetched:', raw.length, '→ deduped to:', deduped.length);
-      
+
       return deduped;
     } catch (error: any) {
-      console.error('❌ Failed to fetch conversations:', error);
       const message = error.response?.data?.detail || 'Failed to fetch conversations';
       throw new Error(message);
     }
@@ -198,8 +165,6 @@ class MessagesService {
    */
   async getConversationMessages(phone: string): Promise<ConversationDetail> {
     try {
-      console.log('📋 Fetching conversation messages for:', phone);
-
       // Always call API with digits-only path segment (avoid '+' in URL to bypass upstream/CORS issues)
       const cleanPhone = String(phone).trim().replace(/^\+/, '');
       const url = buildUrl(
@@ -209,9 +174,6 @@ class MessagesService {
       );
 
       const response = await whatsappClient.get(url);
-
-      // Log the actual response structure to understand the API format
-      console.log('🔍 Raw API response:', response.data);
 
       // Normalize API response to support both shapes:
       // 1) { phone, name?, contact_name?, messages: [...] }
@@ -297,16 +259,8 @@ class MessagesService {
         messages,
       };
 
-      console.log('✅ Conversation messages processed:', {
-        phone: conversationDetail.phone,
-        name: conversationDetail.name,
-        messageCount: conversationDetail.messages.length,
-      });
-
       return conversationDetail;
     } catch (error: any) {
-      console.error('❌ Failed to fetch conversation messages:', error);
-
       if (error.response?.status === 404) {
         throw new Error('Conversation not found');
       }
@@ -322,8 +276,6 @@ class MessagesService {
    */
   async deleteConversation(phone: string): Promise<DeleteConversationResponse> {
     try {
-      console.log('🗑️ Deleting conversation:', phone);
-      
       // Always call API with digits-only path segment (avoid '+' in URL to bypass upstream/CORS issues)
       const cleanPhone = String(phone).trim().replace(/^\+/, '');
       const url = buildUrl(
@@ -331,22 +283,15 @@ class MessagesService {
         { phone: cleanPhone },
         'whatsapp'
       );
-      
+
       const response = await whatsappClient.delete<DeleteConversationResponse>(url);
-      
-      console.log('✅ Conversation deleted:', {
-        phone: response.data.phone,
-        deleted_count: response.data.deleted_count
-      });
-      
+
       return response.data;
     } catch (error: any) {
-      console.error('❌ Failed to delete conversation:', error);
-      
       if (error.response?.status === 404) {
         throw new Error('Conversation not found');
       }
-      
+
       const message = error.response?.data?.detail || 'Failed to delete conversation';
       throw new Error(message);
     }
@@ -357,21 +302,13 @@ class MessagesService {
    */
   async getRecentMessages(query?: RecentMessagesQuery): Promise<RecentMessagesResponse> {
     try {
-      console.log('📋 Fetching recent messages:', query);
-      
       const queryString = buildQueryString(query as unknown as Record<string, string | number | boolean>);
       const url = `${API_CONFIG.WHATSAPP.MESSAGES}${queryString}`;
-      
+
       const response = await whatsappClient.get<RecentMessagesResponse>(url);
-      
-      console.log('✅ Recent messages fetched:', {
-        total: response.data.total,
-        count: response.data.messages.length
-      });
-      
+
       return response.data;
     } catch (error: any) {
-      console.error('❌ Failed to fetch recent messages:', error);
       const message = error.response?.data?.detail || 'Failed to fetch recent messages';
       throw new Error(message);
     }
@@ -382,20 +319,12 @@ class MessagesService {
    */
   async getMessageStats(): Promise<MessageStats> {
     try {
-      console.log('📊 Fetching message statistics');
-      
       const response = await whatsappClient.get<MessageStats>(
         API_CONFIG.WHATSAPP.STATS
       );
-      
-      console.log('✅ Message stats fetched:', {
-        total_messages: response.data.total_messages,
-        total_conversations: response.data.total_conversations
-      });
-      
+
       return response.data;
     } catch (error: any) {
-      console.error('❌ Failed to fetch message stats:', error);
       const message = error.response?.data?.detail || 'Failed to fetch message stats';
       throw new Error(message);
     }

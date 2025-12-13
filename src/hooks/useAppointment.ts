@@ -50,7 +50,6 @@ export const useAppointment = () => {
         shouldRetryOnError: false,
         keepPreviousData: true,
         onError: (err) => {
-          console.error('Failed to fetch appointments:', err);
           setError(err.message || 'Failed to fetch appointments');
         }
       }
@@ -74,7 +73,6 @@ export const useAppointment = () => {
         revalidateOnReconnect: true,
         shouldRetryOnError: false,
         onError: (err) => {
-          console.error('Failed to fetch appointment:', err);
           setError(err.message || 'Failed to fetch appointment');
         }
       }
@@ -99,7 +97,6 @@ export const useAppointment = () => {
         shouldRetryOnError: false,
         keepPreviousData: true,
         onError: (err) => {
-          console.error('Failed to fetch appointments by doctor:', err);
           setError(err.message || 'Failed to fetch appointments by doctor');
         }
       }
@@ -124,7 +121,6 @@ export const useAppointment = () => {
         shouldRetryOnError: false,
         keepPreviousData: true,
         onError: (err) => {
-          console.error('Failed to fetch appointments by patient:', err);
           setError(err.message || 'Failed to fetch appointments by patient');
         }
       }
@@ -149,7 +145,6 @@ export const useAppointment = () => {
         shouldRetryOnError: false,
         keepPreviousData: true,
         onError: (err) => {
-          console.error('Failed to fetch upcoming appointments:', err);
           setError(err.message || 'Failed to fetch upcoming appointments');
         }
       }
@@ -173,7 +168,6 @@ export const useAppointment = () => {
         revalidateOnReconnect: true,
         shouldRetryOnError: false,
         onError: (err) => {
-          console.error('Failed to fetch appointment statistics:', err);
           setError(err.message || 'Failed to fetch appointment statistics');
         }
       }

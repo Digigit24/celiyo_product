@@ -29,7 +29,6 @@ export const useRoles = () => {
         revalidateOnReconnect: true,
         shouldRetryOnError: false,
         onError: (err) => {
-          console.error('Failed to fetch roles:', err);
           setError(err.message || 'Failed to fetch roles');
         }
       }
@@ -48,7 +47,6 @@ export const useRoles = () => {
         revalidateOnReconnect: true,
         shouldRetryOnError: false,
         onError: (err) => {
-          console.error('Failed to fetch role:', err);
           setError(err.message || 'Failed to fetch role');
         }
       }
@@ -136,7 +134,6 @@ export const useRoles = () => {
         revalidateOnReconnect: true,
         shouldRetryOnError: false,
         onError: (err) => {
-          console.error('Failed to fetch role members:', err);
           setError(err.message || 'Failed to fetch role members');
         }
       }
@@ -157,7 +154,6 @@ export const useRoles = () => {
         revalidateOnReconnect: true,
         shouldRetryOnError: false,
         onError: (err) => {
-          console.error('Failed to fetch permissions schema:', err);
           setError(err.message || 'Failed to fetch permissions schema');
         }
       }

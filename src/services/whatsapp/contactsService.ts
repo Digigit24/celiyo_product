@@ -19,7 +19,6 @@ class ContactsService {
    */
   async getContacts(query?: ContactsListQuery): Promise<ContactsListResponse> {
     try {
-      console.log('📋 Fetching contacts:', query);
   
       const queryString = buildQueryString(query as unknown as Record<string, string | number | boolean>);
       const url = `${API_CONFIG.WHATSAPP.CONTACTS}${queryString}`;
@@ -63,14 +62,12 @@ class ContactsService {
         normalized = { total: 0, contacts: [] };
       }
   
-      console.log('✅ Contacts fetched:', {
         total: normalized.total,
         count: normalized.contacts.length,
       });
   
       return normalized;
     } catch (error: any) {
-      console.error('❌ Failed to fetch contacts:', error);
       const message = error.response?.data?.detail || error.message || 'Failed to fetch contacts';
       throw new Error(message);
     }
@@ -81,7 +78,6 @@ class ContactsService {
    */
     async getContact(phone: string): Promise<Contact> {
     try {
-      console.log('Fetching contact:', phone);
       const cleanPhone = this.normalizePhoneParam(phone);
       
       const url = buildUrl(
@@ -92,11 +88,9 @@ class ContactsService {
       
       const response = await whatsappClient.get<Contact>(url);
       
-      console.log('Contact fetched:', response.data.name || response.data.phone);
       
       return response.data;
     } catch (error: any) {
-      console.error('Failed to fetch contact:', error);
       
       if (error.response?.status === 404) {
         throw new Error('Contact not found');
@@ -112,18 +106,15 @@ class ContactsService {
    */
   async createContact(payload: CreateContactPayload): Promise<Contact> {
     try {
-      console.log('➕ Creating contact:', payload.phone);
       
       const response = await whatsappClient.post<Contact>(
         API_CONFIG.WHATSAPP.CONTACT_CREATE,
         payload
       );
       
-      console.log('✅ Contact created:', response.data.phone);
       
       return response.data;
     } catch (error: any) {
-      console.error('❌ Failed to create contact:', error);
       
       if (error.response?.status === 409) {
         throw new Error('Contact already exists');
@@ -139,7 +130,6 @@ class ContactsService {
    */
     async updateContact(phone: string, payload: UpdateContactPayload): Promise<Contact> {
     try {
-      console.log('Updating contact:', phone);
       const cleanPhone = this.normalizePhoneParam(phone);
       
       const url = buildUrl(
@@ -150,11 +140,9 @@ class ContactsService {
       
       const response = await whatsappClient.put<Contact>(url, payload);
       
-      console.log('Contact updated:', response.data.phone);
       
       return response.data;
     } catch (error: any) {
-      console.error('Failed to update contact:', error);
       
       if (error.response?.status === 404) {
         throw new Error('Contact not found');
@@ -170,7 +158,6 @@ class ContactsService {
    */
     async deleteContact(phone: string): Promise<DeleteContactResponse> {
     try {
-      console.log('Deleting contact:', phone);
       const cleanPhone = this.normalizePhoneParam(phone);
       
       const url = buildUrl(
@@ -181,11 +168,9 @@ class ContactsService {
       
       const response = await whatsappClient.delete<DeleteContactResponse>(url);
       
-      console.log('Contact deleted:', response.data.phone);
       
       return response.data;
     } catch (error: any) {
-      console.error('Failed to delete contact:', error);
       
       if (error.response?.status === 404) {
         throw new Error('Contact not found');
@@ -231,7 +216,6 @@ class ContactsService {
    */
   async importContacts(file: File): Promise<string> {
     try {
-      console.log('📤 Importing contacts from file:', file.name);
 
       const formData = new FormData();
       formData.append('file', file);
@@ -248,11 +232,9 @@ class ContactsService {
         },
       });
 
-      console.log('✅ Contacts imported successfully');
 
       return response.data;
     } catch (error: any) {
-      console.error('❌ Failed to import contacts:', error);
 
       const message = error.response?.data?.detail || error.message || 'Failed to import contacts';
       throw new Error(message);

@@ -241,15 +241,12 @@ class OPDTemplateService {
 
   async createTemplateField(data: CreateTemplateFieldPayload): Promise<TemplateField> {
     try {
-      console.log('Service layer - Creating field with data:', data);
       const response = await hmsClient.post<TemplateField>(
         `${this.baseURL}/template-fields/`,
         data
       );
-      console.log('Service layer - Field created:', response.data);
       return response.data;
     } catch (error: any) {
-      console.error('Service layer - Create field error:', error.response?.data);
       const message =
         error.response?.data?.error ||
         error.response?.data?.message ||

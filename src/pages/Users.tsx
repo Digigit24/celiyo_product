@@ -90,7 +90,6 @@ export const Users: React.FC = () => {
       await deleteUser(user.id);
       mutateUsers();
     } catch (error: any) {
-      console.error('Delete failed:', error);
     }
   };
 

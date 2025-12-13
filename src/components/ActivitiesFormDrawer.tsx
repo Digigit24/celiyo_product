@@ -105,7 +105,6 @@ export function ActivitiesFormDrawer({
         return;
       }
 
-      console.log('Form values:', values);
 
       if (currentMode === 'create') {
         // CREATE FLOW
@@ -126,7 +125,6 @@ export function ActivitiesFormDrawer({
         handleSwitchToView();
       }
     } catch (error: any) {
-      console.error('Save error:', error);
       toast.error(
         error?.response?.data?.detail ||
           error?.message ||

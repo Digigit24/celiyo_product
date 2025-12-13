@@ -118,7 +118,6 @@ export default function DoctorsFormDrawer({
           return;
         }
 
-        console.log('Creating doctor with values:', values);
 
         await createDoctor(values as DoctorCreateData);
 
@@ -134,7 +133,6 @@ export default function DoctorsFormDrawer({
           return;
         }
 
-        console.log('Updating doctor with values:', values);
 
         await updateDoctor(doctorId, values as DoctorUpdateData);
 
@@ -143,7 +141,6 @@ export default function DoctorsFormDrawer({
         handleSwitchToView();
       }
     } catch (error: any) {
-      console.error('Save error:', error);
       toast.error(
         error?.response?.data?.error ||
           error?.message ||
@@ -174,7 +171,6 @@ export default function DoctorsFormDrawer({
           {
             icon: Phone,
             onClick: () => {
-              console.log('Call doctor');
               toast.info('Phone feature coming soon');
             },
             label: 'Call doctor',
@@ -189,7 +185,6 @@ export default function DoctorsFormDrawer({
           {
             icon: Calendar,
             onClick: () => {
-              console.log('View schedule');
               toast.info('Schedule feature coming soon');
             },
             label: 'View schedule',

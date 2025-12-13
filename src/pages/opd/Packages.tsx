@@ -160,7 +160,6 @@ await createPackage({
 const { data, isLoading } = useActiveProcedurePackages();
 
 // data will contain only active packages
-console.log(data?.results); // Array of active packages`}
         </pre>
         <p>Example 3: Search for packages</p>
         <pre style={{ background: '#f5f5f5', padding: '10px', overflow: 'auto' }}>

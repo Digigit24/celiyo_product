@@ -132,7 +132,6 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
   useEffect(() => {
     if (messages.length > 0) {
       const lastMsg = messages[messages.length - 1];
-      console.log('💬 ChatWindow messages updated:', {
         count: messages.length,
         lastMessage: {
           id: String(lastMsg.id).substring(0, 10),
@@ -194,7 +193,6 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
         setLocationLoading(false);
       },
       (error) => {
-        console.error('Error getting location:', error);
         alert('Unable to retrieve your location');
         setLocationLoading(false);
       }
@@ -209,7 +207,6 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
         setIsLocationDialogOpen(false);
         setCurrentLocation(null);
       } catch (error) {
-        console.error('Failed to send location:', error);
       }
     }
   };
@@ -223,23 +220,19 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
         setContactName("");
         setContactPhone("");
       } catch (error) {
-        console.error('Failed to send contact:', error);
       }
     }
   };
 
   const handleAttachmentClick = (type: AttachmentType) => {
-    console.log('🎯 Attachment clicked:', type);
 
     if (type === 'contact') {
-      console.log('🎯 Opening contact dialog');
       setIsContactDialogOpen(true);
       setIsAttachmentMenuOpen(false);
       return;
     }
 
     if (type === 'location') {
-      console.log('🎯 Opening location dialog');
       setIsLocationDialogOpen(true);
       handleGetLocation();
       setIsAttachmentMenuOpen(false);
@@ -247,46 +240,35 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
     }
 
     // For file types, trigger the corresponding file input
-    console.log('🎯 Looking for file input ref for type:', type);
     const inputRef = fileInputRefs.current[type];
-    console.log('🎯 Input ref found:', !!inputRef);
 
     if (inputRef) {
-      console.log('🎯 Clicking file input...');
       inputRef.click();
       setIsAttachmentMenuOpen(false);
     } else {
-      console.error('🎯 ❌ No input ref found for type:', type);
-      console.log('🎯 Available refs:', Object.keys(fileInputRefs.current));
     }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: AttachmentType) => {
-    console.log('📎 File selected, type:', type);
     const files = e.target.files;
-    console.log('📎 Files:', files?.length);
 
     if (files && files.length > 0) {
       const fileArray = Array.from(files);
-      console.log('📎 Opening preview dialog for:', fileArray[0].name);
 
       // Set files and type first
       setSelectedFiles(fileArray);
       setSelectedFileType(type);
 
       // Open dialog immediately
-      console.log('📎 Setting isFilePreviewOpen to:', true);
       setIsFilePreviewOpen(true);
 
       // Create preview for images and videos (async)
       if (type === 'image' || type === 'camera' || type === 'video') {
         const reader = new FileReader();
         reader.onloadend = () => {
-          console.log('📎 Preview URL created, length:', (reader.result as string)?.length);
           setFilePreviewUrl(reader.result as string);
         };
         reader.onerror = (error) => {
-          console.error('📎 Failed to read file:', error);
           setFilePreviewUrl(null);
         };
         reader.readAsDataURL(fileArray[0]);
@@ -294,7 +276,6 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
         setFilePreviewUrl(null);
       }
     } else {
-      console.log('📎 No files selected');
     }
     // Reset input value to allow selecting the same file again
     e.target.value = '';
@@ -311,13 +292,11 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
       const media_type = selectedFileType === 'camera' ? 'image' : selectedFileType;
 
       if (media_type === 'contact' || media_type === 'location') {
-        console.error('Contact and location are not sent as files');
         return;
       }
 
       await sendMediaMessage(file, media_type, fileCaption);
     } catch (error) {
-      console.error('Failed to send file:', error);
     } finally {
       // Reset state
       setSelectedFiles([]);
@@ -353,12 +332,10 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
     if (currentCount > 0) {
       if (isInitialLoadRef.current) {
         // Initial load: scroll instantly without animation
-        console.log('📜 Initial load: Scrolling to bottom instantly');
         messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
         isInitialLoadRef.current = false;
       } else if (currentCount > prevCount) {
         // New message arrived: scroll instantly
-        console.log('📜 New message: Scrolling to bottom instantly');
         messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
       }
       // Don't scroll on status updates (same count)
@@ -374,13 +351,9 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
   }, [conversationId]);
 
   useEffect(() => {
-    console.log('📎 isFilePreviewOpen changed:', isFilePreviewOpen);
-    console.log('📎 selectedFiles:', selectedFiles.length);
-    console.log('📎 selectedFileType:', selectedFileType);
 
     // Alert for debugging
     if (isFilePreviewOpen && selectedFiles.length > 0) {
-      console.log('📎 ✅ DIALOG SHOULD BE VISIBLE NOW!');
     }
   }, [isFilePreviewOpen, selectedFiles, selectedFileType]);
 
@@ -612,20 +585,17 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
             ref={(el) => {
               fileInputRefs.current[option.type] = el;
               if (el) {
-                console.log('🔧 File input registered for:', option.type);
               }
             }}
             type="file"
             accept={option.accept}
             className="hidden"
             onChange={(e) => {
-              console.log('⚡ onChange fired!', option.type, e.target.files?.length);
               handleFileChange(e, option.type);
             }}
             multiple={option.type === 'image' || option.type === 'video'}
             capture={option.type === 'camera' ? 'environment' : undefined}
             onClick={(e) => {
-              console.log('🖱️ Input clicked');
             }}
           />
         )

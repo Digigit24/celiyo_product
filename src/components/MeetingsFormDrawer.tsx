@@ -119,7 +119,6 @@ export default function MeetingsFormDrawer({
           return;
         }
 
-        console.log('Creating meeting with values:', values);
 
         await createMeeting(values as MeetingCreateData);
 
@@ -135,7 +134,6 @@ export default function MeetingsFormDrawer({
           return;
         }
 
-        console.log('Updating meeting with values:', values);
 
         await updateMeeting(meetingId, values as MeetingUpdateData);
 
@@ -144,7 +142,6 @@ export default function MeetingsFormDrawer({
         handleSwitchToView();
       }
     } catch (error: any) {
-      console.error('Save error:', error);
       toast.error(
         error?.response?.data?.error ||
           error?.message ||

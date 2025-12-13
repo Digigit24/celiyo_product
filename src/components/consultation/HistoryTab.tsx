@@ -103,7 +103,6 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ patientId }) => {
       if (isNaN(date.getTime())) return 'N/A';
       return format(date, formatString);
     } catch (error) {
-      console.error('Error formatting date:', dateString, error);
       return 'N/A';
     }
   };

@@ -36,28 +36,24 @@ class AuthService {
   // Login
   async login(payload: LoginPayload): Promise<User> {
     try {
-      console.log('🔐 Login attempt:', { email: payload.email });
 
       const response = await authClient.post<any>(
         API_CONFIG.AUTH.LOGIN,
         payload
       );
 
-      console.log('✅ Login API response:', response.data);
 
       // Handle the actual API response structure
       const { tokens, user: userData } = response.data;
       const access = tokens.access;
       const refresh = tokens.refresh;
 
-      console.log('🎫 Tokens received:', {
         access: access ? 'Yes ✓' : 'No ✗',
         refresh: refresh ? 'Yes ✓' : 'No ✗'
       });
 
       // Decode JWT to get tenant info and modules
       const decoded = parseJwt(access);
-      console.log('🔍 Decoded JWT:', decoded);
 
       // Build proper user object with tenant structure
       const user: User = {
@@ -73,7 +69,6 @@ class AuthService {
         preferences: userData.preferences || {}
       };
 
-      console.log('👤 Constructed user object:', user);
 
       // Store tokens and user temporarily
       tokenManager.setAccessToken(access);
@@ -82,20 +77,16 @@ class AuthService {
       // Fetch full user details including preferences if not in login response
       if (!userData.preferences) {
         try {
-          console.log('🔄 Fetching user preferences...');
           const userDetailUrl = API_CONFIG.AUTH.USERS.DETAIL.replace(':id', userData.id);
           const userDetailResponse = await authClient.get(userDetailUrl);
           user.preferences = userDetailResponse.data?.preferences || {};
-          console.log('✅ User preferences fetched:', user.preferences);
         } catch (prefError) {
-          console.warn('⚠️ Failed to fetch user preferences, using defaults:', prefError);
           user.preferences = {};
         }
       }
 
       // Apply theme preference
       if (user.preferences?.theme) {
-        console.log('🎨 Applying theme preference:', user.preferences.theme);
         this.applyThemePreference(user.preferences.theme);
       }
 
@@ -107,7 +98,6 @@ class AuthService {
       const storedRefresh = tokenManager.getRefreshToken();
       const storedUser = this.getUser();
 
-      console.log('💾 Storage verification:', {
         accessTokenStored: storedAccess ? 'Yes ✓' : 'No ✗',
         refreshTokenStored: storedRefresh ? 'Yes ✓' : 'No ✗',
         userStored: storedUser ? 'Yes ✓' : 'No ✗',
@@ -118,7 +108,6 @@ class AuthService {
 
       return user;
     } catch (error: any) {
-      console.error('❌ Login failed:', error);
 
       // Clear any stale data
       this.clearAuth();
@@ -140,9 +129,7 @@ class AuthService {
       } else {
         root.classList.remove('dark');
       }
-      console.log('✅ Theme applied:', theme);
     } catch (error) {
-      console.error('❌ Failed to apply theme:', error);
     }
   }
 
@@ -151,7 +138,6 @@ class AuthService {
     try {
       const user = this.getUser();
       if (user?.preferences) {
-        console.log('🔄 Applying stored preferences:', user.preferences);
 
         // Apply theme
         if (user.preferences.theme) {
@@ -159,10 +145,8 @@ class AuthService {
         }
 
         // You can add more preference applications here as needed
-        console.log('✅ Stored preferences applied');
       }
     } catch (error) {
-      console.error('❌ Failed to apply stored preferences:', error);
     }
   }
 
@@ -184,14 +168,12 @@ class AuthService {
         this.applyThemePreference(preferences.theme);
       }
 
-      console.log('✅ User preferences updated in storage:', user.preferences);
     }
   }
 
   // Refresh token
   async refreshToken(): Promise<string> {
     try {
-      console.log('🔄 Refreshing token...');
       
       const refreshToken = tokenManager.getRefreshToken();
       if (!refreshToken) {
@@ -205,7 +187,6 @@ class AuthService {
 
       const { access, refresh } = response.data;
 
-      console.log('✅ Token refreshed successfully');
 
       // Update tokens
       tokenManager.setAccessToken(access);
@@ -215,7 +196,6 @@ class AuthService {
 
       return access;
     } catch (error: any) {
-      console.error('❌ Token refresh failed:', error);
       
       // Clear auth data if refresh fails
       this.clearAuth();
@@ -240,7 +220,6 @@ class AuthService {
 
       return response.data.valid;
     } catch (error) {
-      console.error('Token verification failed:', error);
       return false;
     }
   }
@@ -248,7 +227,6 @@ class AuthService {
   // Logout
   async logout(): Promise<void> {
     try {
-      console.log('👋 Logging out...');
       
       const refreshToken = tokenManager.getRefreshToken();
       if (refreshToken) {
@@ -259,11 +237,9 @@ class AuthService {
         );
       }
     } catch (error) {
-      console.error('Logout API call failed:', error);
     } finally {
       // Always clear local auth data
       this.clearAuth();
-      console.log('✅ Logged out successfully');
     }
   }
 
@@ -318,7 +294,6 @@ class AuthService {
     const hasToken = tokenManager.hasAccessToken();
     const hasUser = !!this.getUser();
     
-    console.log('🔒 Auth check:', { hasToken, hasUser });
     
     return hasToken && hasUser;
   }
@@ -331,7 +306,6 @@ class AuthService {
     const tenant: any = (user as any)?.tenant;
     if (tenant && typeof tenant === 'object' && Array.isArray(tenant.enabled_modules)) {
       const hasAccess = tenant.enabled_modules.includes(module);
-      console.log(`🔑 Module access check for "${module}":`, hasAccess ? 'Granted ✓' : 'Denied ✗');
       return hasAccess;
     }
 
@@ -341,13 +315,11 @@ class AuthService {
 
     // Super admin has access to all modules
     if (decoded?.is_super_admin) {
-      console.log(`🔑 Module access for "${module}": Granted (Super Admin) ✓`);
       return true;
     }
 
     const enabledFromToken: string[] | undefined = decoded?.enabled_modules;
     const hasAccess = Array.isArray(enabledFromToken) ? enabledFromToken.includes(module) : false;
-    console.log(`🔑 Module access check for "${module}":`, hasAccess ? 'Granted ✓' : 'Denied ✗');
     
     return hasAccess;
   }
@@ -386,7 +358,6 @@ class AuthService {
 
   // Clear all auth data
   clearAuth(): void {
-    console.log('🧹 Clearing all auth data...');
     this.removeTokens();
     this.removeUser();
   }

@@ -159,7 +159,6 @@ await createProcedure({
 const { data, isLoading } = useActiveProcedureMasters('laboratory');
 
 // data will contain only active laboratory procedures
-console.log(data?.results); // Array of active lab procedures`}
         </pre>
         <p>Example 3: Search for procedures</p>
         <pre style={{ background: '#f5f5f5', padding: '10px', overflow: 'auto' }}>

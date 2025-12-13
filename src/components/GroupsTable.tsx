@@ -203,7 +203,6 @@ export default function GroupsTable({
           size="sm"
           onClick={() => {
             // Navigate to group chat
-            console.log('Open group chat:', group.group_id);
           }}
           className="flex-1"
         >
@@ -215,7 +214,6 @@ export default function GroupsTable({
           size="sm"
           onClick={() => {
             // Manage participants
-            console.log('Manage participants:', group.group_id);
           }}
           className="flex-1"
         >

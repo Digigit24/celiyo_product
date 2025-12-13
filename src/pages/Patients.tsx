@@ -92,7 +92,6 @@ export const Patients: React.FC = () => {
       await deletePatient(patient.id);
       mutatePatients();
     } catch (error: any) {
-      console.error('Delete failed:', error);
     }
   };
 

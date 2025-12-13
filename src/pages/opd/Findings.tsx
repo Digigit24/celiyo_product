@@ -225,9 +225,6 @@ await createFinding({
 const { data: vitals, isLoading } = useLatestVitals(123);
 
 // vitals will contain the most recent examination finding
-console.log(vitals?.blood_pressure); // "120/80"
-console.log(vitals?.bmi); // "23.02"
-console.log(vitals?.bmi_category); // "Normal"`}
         </pre>
       </div>
 

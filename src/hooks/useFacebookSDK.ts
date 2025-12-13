@@ -119,7 +119,6 @@ export function useFacebookSDK({
 
   const checkLoginState = useCallback(() => {
     if (!window.FB) {
-      console.warn('Facebook SDK not loaded yet');
       return;
     }
 
@@ -137,7 +136,6 @@ export function useFacebookSDK({
       customOptions?: Partial<FacebookLoginOptions>
     ) => {
       if (!window.FB) {
-        console.error('Facebook SDK not loaded');
         return;
       }
 
@@ -164,11 +162,9 @@ export function useFacebookSDK({
         ...customOptions,
       };
 
-      console.log('FB.login called with options:', loginOptions);
 
       window.FB.login(
         (response) => {
-          console.log('FB.login response:', response);
           setLoginStatus(response);
           if (onStatusChange) {
             onStatusChange(response);

@@ -27,7 +27,6 @@ export const useTenant = () => {
         revalidateOnReconnect: true,
         shouldRetryOnError: false,
         onError: (err) => {
-          console.error('Failed to fetch tenants:', err);
           setError(err.message || 'Failed to fetch tenants');
         }
       }
@@ -46,7 +45,6 @@ export const useTenant = () => {
         revalidateOnReconnect: true,
         shouldRetryOnError: false,
         onError: (err) => {
-          console.error('Failed to fetch tenant:', err);
           setError(err.message || 'Failed to fetch tenant');
         }
       }
@@ -65,7 +63,6 @@ export const useTenant = () => {
         revalidateOnReconnect: true,
         shouldRetryOnError: false,
         onError: (err) => {
-          console.error('Failed to fetch current tenant:', err);
           setError(err.message || 'Failed to fetch current tenant');
         }
       }
@@ -84,7 +81,6 @@ export const useTenant = () => {
         revalidateOnReconnect: true,
         shouldRetryOnError: false,
         onError: (err) => {
-          console.error('Failed to fetch tenant images:', err);
           setError(err.message || 'Failed to fetch tenant images');
         }
       }

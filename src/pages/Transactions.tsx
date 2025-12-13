@@ -1,37 +1,46 @@
 // src/pages/Transactions.tsx
-import React, { useState } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { usePayment } from '@/hooks/usePayment';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { DataTable, type DataTableColumn } from '@/components/DataTable';
+import type { RowActions } from '@/components/DataTable';
+import TransactionDetailsDrawer from '@/components/transaction-drawer/TransactionDetailsDrawer';
 import {
-  Loader2,
   Plus,
-  Search,
   CreditCard,
   DollarSign,
   TrendingUp,
   TrendingDown,
-  Filter,
+  RefreshCw,
 } from 'lucide-react';
 import { Transaction } from '@/types/payment.types';
 import { format } from 'date-fns';
+import { toast } from 'sonner';
+
+type DrawerMode = 'view' | 'edit' | 'create';
 
 export const Transactions: React.FC = () => {
   const {
     useTransactions,
     useTransactionStatistics,
+    deleteTransaction,
   } = usePayment();
 
-  // State for search and filters
-  const [searchTerm, setSearchTerm] = useState('');
+  // State for pagination
   const [currentPage, setCurrentPage] = useState(1);
+
+  // Drawer state
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [selectedTransactionId, setSelectedTransactionId] = useState<string | null>(null);
+  const [drawerMode, setDrawerMode] = useState<DrawerMode>('view');
 
   // Build query params
   const queryParams = {
     page: currentPage,
-    search: searchTerm || undefined,
+    page_size: 20,
+    ordering: '-created_at',
   };
 
   // Fetch transactions
@@ -52,12 +61,47 @@ export const Transactions: React.FC = () => {
   const totalCount = transactionsData?.count || 0;
 
   // Handlers
-  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(e.target.value);
-    setCurrentPage(1); // Reset to first page
-  };
+  const handleCreateTransaction = useCallback(() => {
+    setSelectedTransactionId(null);
+    setDrawerMode('create');
+    setDrawerOpen(true);
+  }, []);
 
-  // Transaction type badge color
+  const handleViewTransaction = useCallback((transaction: Transaction) => {
+    setSelectedTransactionId(transaction.id);
+    setDrawerMode('view');
+    setDrawerOpen(true);
+  }, []);
+
+  const handleEditTransaction = useCallback((transaction: Transaction) => {
+    setSelectedTransactionId(transaction.id);
+    setDrawerMode('edit');
+    setDrawerOpen(true);
+  }, []);
+
+  const handleDeleteTransaction = useCallback(
+    async (transaction: Transaction) => {
+      try {
+        await deleteTransaction(transaction.id);
+        toast.success(`Transaction "${transaction.transaction_number}" deleted successfully`);
+        mutateTransactions();
+      } catch (error: any) {
+        toast.error(error?.message || 'Failed to delete transaction');
+        throw error;
+      }
+    },
+    [deleteTransaction, mutateTransactions]
+  );
+
+  const handleDrawerSuccess = useCallback(() => {
+    mutateTransactions();
+  }, [mutateTransactions]);
+
+  const handleModeChange = useCallback((mode: DrawerMode) => {
+    setDrawerMode(mode);
+  }, []);
+
+  // Transaction type badge
   const getTransactionTypeBadge = (type: string) => {
     switch (type) {
       case 'payment':
@@ -79,204 +123,307 @@ export const Transactions: React.FC = () => {
     return <Badge variant="outline">{method.toUpperCase()}</Badge>;
   };
 
+  // Column definitions
+  const columns: DataTableColumn<Transaction>[] = useMemo(
+    () => [
+      {
+        header: 'Transaction #',
+        key: 'transaction_number',
+        cell: (transaction) => (
+          <div className="flex flex-col">
+            <span className="font-medium text-foreground">{transaction.transaction_number}</span>
+            <span className="text-xs text-muted-foreground">
+              {format(new Date(transaction.created_at), 'MMM dd, yyyy')}
+            </span>
+          </div>
+        ),
+        className: 'w-[180px]',
+        sortable: true,
+        filterable: true,
+        accessor: (transaction) => transaction.transaction_number,
+      },
+      {
+        header: 'Type',
+        key: 'type',
+        cell: (transaction) => (
+          <div className="flex flex-col gap-1">
+            {getTransactionTypeBadge(transaction.transaction_type)}
+            {transaction.payment_method && getPaymentMethodBadge(transaction.payment_method)}
+          </div>
+        ),
+        sortable: true,
+        filterable: true,
+        accessor: (transaction) => transaction.transaction_type,
+      },
+      {
+        header: 'Category',
+        key: 'category',
+        cell: (transaction) => (
+          <div className="flex flex-col">
+            <span className="font-medium">{transaction.category.name}</span>
+            <span className="text-xs text-muted-foreground capitalize">
+              {transaction.category.category_type}
+            </span>
+          </div>
+        ),
+        sortable: true,
+        filterable: true,
+        accessor: (transaction) => transaction.category.name,
+      },
+      {
+        header: 'Amount',
+        key: 'amount',
+        cell: (transaction) => (
+          <div className="flex items-center gap-1.5">
+            <DollarSign className="h-3.5 w-3.5 text-muted-foreground" />
+            <span className="font-semibold">
+              ₹{parseFloat(transaction.amount).toLocaleString()}
+            </span>
+          </div>
+        ),
+        className: 'text-right',
+        sortable: true,
+        filterable: false,
+        accessor: (transaction) => parseFloat(transaction.amount),
+      },
+      {
+        header: 'Description',
+        key: 'description',
+        cell: (transaction) => (
+          <span className="text-sm text-muted-foreground truncate max-w-[300px] block">
+            {transaction.description || '-'}
+          </span>
+        ),
+        sortable: false,
+        filterable: true,
+        accessor: (transaction) => transaction.description || '',
+      },
+      {
+        header: 'Status',
+        key: 'status',
+        cell: (transaction) => (
+          <div>
+            {transaction.is_reconciled ? (
+              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                Reconciled
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+                Pending
+              </Badge>
+            )}
+          </div>
+        ),
+        sortable: true,
+        filterable: false,
+        accessor: (transaction) => (transaction.is_reconciled ? 'reconciled' : 'pending'),
+      },
+    ],
+    []
+  );
+
+  // Mobile card renderer
+  const renderMobileCard = (transaction: Transaction, actions: RowActions<Transaction>) => (
+    <>
+      {/* Header */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1 min-w-0">
+          <h3 className="font-semibold text-base">{transaction.transaction_number}</h3>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {format(new Date(transaction.created_at), 'MMM dd, yyyy')}
+          </p>
+        </div>
+        <div className="flex items-center gap-1">
+          {getTransactionTypeBadge(transaction.transaction_type)}
+        </div>
+      </div>
+
+      {/* Category & Payment Method */}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-sm font-medium">{transaction.category.name}</span>
+        {transaction.payment_method && getPaymentMethodBadge(transaction.payment_method)}
+      </div>
+
+      {/* Amount */}
+      <div className="flex items-center gap-1.5">
+        <DollarSign className="h-4 w-4 text-muted-foreground" />
+        <span className="text-lg font-semibold">
+          ₹{parseFloat(transaction.amount).toLocaleString()}
+        </span>
+      </div>
+
+      {/* Description */}
+      {transaction.description && (
+        <p className="text-sm text-muted-foreground">{transaction.description}</p>
+      )}
+
+      {/* Status */}
+      <div className="flex items-center gap-2">
+        {transaction.is_reconciled ? (
+          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+            Reconciled
+          </Badge>
+        ) : (
+          <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+            Pending
+          </Badge>
+        )}
+      </div>
+
+      {/* Actions */}
+      <div className="flex items-center justify-between pt-2 border-t">
+        <span className="text-xs text-muted-foreground">
+          {format(new Date(transaction.updated_at), 'MMM dd, yyyy h:mm a')}
+        </span>
+        <div className="flex gap-2">
+          {actions.edit && (
+            <Button variant="outline" size="sm" onClick={actions.edit}>
+              Edit
+            </Button>
+          )}
+          {actions.view && (
+            <Button variant="default" size="sm" onClick={actions.view}>
+              View
+            </Button>
+          )}
+        </div>
+      </div>
+    </>
+  );
+
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Transactions</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl sm:text-3xl font-bold">Transactions</h1>
+          <p className="text-muted-foreground text-sm sm:text-base">
             Manage and track all financial transactions
           </p>
         </div>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" />
-          New Transaction
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => mutateTransactions()}
+            disabled={transactionsLoading}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${transactionsLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+          <Button onClick={handleCreateTransaction} size="default" className="w-full sm:w-auto">
+            <Plus className="h-4 w-4 mr-2" />
+            New Transaction
+          </Button>
+        </div>
       </div>
 
       {/* Statistics Cards */}
       {stats && (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Payments</CardTitle>
-              <TrendingUp className="h-4 w-4 text-green-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                ₹{stats.overall_stats.total_payments.toLocaleString()}
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-green-100 rounded-lg">
+                  <TrendingUp className="h-5 w-5 text-green-600" />
+                </div>
+                <div>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Total Payments</p>
+                  <p className="text-xl sm:text-2xl font-bold">
+                    ₹{stats.overall_stats.total_payments.toLocaleString()}
+                  </p>
+                </div>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Revenue received
-              </p>
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Expenses</CardTitle>
-              <TrendingDown className="h-4 w-4 text-red-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                ₹{stats.overall_stats.total_expenses.toLocaleString()}
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-red-100 rounded-lg">
+                  <TrendingDown className="h-5 w-5 text-red-600" />
+                </div>
+                <div>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Total Expenses</p>
+                  <p className="text-xl sm:text-2xl font-bold">
+                    ₹{stats.overall_stats.total_expenses.toLocaleString()}
+                  </p>
+                </div>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Expenses paid
-              </p>
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Transactions</CardTitle>
-              <CreditCard className="h-4 w-4 text-blue-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {stats.overall_stats.total_transactions}
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <CreditCard className="h-5 w-5 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Total Transactions</p>
+                  <p className="text-xl sm:text-2xl font-bold">
+                    {stats.overall_stats.total_transactions}
+                  </p>
+                </div>
               </div>
-              <p className="text-xs text-muted-foreground">
-                All time count
-              </p>
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Net Amount</CardTitle>
-              <DollarSign className="h-4 w-4 text-purple-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                ₹{stats.overall_stats.total_amount.toLocaleString()}
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-purple-100 rounded-lg">
+                  <DollarSign className="h-5 w-5 text-purple-600" />
+                </div>
+                <div>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Net Amount</p>
+                  <p className="text-xl sm:text-2xl font-bold">
+                    ₹{stats.overall_stats.total_amount.toLocaleString()}
+                  </p>
+                </div>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Total transaction value
-              </p>
             </CardContent>
           </Card>
         </div>
       )}
 
-      {/* Search and Filters */}
+      {/* Main Content */}
       <Card>
-        <CardHeader>
-          <CardTitle>All Transactions</CardTitle>
-          <CardDescription>
-            View and manage all financial transactions ({totalCount} total)
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-4 mb-6">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search transactions..."
-                value={searchTerm}
-                onChange={handleSearch}
-                className="pl-10"
-              />
-            </div>
-            <Button variant="outline">
-              <Filter className="mr-2 h-4 w-4" />
-              Filters
-            </Button>
-          </div>
-
-          {/* Loading State */}
-          {transactionsLoading && (
-            <div className="flex justify-center items-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
-          )}
-
-          {/* Error State */}
-          {transactionsError && (
-            <div className="text-center py-12">
-              <p className="text-destructive">Failed to load transactions</p>
-              <p className="text-sm text-muted-foreground mt-2">
-                {transactionsError.message}
-              </p>
-            </div>
-          )}
-
-          {/* Transactions List */}
-          {!transactionsLoading && !transactionsError && (
-            <div className="space-y-4">
-              {transactions.length === 0 ? (
-                <div className="text-center py-12">
-                  <CreditCard className="mx-auto h-12 w-12 text-muted-foreground" />
-                  <h3 className="mt-4 text-lg font-semibold">No transactions found</h3>
-                  <p className="text-sm text-muted-foreground">
-                    {searchTerm
-                      ? 'Try adjusting your search'
-                      : 'Get started by creating your first transaction'}
-                  </p>
-                </div>
-              ) : (
-                <div className="border rounded-lg divide-y">
-                  {transactions.map((transaction) => (
-                    <div
-                      key={transaction.id}
-                      className="p-4 hover:bg-accent/50 transition-colors cursor-pointer"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <p className="font-medium">{transaction.transaction_number}</p>
-                            {getTransactionTypeBadge(transaction.transaction_type)}
-                            {getPaymentMethodBadge(transaction.payment_method)}
-                          </div>
-                          <p className="text-sm text-muted-foreground truncate">
-                            {transaction.description || 'No description'}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            {transaction.category.name}
-                          </p>
-                        </div>
-                        <div className="text-right ml-4">
-                          <p className="font-semibold text-lg">
-                            ₹{parseFloat(transaction.amount).toLocaleString()}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            {format(new Date(transaction.created_at), 'MMM dd, yyyy')}
-                          </p>
-                          {transaction.is_reconciled && (
-                            <Badge variant="outline" className="mt-1">
-                              Reconciled
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+        <CardContent className="p-0">
+          <DataTable
+            rows={transactions}
+            isLoading={transactionsLoading}
+            columns={columns}
+            renderMobileCard={renderMobileCard}
+            getRowId={(transaction) => transaction.id}
+            getRowLabel={(transaction) => transaction.transaction_number}
+            onView={handleViewTransaction}
+            onEdit={handleEditTransaction}
+            onDelete={handleDeleteTransaction}
+            emptyTitle="No transactions found"
+            emptySubtitle="Get started by creating your first transaction"
+          />
 
           {/* Pagination */}
-          {totalCount > 0 && (
-            <div className="flex items-center justify-between mt-6">
+          {!transactionsLoading && transactionsData && transactionsData.count > 0 && (
+            <div className="flex items-center justify-between px-6 py-4 border-t">
               <p className="text-sm text-muted-foreground">
-                Showing {transactions.length} of {totalCount} transactions
+                Showing {transactions.length} of {totalCount} transaction(s)
               </p>
               <div className="flex gap-2">
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setCurrentPage(currentPage - 1)}
-                  disabled={currentPage === 1}
+                  disabled={!transactionsData.previous}
+                  onClick={() => setCurrentPage((prev) => prev - 1)}
                 >
                   Previous
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setCurrentPage(currentPage + 1)}
-                  disabled={!transactionsData?.next}
+                  disabled={!transactionsData.next}
+                  onClick={() => setCurrentPage((prev) => prev + 1)}
                 >
                   Next
                 </Button>
@@ -285,6 +432,19 @@ export const Transactions: React.FC = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Transaction Drawer */}
+      <TransactionDetailsDrawer
+        open={drawerOpen}
+        onOpenChange={setDrawerOpen}
+        transactionId={selectedTransactionId}
+        mode={drawerMode}
+        onSuccess={handleDrawerSuccess}
+        onDelete={(id) => {
+          // Already handled in handleDeleteTransaction
+        }}
+        onModeChange={handleModeChange}
+      />
     </div>
   );
 };

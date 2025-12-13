@@ -83,14 +83,8 @@ authClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     const token = tokenManager.getAccessToken();
 
-      url: config.url,
-      method: config.method?.toUpperCase(),
-      hasToken: !!token
-    });
-
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
-    } else {
     }
 
     // Multi-tenant header propagation (read from stored user)
@@ -108,21 +102,15 @@ authClient.interceptors.request.use(
             config.headers['X-Tenant-Id'] = tenantId;
             config.headers['x-tenant-id'] = tenantId; // Backend expects lowercase
             config.headers['tenanttoken'] = tenantId; // Your API uses 'tenanttoken' header
-
-              'X-Tenant-Id': tenantId,
-              'x-tenant-id': tenantId,
-              'tenanttoken': tenantId
-            });
           }
 
           if (tenant.slug) {
             config.headers['X-Tenant-Slug'] = tenant.slug;
           }
-        } else {
         }
-      } else {
       }
     } catch (error) {
+      // Silently ignore errors reading tenant from localStorage
     }
 
     return config;
@@ -136,15 +124,9 @@ authClient.interceptors.request.use(
 crmClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     const token = tokenManager.getAccessToken();
-    
-      url: config.url,
-      method: config.method?.toUpperCase(),
-      hasToken: !!token
-    });
-    
+
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
-    } else {
     }
 
     // Multi-tenant header propagation (read from stored user)
@@ -153,30 +135,25 @@ crmClient.interceptors.request.use(
       if (userJson) {
         const user = JSON.parse(userJson);
         const tenant = user?.tenant;
-        
+
         if (tenant) {
           // Get tenant ID (could be tenant.id or tenant.tenant_id)
           const tenantId = tenant.id || tenant.tenant_id;
-          
+
           if (tenantId) {
             config.headers['X-Tenant-Id'] = tenantId;
             config.headers['tenanttoken'] = tenantId; // Your API uses 'tenanttoken' header
-            
-              'X-Tenant-Id': tenantId,
-              'tenanttoken': tenantId
-            });
           }
-          
+
           if (tenant.slug) {
             config.headers['X-Tenant-Slug'] = tenant.slug;
           }
-        } else {
         }
-      } else {
       }
     } catch (error) {
+      // Silently ignore errors reading tenant from localStorage
     }
-    
+
     return config;
   },
   (error) => {
@@ -188,15 +165,9 @@ crmClient.interceptors.request.use(
 hmsClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     const token = tokenManager.getAccessToken();
-    
-      url: config.url,
-      method: config.method?.toUpperCase(),
-      hasToken: !!token
-    });
-    
+
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
-    } else {
     }
 
     // Multi-tenant header propagation (read from stored user)
@@ -205,30 +176,25 @@ hmsClient.interceptors.request.use(
       if (userJson) {
         const user = JSON.parse(userJson);
         const tenant = user?.tenant;
-        
+
         if (tenant) {
           // Get tenant ID (could be tenant.id or tenant.tenant_id)
           const tenantId = tenant.id || tenant.tenant_id;
-          
+
           if (tenantId) {
             config.headers['X-Tenant-Id'] = tenantId;
             config.headers['tenanttoken'] = tenantId; // Your API uses 'tenanttoken' header
-            
-              'X-Tenant-Id': tenantId,
-              'tenanttoken': tenantId
-            });
           }
-          
+
           if (tenant.slug) {
             config.headers['X-Tenant-Slug'] = tenant.slug;
           }
-        } else {
         }
-      } else {
       }
     } catch (error) {
+      // Silently ignore errors reading tenant from localStorage
     }
-    
+
     return config;
   },
   (error) => {
@@ -242,29 +208,17 @@ authClient.interceptors.response.use(
     return response;
   },
   (error) => {
-      status: error.response?.status,
-      data: error.response?.data
-    });
-    
     // Handle 401 Unauthorized - token expired or invalid
     if (error.response?.status === 401) {
       tokenManager.removeTokens();
       localStorage.removeItem(USER_KEY);
-      
+
       // Only redirect to login if not already on login page
       if (!window.location.pathname.includes('/login')) {
         window.location.href = '/login';
       }
     }
-    
-    // Handle 403 Forbidden
-    if (error.response?.status === 403) {
-    }
-    
-    // Handle network errors
-    if (!error.response) {
-    }
-    
+
     return Promise.reject(error);
   }
 );
@@ -272,23 +226,14 @@ authClient.interceptors.response.use(
 // Response interceptor for CRM client
 crmClient.interceptors.response.use(
   (response) => {
-      status: response.status,
-      url: response.config.url
-    });
     return response;
   },
   async (error) => {
     const originalRequest = error.config;
 
-      status: error.response?.status,
-      url: error.config?.url,
-      data: error.response?.data
-    });
-
     // Handle 401 Unauthorized - try to refresh token
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
-
 
       try {
         const refreshToken = tokenManager.getRefreshToken();
@@ -300,23 +245,21 @@ crmClient.interceptors.response.use(
 
           const { access, refresh } = response.data;
           tokenManager.setAccessToken(access);
-          
+
           // Update refresh token if provided
           if (refresh) {
             tokenManager.setRefreshToken(refresh);
           }
-
 
           // Retry the original request with new token
           originalRequest.headers.Authorization = `Bearer ${access}`;
           return crmClient(originalRequest);
         }
       } catch (refreshError) {
-        
         // Refresh failed, clear tokens and redirect to login
         tokenManager.removeTokens();
         localStorage.removeItem(USER_KEY);
-        
+
         if (!window.location.pathname.includes('/login')) {
           window.location.href = '/login';
         }
@@ -324,14 +267,6 @@ crmClient.interceptors.response.use(
       }
     }
 
-    // Handle 403 Forbidden - CRM module not enabled
-    if (error.response?.status === 403) {
-    }
-    
-    // Handle network errors
-    if (!error.response) {
-    }
-    
     return Promise.reject(error);
   }
 );
@@ -339,23 +274,14 @@ crmClient.interceptors.response.use(
 // Response interceptor for HMS client
 hmsClient.interceptors.response.use(
   (response) => {
-      status: response.status,
-      url: response.config.url
-    });
     return response;
   },
   async (error) => {
     const originalRequest = error.config;
 
-      status: error.response?.status,
-      url: error.config?.url,
-      data: error.response?.data
-    });
-
     // Handle 401 Unauthorized - try to refresh token
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
-
 
       try {
         const refreshToken = tokenManager.getRefreshToken();
@@ -367,23 +293,21 @@ hmsClient.interceptors.response.use(
 
           const { access, refresh } = response.data;
           tokenManager.setAccessToken(access);
-          
+
           // Update refresh token if provided
           if (refresh) {
             tokenManager.setRefreshToken(refresh);
           }
-
 
           // Retry the original request with new token
           originalRequest.headers.Authorization = `Bearer ${access}`;
           return hmsClient(originalRequest);
         }
       } catch (refreshError) {
-        
         // Refresh failed, clear tokens and redirect to login
         tokenManager.removeTokens();
         localStorage.removeItem(USER_KEY);
-        
+
         if (!window.location.pathname.includes('/login')) {
           window.location.href = '/login';
         }
@@ -391,14 +315,6 @@ hmsClient.interceptors.response.use(
       }
     }
 
-    // Handle 403 Forbidden - HMS module not enabled
-    if (error.response?.status === 403) {
-    }
-    
-    // Handle network errors
-    if (!error.response) {
-    }
-    
     return Promise.reject(error);
   }
 );

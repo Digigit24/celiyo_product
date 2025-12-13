@@ -550,17 +550,17 @@ export function UniversalSidebar({
 
       {/* Collapse Button (Desktop only) */}
       {!mobileOpen && onCollapse && (
-        <div className="p-3 border-t border-sidebar-border relative z-10">
+        <div className="p-3 border-t border-sidebar-border relative z-10 bg-sidebar">
           <Button
-            variant="ghost"
+            variant="outline"
             onClick={onCollapse}
             className={cn(
-              "w-full justify-start gap-3 h-10",
+              "w-full justify-start gap-3 h-10 bg-sidebar hover:bg-sidebar-accent",
               collapsed && "justify-center"
             )}
           >
             <Icon3D icon={Menu} className="h-5 w-5 shrink-0" />
-            {!collapsed && <span>Collapse</span>}
+            {!collapsed && <span className="font-medium">Collapse</span>}
           </Button>
         </div>
       )}

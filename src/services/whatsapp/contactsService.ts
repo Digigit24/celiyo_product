@@ -61,11 +61,7 @@ class ContactsService {
         // Unknown/empty shape
         normalized = { total: 0, contacts: [] };
       }
-  
-        total: normalized.total,
-        count: normalized.contacts.length,
-      });
-  
+
       return normalized;
     } catch (error: any) {
       const message = error.response?.data?.detail || error.message || 'Failed to fetch contacts';

@@ -18,12 +18,7 @@ const whatsappClient: AxiosInstance = axios.create({
 whatsappClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     const token = tokenManager.getAccessToken();
-    
-      url: config.url,
-      method: config.method?.toUpperCase(),
-      hasToken: !!token
-    });
-    
+
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     } else {

@@ -22,10 +22,6 @@ class QRCodesService {
 
       const response = await whatsappClient.get<QRCodeListResponse>(url);
 
-        total: response.data.total,
-        count: response.data.items.length,
-      });
-
       return response.data;
     } catch (error: any) {
       const message = error.response?.data?.detail || error.message || 'Failed to fetch QR codes';

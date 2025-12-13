@@ -113,13 +113,6 @@ export default function Chats() {
       // Normalize phone number for comparison
       const phoneKey = normalize(phone);
 
-        phone,
-        name,
-        is_new: contact?.is_new,
-        exists: contact?.exists,
-        message_text: message?.text
-      });
-
       setConversations(prev => {
         const list = prev ? [...prev] : [];
         const idx = list.findIndex(c => normalize(c.phone) === phoneKey);
@@ -135,14 +128,6 @@ export default function Chats() {
           const newUnreadCount = isIncomingMessage && !isSelectedConversation
             ? currentUnreadCount + 1
             : currentUnreadCount;
-
-            phoneKey,
-            isIncomingMessage,
-            isSelectedConversation,
-            selectedConversationId: normalize(selectedConversationId),
-            currentUnreadCount,
-            newUnreadCount
-          });
 
           const updated: Conversation = {
             ...existing,

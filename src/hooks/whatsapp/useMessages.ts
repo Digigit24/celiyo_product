@@ -181,15 +181,6 @@ export function useMessages(conversationPhone: string | null): UseMessagesReturn
           return timeA - timeB;
         });
 
-        count: sortedMessages.length,
-        withStatus: sortedMessages.filter(m => m.status).length,
-        statuses: sortedMessages.map(m => ({
-          id: String(m.id).substring(0, 10),
-          status: m.status,
-          direction: m.direction
-        }))
-      });
-
       setMessages(sortedMessages);
     } catch (err: any) {
       setError(err.message || 'Failed to load messages');

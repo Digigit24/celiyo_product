@@ -49,31 +49,6 @@ export const GeneralSettingsTab: React.FC = () => {
 
   const handleSave = () => {
     // TODO: Implement save functionality
-      hospitalName,
-      logo,
-      address,
-      contactEmail,
-      contactNumber,
-      websiteUrl,
-      header: {
-        layout: headerLayout,
-        backgroundColor: headerUseGradient
-          ? `linear-gradient(to right, ${headerGradientStart}, ${headerGradientEnd})`
-          : headerBgColor,
-        textColor: headerTextColor,
-      },
-      footer: {
-        alignment: footerAlignment,
-        backgroundColor: useSeparateFooterColor
-          ? footerUseGradient
-            ? `linear-gradient(to right, ${footerGradientStart}, ${footerGradientEnd})`
-            : footerBgColor
-          : headerUseGradient
-            ? `linear-gradient(to right, ${headerGradientStart}, ${headerGradientEnd})`
-            : headerBgColor,
-        textColor: useSeparateFooterColor ? footerTextColor : headerTextColor,
-      },
-    });
     toast.success('Hospital settings saved successfully');
   };
 

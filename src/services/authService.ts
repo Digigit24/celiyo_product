@@ -48,10 +48,6 @@ class AuthService {
       const access = tokens.access;
       const refresh = tokens.refresh;
 
-        access: access ? 'Yes ✓' : 'No ✗',
-        refresh: refresh ? 'Yes ✓' : 'No ✗'
-      });
-
       // Decode JWT to get tenant info and modules
       const decoded = parseJwt(access);
 

@@ -34,11 +34,6 @@ export const onboardWhatsAppClient = async (
 ): Promise<WhatsAppOnboardingResponse> => {
   const tenantId = getTenantId();
 
-    waba_id: request.waba_id,
-    phone_number_id: request.phone_number_id,
-    tenant_id: tenantId,
-  });
-
   const response = await whatsappClient.post<WhatsAppOnboardingResponse>(
     API_CONFIG.WHATSAPP.TENANT_CONFIG.ONBOARD_WHATSAPP,
     {

@@ -25,10 +25,6 @@ class FlowsService {
 
       const response = await whatsappClient.get<FlowsListResponse>(url);
 
-        total: response.data.total,
-        count: response.data.flows.length,
-      });
-
       return response.data;
     } catch (error: any) {
       const message = error.response?.data?.detail || error.message || 'Failed to fetch flows';

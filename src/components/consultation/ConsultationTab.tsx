@@ -80,12 +80,7 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
   // Debug: Log template data changes
   useEffect(() => {
     if (selectedTemplate) {
-        selectedTemplate,
-        hasTemplateData: !!templateData,
-        isLoadingTemplate,
-        fieldsCount: fieldsData.length,
-        templateName: templateData?.name
-      });
+      // Template data loaded
     }
   }, [selectedTemplate, templateData, isLoadingTemplate, fieldsData.length]);
 

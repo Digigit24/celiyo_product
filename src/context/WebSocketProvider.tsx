@@ -222,24 +222,11 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ children }
           if (hydratedMessage.direction === 'incoming') {
             setNewMessageCount((prevCount) => prevCount + 1);
           }
-
-            phone: data.phone,
-            name: data.name,
-            is_new: data.contact?.is_new,
-            exists: data.contact?.exists,
-            message: hydratedMessage?.text
-          });
         } else if (payload.event === 'message_status') {
           // Handle message status updates (sent, delivered, read)
           const { message_id, status, timestamp } = payload.data;
 
-            message_id,
-            status,
-            timestamp
-          });
-
           updateMessageStatus(message_id, status);
-
         }
       } catch (error) {
       }

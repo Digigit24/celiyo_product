@@ -34,11 +34,6 @@ class CampaignsService {
         payload
       );
 
-        campaign_id: response.data.campaign_id,
-        sent: response.data.sent,
-        failed: response.data.failed
-      });
-
       return response.data;
     } catch (error: any) {
 

@@ -266,13 +266,7 @@ export default function OPDBilling() {
 
   // Debug: Log tenant data
   useEffect(() => {
-      hasTenantData: !!tenantData,
-      tenantName: tenantData?.name,
-      hasSettings: !!tenantSettings,
-      address: tenantSettings?.address,
-      contactEmail: tenantSettings?.contact_email,
-      contactPhone: tenantSettings?.contact_phone,
-    });
+    // Tenant data loaded
   }, [tenantData, tenantSettings]);
 
   const { useOpdVisitById } = useOpdVisit();

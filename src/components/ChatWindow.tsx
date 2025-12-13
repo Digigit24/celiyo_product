@@ -128,25 +128,6 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
     metadata: msg.metadata,
   }));
 
-  // Log messages for debugging
-  useEffect(() => {
-    if (messages.length > 0) {
-      const lastMsg = messages[messages.length - 1];
-        count: messages.length,
-        lastMessage: {
-          id: String(lastMsg.id).substring(0, 10),
-          text: String(lastMsg.text).substring(0, 30),
-          status: lastMsg.status,
-          direction: lastMsg.direction
-        },
-        allStatuses: messages.map(m => ({
-          id: String(m.id).substring(0, 10),
-          status: m.status,
-          dir: m.direction
-        }))
-      });
-    }
-  }, [messages]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);

@@ -1,6 +1,6 @@
 // src/pages/opd/Billing.tsx
 // deps: npm i react-to-print@^3 jspdf html2canvas
-import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, memo, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useOpdVisit } from '@/hooks/useOpdVisit';
 import { useOPDBill } from '@/hooks/useOPDBill';
@@ -284,13 +284,18 @@ export default function OPDBilling() {
   const { data: visit, isLoading: visitLoading, error: visitError } = useOpdVisitById(visitId ? parseInt(visitId) : null);
 
   // Fetch bills for current visit (to check if bill exists)
-  const { data: visitBillsData, isLoading: visitBillsLoading, mutate: mutateVisitBills } = useOPDBills({ visit: visitId ? parseInt(visitId) : undefined });
-
-  // Fetch all bills for the patient (for bill history)
-  const { data: patientBillsData, isLoading: patientBillsLoading } = useOPDBills({
-    patient: visit?.patient,
-    ordering: '-bill_date',  // Order by latest first
+  const { data: visitBillsData, isLoading: visitBillsLoading, mutate: mutateVisitBills } = useOPDBills({
+    visit: visitId ? parseInt(visitId) : undefined
   });
+
+  // Fetch all bills for the patient (for bill history) - ONLY after visit is loaded
+  // Hook will not fetch if patient is undefined (returns null key to SWR)
+  const { data: patientBillsData, isLoading: patientBillsLoading } = useOPDBills(
+    visit?.patient ? {
+      patient: visit.patient,
+      ordering: '-bill_date',
+    } : undefined
+  );
 
   const { data: proceduresData, isLoading: proceduresLoading } = useActiveProcedureMasters();
   const { data: packagesData, isLoading: packagesLoading } = useActiveProcedurePackages();
@@ -302,6 +307,21 @@ export default function OPDBilling() {
   // Get all bills for patient history
   const patientBills = patientBillsData?.results || [];
   const billsLoading = visitBillsLoading || patientBillsLoading;
+
+  // State to control showing create bill button vs form
+  const [showBillingForm, setShowBillingForm] = useState(false);
+
+  // Flag to prevent auto-recalculation when loading existing bill data
+  const [isLoadingBillData, setIsLoadingBillData] = useState(false);
+
+  // Auto-show form if bill exists, otherwise wait for user to click "Create New Bill"
+  useEffect(() => {
+    if (!visitBillsLoading && existingBill) {
+      setShowBillingForm(true);
+    } else if (!visitBillsLoading && !existingBill) {
+      setShowBillingForm(false);
+    }
+  }, [existingBill, visitBillsLoading]);
 
   // Function to refresh all bills
   const mutateBills = () => {
@@ -344,6 +364,22 @@ export default function OPDBilling() {
     balanceAmount: '0.00',
   });
 
+  // Calculate current payment status based on bill or billing data
+  const currentPaymentStatus = useMemo((): 'paid' | 'partial' | 'unpaid' => {
+    if (existingBill) {
+      return existingBill.payment_status;
+    }
+    // For new bills, calculate from billingData
+    const balance = parseFloat(billingData.balanceAmount) || 0;
+    const received = parseFloat(billingData.receivedAmount) || 0;
+    const total = parseFloat(billingData.totalAmount) || 0;
+
+    if (total === 0) return 'unpaid';
+    if (balance === 0 && received > 0) return 'paid';
+    if (received > 0 && balance > 0) return 'partial';
+    return 'unpaid';
+  }, [existingBill, billingData.balanceAmount, billingData.receivedAmount, billingData.totalAmount]);
+
   // Procedure Search
   const [procedureSearch, setProcedureSearch] = useState('');
 
@@ -352,9 +388,9 @@ export default function OPDBilling() {
   const [isPackageDialogOpen, setIsPackageDialogOpen] = useState(false);
   const [loadingPackageId, setLoadingPackageId] = useState<number | null>(null);
 
-  // Map visit data to form when visit loads
+  // Map visit data to form when visit loads (ONLY for new bills, not when editing)
   useEffect(() => {
-    if (visit) {
+    if (visit && !visitBillsLoading) {
       const receiptNo = visit.visit_number
         ? `BILL/${visit.visit_number.split('/').slice(1).join('/')}`
         : `BILL/${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}${String(
@@ -392,14 +428,20 @@ export default function OPDBilling() {
         doctor: visit.doctor?.toString() || '',
       }));
 
-      recalculateBilling(opdAmount, '0.00');
+      // Only recalculate if there's NO existing bill (for new bills only)
+      if (!existingBill) {
+        recalculateBilling(opdAmount, '0.00');
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visit]);
+  }, [visit, visitBillsLoading, existingBill]);
 
   // Load existing bill data if available
   useEffect(() => {
     if (existingBill && !billsLoading) {
+      // Set flag to prevent auto-recalculation
+      setIsLoadingBillData(true);
+
       // Load OPD form data from existing bill
       const consultationItem = existingBill.items?.find(item => item.particular === 'consultation');
       if (consultationItem) {
@@ -432,7 +474,7 @@ export default function OPDBilling() {
         procedures: procedureItems,
       }));
 
-      // Load billing data
+      // Load billing data from existing bill (this is the source of truth)
       setBillingData({
         opdTotal: consultationItem?.total_amount || '0.00',
         procedureTotal: existingBill.items
@@ -447,6 +489,9 @@ export default function OPDBilling() {
         receivedAmount: existingBill.received_amount || '0.00',
         balanceAmount: existingBill.balance_amount || '0.00',
       });
+
+      // Reset flag after data is loaded
+      setTimeout(() => setIsLoadingBillData(false), 100);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [existingBill, billsLoading]);
@@ -480,16 +525,20 @@ export default function OPDBilling() {
     }));
   };
 
-  // Update OPD amount
+  // Update OPD amount (skip during bill data loading to preserve loaded values)
   useEffect(() => {
-    recalculateBilling(opdFormData.opdAmount, billingData.procedureTotal);
+    if (!isLoadingBillData) {
+      recalculateBilling(opdFormData.opdAmount, billingData.procedureTotal);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [opdFormData.opdAmount]);
 
-  // Calculate procedure total
+  // Calculate procedure total (skip during bill data loading to preserve loaded values)
   useEffect(() => {
-    const total = procedureFormData.procedures.reduce((sum, proc) => sum + (parseFloat(proc.total_price) || 0), 0);
-    recalculateBilling(billingData.opdTotal, total.toFixed(2));
+    if (!isLoadingBillData) {
+      const total = procedureFormData.procedures.reduce((sum, proc) => sum + (parseFloat(proc.total_price) || 0), 0);
+      recalculateBilling(billingData.opdTotal, total.toFixed(2));
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [procedureFormData.procedures]);
 
@@ -816,9 +865,24 @@ export default function OPDBilling() {
         </div>
         <div className="flex items-center gap-3">
           <div className="text-right">
-            <p className="text-sm text-muted-foreground">Payment Status</p>
-            <Badge variant={visit.payment_status === 'paid' ? 'default' : 'destructive'} className="mt-1">
-              {visit.payment_status}
+            <p className="text-sm text-muted-foreground">Bill Payment Status</p>
+            <Badge
+              variant={
+                currentPaymentStatus === 'paid'
+                  ? 'default'
+                  : currentPaymentStatus === 'partial'
+                    ? 'secondary'
+                    : 'destructive'
+              }
+              className={`mt-1 capitalize ${
+                currentPaymentStatus === 'paid'
+                  ? 'bg-green-600'
+                  : currentPaymentStatus === 'partial'
+                    ? 'bg-yellow-600'
+                    : 'bg-red-600'
+              }`}
+            >
+              {currentPaymentStatus === 'partial' ? 'Partially Paid' : currentPaymentStatus}
             </Badge>
           </div>
         </div>
@@ -874,25 +938,57 @@ export default function OPDBilling() {
         </CardContent>
       </Card>
 
-      {/* Tabs */}
-      <Tabs defaultValue="opd" className="w-full">
-        <TabsList className="grid w-full max-w-2xl grid-cols-3">
-          <TabsTrigger value="opd" className="flex items-center gap-2">
-            <Receipt className="h-4 w-4" />
-            OPD Billing
-          </TabsTrigger>
-          <TabsTrigger value="procedure" className="flex items-center gap-2">
-            <Package className="h-4 w-4" />
-            Procedure Billing
-          </TabsTrigger>
-          <TabsTrigger value="preview" className="flex items-center gap-2">
-            <FileText className="h-4 w-4" />
-            Bill Preview
-          </TabsTrigger>
-        </TabsList>
+      {/* Show "Create New Bill" button if no bill exists and form not shown yet */}
+      {!showBillingForm && !visitBillsLoading && (
+        <Card className="border-dashed">
+          <CardContent className="flex flex-col items-center justify-center py-16">
+            <div className="rounded-full bg-primary/10 p-6 mb-4">
+              <Receipt className="h-12 w-12 text-primary" />
+            </div>
+            <h3 className="text-xl font-semibold mb-2">No Bill Created Yet</h3>
+            <p className="text-muted-foreground mb-6 text-center max-w-md">
+              This visit doesn't have a bill yet. Click the button below to create a new bill for this patient.
+            </p>
+            <Button
+              size="lg"
+              onClick={() => {
+                setShowBillingForm(true);
+                // Ensure billing data is properly initialized for new bill
+                setBillingData((prev) => ({
+                  ...prev,
+                  receivedAmount: '0.00',
+                  balanceAmount: prev.totalAmount, // Balance should equal total for new bill
+                }));
+              }}
+              className="px-8"
+            >
+              <Plus className="h-5 w-5 mr-2" />
+              Create New Bill
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
-        {/* OPD Billing */}
-        <TabsContent value="opd" className="space-y-6">
+      {/* Tabs - Only show when form is visible */}
+      {showBillingForm && (
+        <Tabs defaultValue="opd" className="w-full">
+          <TabsList className="grid w-full max-w-2xl grid-cols-3">
+            <TabsTrigger value="opd" className="flex items-center gap-2">
+              <Receipt className="h-4 w-4" />
+              OPD Billing
+            </TabsTrigger>
+            <TabsTrigger value="procedure" className="flex items-center gap-2">
+              <Package className="h-4 w-4" />
+              Procedure Billing
+            </TabsTrigger>
+            <TabsTrigger value="preview" className="flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              Bill Preview
+            </TabsTrigger>
+          </TabsList>
+
+          {/* OPD Billing */}
+          <TabsContent value="opd" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <Card className="lg:col-span-2">
               <CardHeader>
@@ -1668,7 +1764,8 @@ export default function OPDBilling() {
             </CardContent>
           </Card>
         </TabsContent>
-      </Tabs>
+        </Tabs>
+      )}
     </div>
   );
 }

@@ -37,7 +37,8 @@ export const useOPDBill = () => {
    * });
    */
   const useOPDBills = (params?: OPDBillListParams) => {
-    const key = ['opd-bills', params];
+    // Create a stable key that will be null if params is undefined (prevents unnecessary fetching)
+    const key = params ? ['opd-bills', params] : null;
 
     return useSWR<PaginatedResponse<OPDBill>>(
       key,

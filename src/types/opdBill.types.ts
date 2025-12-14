@@ -123,15 +123,27 @@ export interface OPDBillPrintResponse {
   message?: string;
 }
 
-// Statistics/Summary types
+// Statistics/Summary types - Matching actual API response
 export interface OPDBillStatistics {
   total_bills: number;
-  total_amount: string;
-  received_amount: string;
-  balance_amount: string;
-  paid_bills: number;
-  unpaid_bills: number;
-  partial_bills: number;
+  total_revenue: string;
+  paid_revenue: string;
+  pending_amount: string;
+  total_discount: string;
+  bills_paid: number;
+  bills_partial: number;
+  bills_unpaid: number;
+  by_opd_type: Array<{
+    opd_type: string;
+    count: number;
+    revenue: number;
+  }>;
+  by_payment_mode: Array<{
+    payment_mode: string;
+    count: number;
+    amount: number;
+  }>;
+  average_bill_amount: string;
 }
 
 // Paginated response

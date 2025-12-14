@@ -142,10 +142,11 @@ class OPDBillService {
   async getOPDBillStatistics(params?: Record<string, any>): Promise<OPDBillStatistics> {
     try {
       const queryString = buildQueryString(params);
-      const response = await hmsClient.get<OPDBillStatistics>(
+      const response = await hmsClient.get<ApiResponse<OPDBillStatistics>>(
         `${API_CONFIG.HMS.OPD.BILLS.STATISTICS}${queryString}`
       );
-      return response.data;
+      // Handle wrapped response (API returns {success: true, data: {...}})
+      return response.data.data || response.data;
     } catch (error: any) {
       const message =
         error.response?.data?.error ||

@@ -10,7 +10,7 @@ export const API_CONFIG = {
   // VITE_AUTH_BASE_URL, VITE_CRM_BASE_URL, VITE_WHATSAPP_BASE_URL, VITE_WHATSAPP_WS_URL
   AUTH_BASE_URL: import.meta.env.VITE_AUTH_BASE_URL || 'https://admin.celiyo.com/api',
   CRM_BASE_URL: import.meta.env.VITE_CRM_BASE_URL || 'https://crm.celiyo.com/api',
-  HMS_BASE_URL: import.meta.env.VITE_HMS_BASE_URL || 'https://hms.celiyo.com/api',
+  HMS_BASE_URL: import.meta.env.VITE_HMS_BASE_URL || 'http://127.0.0.1:8000/api',
   WHATSAPP_BASE_URL: import.meta.env.VITE_WHATSAPP_BASE_URL || 'https://whatsapp.celiyo.com/api',
 
 
@@ -345,6 +345,7 @@ export const API_CONFIG = {
     FLOW_UNPUBLISH: '/flows/:flow_id/unpublish',
     FLOW_DUPLICATE: '/flows/:flow_id/duplicate',
     FLOW_VALIDATE: '/flows/:flow_id/validate',
+    
     FLOW_STATS: '/flows/stats',
 
     // QR Codes endpoints

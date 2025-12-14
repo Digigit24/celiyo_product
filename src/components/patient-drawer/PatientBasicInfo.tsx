@@ -19,45 +19,45 @@ import {
 
 import type { Patient, PatientCreateData, PatientUpdateData } from '@/types/patient.types';
 
-// Validation schemas
+// Validation schemas - Matching backend model exactly
 const createPatientSchema = z.object({
-  // Personal Info (REQUIRED)
+  // Personal Info - REQUIRED: first_name, gender (as per backend model)
   first_name: z.string().min(1, 'First name is required'),
-  last_name: z.string().min(1, 'Last name is required'),
+  last_name: z.string().optional(), // Optional in backend (null=True, blank=True)
   middle_name: z.string().optional(),
-  date_of_birth: z.string().min(1, 'Date of birth is required'),
-  gender: z.enum(['male', 'female', 'other'], { required_error: 'Gender is required' }),
+  date_of_birth: z.string().optional(), // Optional, age auto-calculated in backend
+  gender: z.enum(['male', 'female', 'other'], { required_error: 'Gender is required' }), // Required in backend
 
-  // Contact (REQUIRED)
-  mobile_primary: z.string().min(10, 'Mobile number must be at least 10 digits'),
-  mobile_secondary: z.string().optional(),
+  // Contact - REQUIRED: mobile_primary only
+  mobile_primary: z.string().min(9, 'Mobile number must be at least 9 digits').max(15, 'Mobile number cannot exceed 15 digits'),
+  mobile_secondary: z.string().max(15, 'Mobile number cannot exceed 15 digits').optional(),
   email: z.string().email('Invalid email address').optional().or(z.literal('')),
 
-  // Address (REQUIRED)
-  address_line1: z.string().min(1, 'Address line 1 is required'),
-  address_line2: z.string().optional(),
-  city: z.string().min(1, 'City is required'),
-  state: z.string().min(1, 'State is required'),
+  // Address - All optional in backend
+  address_line1: z.string().max(200).optional(),
+  address_line2: z.string().max(200).optional(),
+  city: z.string().max(100).optional(),
+  state: z.string().max(100).optional(),
   country: z.string().default('India'),
-  pincode: z.string().min(4, 'Pincode must be at least 4 digits'),
+  pincode: z.string().max(10).optional(),
 
-  // Medical Info (OPTIONAL)
+  // Medical Info - All optional in backend
   blood_group: z.enum(['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']).optional(),
-  height: z.coerce.number().min(0).optional().or(z.literal('')),
-  weight: z.coerce.number().min(0).optional().or(z.literal('')),
+  height: z.coerce.number().min(0).max(999.99).optional().or(z.literal('')), // DecimalField(max_digits=5, decimal_places=2)
+  weight: z.coerce.number().min(0).max(999.99).optional().or(z.literal('')), // DecimalField(max_digits=5, decimal_places=2)
 
-  // Social Info (OPTIONAL)
+  // Social Info - All optional in backend
   marital_status: z.enum(['single', 'married', 'divorced', 'widowed']).optional(),
-  occupation: z.string().optional(),
+  occupation: z.string().max(100).optional(),
 
-  // Emergency Contact (REQUIRED)
-  emergency_contact_name: z.string().min(1, 'Emergency contact name is required'),
-  emergency_contact_phone: z.string().min(10, 'Emergency contact phone must be at least 10 digits'),
-  emergency_contact_relation: z.string().min(1, 'Emergency contact relation is required'),
+  // Emergency Contact - All optional in backend (null=True, blank=True)
+  emergency_contact_name: z.string().max(100).optional(),
+  emergency_contact_phone: z.string().max(15).optional(),
+  emergency_contact_relation: z.string().max(50).optional(),
 
-  // Insurance (OPTIONAL)
-  insurance_provider: z.string().optional(),
-  insurance_policy_number: z.string().optional(),
+  // Insurance - All optional in backend
+  insurance_provider: z.string().max(200).optional(),
+  insurance_policy_number: z.string().max(100).optional(),
   insurance_expiry_date: z.string().optional(),
 });
 
@@ -126,28 +126,35 @@ const PatientBasicInfo = forwardRef<PatientBasicInfoHandle, PatientBasicInfoProp
 
     const defaultValues = isCreateMode
       ? {
+          // Personal Info
           first_name: '',
           last_name: '',
           middle_name: '',
           date_of_birth: '',
-          gender: 'male' as const,
+          gender: undefined, // No default - user must select
+          // Contact
           mobile_primary: '',
           mobile_secondary: '',
           email: '',
+          // Address
           address_line1: '',
           address_line2: '',
           city: '',
           state: '',
-          country: 'India',
+          country: 'India', // Backend default
           pincode: '',
+          // Medical Info
           blood_group: undefined,
           height: '' as any,
           weight: '' as any,
-          marital_status: undefined,
+          // Social Info
+          marital_status: undefined, // Backend has default='single' but we let user choose
           occupation: '',
+          // Emergency Contact
           emergency_contact_name: '',
           emergency_contact_phone: '',
           emergency_contact_relation: '',
+          // Insurance
           insurance_provider: '',
           insurance_policy_number: '',
           insurance_expiry_date: '',
@@ -197,6 +204,26 @@ const PatientBasicInfo = forwardRef<PatientBasicInfoHandle, PatientBasicInfoProp
     const watchedStatus = watch('status');
     const watchedBloodGroup = watch('blood_group');
     const watchedMaritalStatus = watch('marital_status');
+    const watchedDateOfBirth = watch('date_of_birth');
+
+    // Calculate age from date of birth (matching backend logic)
+    const calculateAge = (dateOfBirth: string): number | null => {
+      if (!dateOfBirth) return null;
+
+      const today = new Date();
+      const birthDate = new Date(dateOfBirth);
+
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+
+      return age;
+    };
+
+    const calculatedAge = watchedDateOfBirth ? calculateAge(watchedDateOfBirth) : null;
 
     // Reset form when patient data changes (for edit/view modes)
     useEffect(() => {
@@ -349,7 +376,7 @@ const PatientBasicInfo = forwardRef<PatientBasicInfoHandle, PatientBasicInfoProp
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="last_name">Last Name *</Label>
+                    <Label htmlFor="last_name">Last Name</Label>
                     <Input
                       id="last_name"
                       {...register('last_name')}
@@ -365,7 +392,7 @@ const PatientBasicInfo = forwardRef<PatientBasicInfoHandle, PatientBasicInfoProp
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="date_of_birth">Date of Birth *</Label>
+                    <Label htmlFor="date_of_birth">Date of Birth</Label>
                     <Input
                       id="date_of_birth"
                       type="date"
@@ -375,6 +402,9 @@ const PatientBasicInfo = forwardRef<PatientBasicInfoHandle, PatientBasicInfoProp
                     />
                     {errors.date_of_birth && (
                       <p className="text-sm text-destructive">{errors.date_of_birth.message as string}</p>
+                    )}
+                    {calculatedAge !== null && (
+                      <p className="text-sm text-muted-foreground">Age: {calculatedAge} years</p>
                     )}
                   </div>
 
@@ -483,7 +513,7 @@ const PatientBasicInfo = forwardRef<PatientBasicInfoHandle, PatientBasicInfoProp
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="address_line1">Address Line 1 *</Label>
+              <Label htmlFor="address_line1">Address Line 1</Label>
               <Input
                 id="address_line1"
                 {...register('address_line1')}
@@ -508,7 +538,7 @@ const PatientBasicInfo = forwardRef<PatientBasicInfoHandle, PatientBasicInfoProp
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="city">City *</Label>
+                <Label htmlFor="city">City</Label>
                 <Input
                   id="city"
                   {...register('city')}
@@ -522,7 +552,7 @@ const PatientBasicInfo = forwardRef<PatientBasicInfoHandle, PatientBasicInfoProp
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="state">State *</Label>
+                <Label htmlFor="state">State</Label>
                 <Input
                   id="state"
                   {...register('state')}
@@ -538,7 +568,7 @@ const PatientBasicInfo = forwardRef<PatientBasicInfoHandle, PatientBasicInfoProp
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="pincode">Pincode *</Label>
+                <Label htmlFor="pincode">Pincode</Label>
                 <Input
                   id="pincode"
                   {...register('pincode')}
@@ -682,7 +712,7 @@ const PatientBasicInfo = forwardRef<PatientBasicInfoHandle, PatientBasicInfoProp
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="emergency_contact_name">Contact Name *</Label>
+              <Label htmlFor="emergency_contact_name">Contact Name</Label>
               <Input
                 id="emergency_contact_name"
                 {...register('emergency_contact_name')}
@@ -697,7 +727,7 @@ const PatientBasicInfo = forwardRef<PatientBasicInfoHandle, PatientBasicInfoProp
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="emergency_contact_phone">Contact Phone *</Label>
+                <Label htmlFor="emergency_contact_phone">Contact Phone</Label>
                 <Input
                   id="emergency_contact_phone"
                   {...register('emergency_contact_phone')}
@@ -711,7 +741,7 @@ const PatientBasicInfo = forwardRef<PatientBasicInfoHandle, PatientBasicInfoProp
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="emergency_contact_relation">Relation *</Label>
+                <Label htmlFor="emergency_contact_relation">Relation</Label>
                 <Input
                   id="emergency_contact_relation"
                   {...register('emergency_contact_relation')}

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { DataTable, DataTableColumn } from '@/components/DataTable';
-import { Loader2, Plus, Search, DollarSign, FileText, CreditCard, AlertCircle } from 'lucide-react';
+import { Loader2, Plus, Search, DollarSign, FileText, CreditCard, AlertCircle, CheckCircle2, Clock, TrendingUp, PieChart } from 'lucide-react';
 import { OPDBill, OPDBillListParams } from '@/types/opdBill.types';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
@@ -63,6 +63,81 @@ export const OPDBills: React.FC = () => {
     } catch (error: any) {
       toast.error(error.message);
     }
+  };
+
+  // Mobile card renderer
+  const renderMobileCard = (bill: OPDBill, actions: any) => {
+    const statusConfig = {
+      paid: { label: 'Paid', className: 'bg-green-600' },
+      partial: { label: 'Partial', className: 'bg-orange-600' },
+      unpaid: { label: 'Unpaid', className: 'bg-red-600' },
+    };
+    const config = bill.payment_status ? statusConfig[bill.payment_status] : null;
+
+    return (
+      <>
+        {/* Header Row */}
+        <div className="flex items-start justify-between">
+          <div className="flex-1 min-w-0">
+            <h3 className="font-semibold text-base font-mono truncate">{bill.bill_number}</h3>
+            <p className="text-sm text-muted-foreground">
+              {format(new Date(bill.bill_date), 'MMM dd, yyyy')}
+            </p>
+          </div>
+          {config && (
+            <Badge variant="default" className={config.className}>
+              {config.label}
+            </Badge>
+          )}
+        </div>
+
+        {/* Patient & Visit Info */}
+        <div className="flex flex-col gap-1 text-sm">
+          <p className="font-medium">{bill.patient_name || 'N/A'}</p>
+          <p className="text-muted-foreground font-mono text-xs">Visit: {bill.visit_number || `#${bill.visit}`}</p>
+        </div>
+
+        {/* Amount Details */}
+        <div className="grid grid-cols-2 gap-2 text-sm">
+          <div>
+            <p className="text-muted-foreground text-xs">Total Amount</p>
+            <p className="font-medium">₹{bill.total_amount}</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground text-xs">Balance</p>
+            <p className={`font-medium ${parseFloat(bill.balance_amount) > 0 ? 'text-red-600' : 'text-green-600'}`}>
+              ₹{bill.balance_amount}
+            </p>
+          </div>
+        </div>
+
+        {/* Type Badge */}
+        <div>
+          <Badge variant="secondary" className="text-xs">
+            {bill.bill_type ? bill.bill_type.toUpperCase() : 'N/A'}
+          </Badge>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex gap-2 pt-2">
+          {actions.view && (
+            <Button size="sm" variant="outline" onClick={actions.view} className="flex-1">
+              View
+            </Button>
+          )}
+          {actions.edit && (
+            <Button size="sm" variant="outline" onClick={actions.edit} className="flex-1">
+              Edit
+            </Button>
+          )}
+          {actions.askDelete && (
+            <Button size="sm" variant="destructive" onClick={actions.askDelete}>
+              Delete
+            </Button>
+          )}
+        </div>
+      </>
+    );
   };
 
   const columns: DataTableColumn<OPDBill>[] = [
@@ -171,6 +246,7 @@ export const OPDBills: React.FC = () => {
         </Card>
       )}
 
+      {/* Main Statistics Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-4 sm:p-6">
@@ -193,8 +269,8 @@ export const OPDBills: React.FC = () => {
                 <DollarSign className="h-5 w-5 text-green-600" />
               </div>
               <div>
-                <p className="text-xs sm:text-sm text-muted-foreground">Collected</p>
-                <p className="text-xl sm:text-2xl font-bold">₹{statistics?.received_amount ?? '-'}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Total Revenue</p>
+                <p className="text-xl sm:text-2xl font-bold">₹{statistics?.total_revenue ?? '-'}</p>
               </div>
             </div>
           </CardContent>
@@ -203,12 +279,12 @@ export const OPDBills: React.FC = () => {
         <Card>
           <CardContent className="p-4 sm:p-6">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-orange-100 rounded-lg">
-                <AlertCircle className="h-5 w-5 text-orange-600" />
+              <div className="p-2 bg-emerald-100 rounded-lg">
+                <CheckCircle2 className="h-5 w-5 text-emerald-600" />
               </div>
               <div>
-                <p className="text-xs sm:text-sm text-muted-foreground">Pending</p>
-                <p className="text-xl sm:text-2xl font-bold">₹{statistics?.balance_amount ?? '-'}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Paid Revenue</p>
+                <p className="text-xl sm:text-2xl font-bold">₹{statistics?.paid_revenue ?? '-'}</p>
               </div>
             </div>
           </CardContent>
@@ -218,16 +294,144 @@ export const OPDBills: React.FC = () => {
           <CardContent className="p-4 sm:p-6">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-red-100 rounded-lg">
-                <CreditCard className="h-5 w-5 text-red-600" />
+                <AlertCircle className="h-5 w-5 text-red-600" />
               </div>
               <div>
-                <p className="text-xs sm:text-sm text-muted-foreground">Unpaid</p>
-                <p className="text-xl sm:text-2xl font-bold">{statistics?.unpaid_bills ?? '-'}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Pending</p>
+                <p className="text-xl sm:text-2xl font-bold text-red-600">₹{statistics?.pending_amount ?? '-'}</p>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
+
+      {/* Secondary Statistics Grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <CheckCircle2 className="h-5 w-5 text-green-600" />
+              </div>
+              <div>
+                <p className="text-xs sm:text-sm text-muted-foreground">Paid Bills</p>
+                <p className="text-xl sm:text-2xl font-bold">{statistics?.bills_paid ?? '-'}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-yellow-100 rounded-lg">
+                <Clock className="h-5 w-5 text-yellow-600" />
+              </div>
+              <div>
+                <p className="text-xs sm:text-sm text-muted-foreground">Partial</p>
+                <p className="text-xl sm:text-2xl font-bold">{statistics?.bills_partial ?? '-'}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-red-100 rounded-lg">
+                <AlertCircle className="h-5 w-5 text-red-600" />
+              </div>
+              <div>
+                <p className="text-xs sm:text-sm text-muted-foreground">Unpaid</p>
+                <p className="text-xl sm:text-2xl font-bold">{statistics?.bills_unpaid ?? '-'}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <TrendingUp className="h-5 w-5 text-purple-600" />
+              </div>
+              <div>
+                <p className="text-xs sm:text-sm text-muted-foreground">Avg Bill</p>
+                <p className="text-xl sm:text-2xl font-bold">₹{statistics?.average_bill_amount ?? '-'}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Breakdown Cards */}
+      {statistics && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* By OPD Type */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <PieChart className="h-5 w-5" />
+                Revenue by OPD Type
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {statistics.by_opd_type?.map((item, index) => (
+                  <div key={index} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <Badge variant="outline" className="capitalize">
+                        {item.opd_type}
+                      </Badge>
+                      <span className="text-sm text-muted-foreground">
+                        {item.count} bill{item.count !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                    <span className="font-semibold">₹{item.revenue.toFixed(2)}</span>
+                  </div>
+                ))}
+                {(!statistics.by_opd_type || statistics.by_opd_type.length === 0) && (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    No data available
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* By Payment Mode */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <CreditCard className="h-5 w-5" />
+                Revenue by Payment Mode
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {statistics.by_payment_mode?.map((item, index) => (
+                  <div key={index} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <Badge variant="outline" className="capitalize">
+                        {item.payment_mode}
+                      </Badge>
+                      <span className="text-sm text-muted-foreground">
+                        {item.count} payment{item.count !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                    <span className="font-semibold">₹{item.amount.toFixed(2)}</span>
+                  </div>
+                ))}
+                {(!statistics.by_payment_mode || statistics.by_payment_mode.length === 0) && (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    No data available
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       <Card>
         <CardHeader>
@@ -281,6 +485,7 @@ export const OPDBills: React.FC = () => {
                 rows={bills}
                 isLoading={isLoading}
                 columns={columns}
+                renderMobileCard={renderMobileCard}
                 getRowId={(bill) => bill.id}
                 getRowLabel={(bill) => bill.bill_number}
                 onView={(bill) => navigate(`/opd/billing/${bill.visit}`)}

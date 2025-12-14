@@ -91,7 +91,8 @@ export const UniversalHeader = ({ onMenuClick }: UniversalHeaderProps) => {
             <Menu size={20} />
           </Button>
         )}
-        <h1 className="text-xl font-semibold">{pageTitle}</h1>
+        {/* <h1 className="text-xl font-semibold">{pageTitle}</h1> */}
+        <h1 className="text-xl font-semibold">HMS</h1>
       </div>
 
       {/* Right Side - Settings and Profile */}

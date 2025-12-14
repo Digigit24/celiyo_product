@@ -4,30 +4,20 @@ import { usePharmacy } from '@/hooks/usePharmacy';
 import { DataTable, DataTableColumn } from '@/components/DataTable';
 import { ProductFormDrawer } from '@/components/pharmacy/ProductFormDrawer';
 import { DrawerMode } from '@/components/SideDrawer';
-import { PharmacyProduct } from '@/types/pharmacy.types';
+import { PharmacyProduct } from '@/types/pharmacy';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, RefreshCw } from 'lucide-react';
+import { PlusCircle } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
-import { PharmacyDashboard } from '@/components/pharmacy/PharmacyDashboard';
+;
 
 export const PharmacyPage: React.FC = () => {
-  const { 
-    usePharmacyProducts, 
-    deletePharmacyProduct,
-    usePharmacyProductStats 
-  } = usePharmacy();
-  
+  const { usePharmacyProducts, deleteProduct } = usePharmacy();
   const {
     data: pharmacyProductsData,
     isLoading: productsLoading,
-    mutate: refreshProducts,
+    error: productsError,
   } = usePharmacyProducts();
-
-  const {
-    data: productStats,
-    isLoading: productStatsLoading,
-  } = usePharmacyProductStats();
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerMode, setDrawerMode] = useState<DrawerMode>('create');
@@ -51,8 +41,8 @@ export const PharmacyPage: React.FC = () => {
     setDrawerOpen(true);
   };
 
-  const handleDelete = (product: PharmacyProduct) => {
-    deletePharmacyProduct.mutate(product.id);
+  const handleDelete = async (product: PharmacyProduct) => {
+    await deleteProduct.mutateAsync(product.id);
   };
   
   const columns = useMemo((): DataTableColumn<PharmacyProduct>[] => [
@@ -72,10 +62,10 @@ export const PharmacyPage: React.FC = () => {
     {
       header: 'Category',
       key: 'category',
-      accessor: (row) => row.category?.name || '',
+      accessor: (row) => row.category.name,
       sortable: true,
       filterable: true,
-      cell: (row) => row.category?.name || 'N/A',
+      cell: (row) => row.category.name,
     },
     {
       header: 'Stock',
@@ -123,22 +113,8 @@ export const PharmacyPage: React.FC = () => {
   const products = pharmacyProductsData?.results || [];
 
   return (
-    <div className="flex flex-col h-full p-4 sm:p-6">
-        <div className="flex items-center justify-between mb-6">
-            <h1 className="text-2xl font-bold">Pharmacy</h1>
-            <div className="flex items-center gap-2">
-                <Button variant="outline" size="icon" onClick={() => refreshProducts()}>
-                    <RefreshCw className="h-4 w-4" />
-                </Button>
-                <Button onClick={handleCreate}>
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Add New Product
-                </Button>
-            </div>
-        </div>
-
-        <PharmacyDashboard stats={productStats} isLoading={productStatsLoading} />
-
+    <div className="flex flex-col h-full">
+       
         <div className="flex-1 overflow-auto">
              <DataTable
                 rows={products}
@@ -170,7 +146,7 @@ export const PharmacyPage: React.FC = () => {
                                 <div>{row.quantity}</div>
                             </div>
                             <div className="text-right">
-.                                <div className="text-muted-foreground">Expiry</div>
+                                <div className="text-muted-foreground">Expiry</div>
                                 <div>{format(parseISO(row.expiry_date), 'MMM yyyy')}</div>
                             </div>
                         </div>

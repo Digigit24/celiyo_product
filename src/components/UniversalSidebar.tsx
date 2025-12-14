@@ -38,6 +38,8 @@ import {
   Workflow,
   QrCode,
   UserPlus,
+  Pill, // Added Pill icon for Pharmacy module
+  ShoppingCart, // Added ShoppingCart icon for Cart
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -288,6 +290,25 @@ const menuItems: MenuItem[] = [
         label: "Accounting Periods",
         icon: TrendingUp,
         path: "/payments/periods",
+      },
+    ],
+  },
+  {
+    id: "pharmacy",
+    label: "Pharmacy",
+    icon: Pill,
+    children: [
+      {
+        id: "pharmacy-products",
+        label: "Products",
+        icon: Package,
+        path: "/pharmacy",
+      },
+      {
+        id: "pharmacy-cart",
+        label: "Cart",
+        icon: ShoppingCart,
+        path: "/cart",
       },
     ],
   },

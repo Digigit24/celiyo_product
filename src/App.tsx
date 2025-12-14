@@ -56,6 +56,8 @@ import { AdminSettings } from "./pages/AdminSettings";
 import { Transactions } from "./pages/Transactions";
 import { PaymentCategories } from "./pages/PaymentCategories";
 import { AccountingPeriods } from "./pages/AccountingPeriods";
+import { PharmacyPage } from "./pages/Pharmacy"; // Import PharmacyPage
+import { CartListPage } from "./pages/CartList";   // Import CartListPage
 
 import { WebSocketProvider } from "./context/WebSocketProvider";
 
@@ -117,6 +119,10 @@ const AppLayout = () => {
               <Route path="/payments/transactions" element={<Transactions />} />
               <Route path="/payments/categories" element={<PaymentCategories />} />
               <Route path="/payments/periods" element={<AccountingPeriods />} />
+
+              {/* Pharmacy Routes */}
+              <Route path="/pharmacy" element={<PharmacyPage />} />
+              <Route path="/cart" element={<CartListPage />} />
 
               {/* WhatsApp Routes */}
               <Route path="/whatsapp/onboarding" element={<WhatsAppOnboarding />} />

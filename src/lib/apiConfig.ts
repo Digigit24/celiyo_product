@@ -225,6 +225,49 @@ export const API_CONFIG = {
         RECALCULATE: '/payments/accounting-periods/:id/recalculate/',
         CLOSE: '/payments/accounting-periods/:id/close/',
       },
+    },
+    PHARMACY: {
+      // Cart
+      CART_LIST: '/pharmacy/cart/',
+      CART_DETAIL: '/pharmacy/cart/:id/',
+      CART_CREATE: '/pharmacy/cart/',
+      CART_UPDATE: '/pharmacy/cart/:id/',
+      CART_PARTIAL_UPDATE: '/pharmacy/cart/:id/',
+      CART_DELETE: '/pharmacy/cart/:id/',
+      CART_ADD_ITEM: '/pharmacy/cart/add_item/',
+      CART_CLEAR: '/pharmacy/cart/clear/',
+      CART_REMOVE_ITEM: '/pharmacy/cart/remove_item/',
+      CART_UPDATE_ITEM: '/pharmacy/cart/update_item/',
+
+      // Product Categories
+      CATEGORIES_LIST: '/pharmacy/categories/',
+      CATEGORY_CREATE: '/pharmacy/categories/',
+      CATEGORY_DETAIL: '/pharmacy/categories/:id/',
+      CATEGORY_UPDATE: '/pharmacy/categories/:id/',
+      CATEGORY_PARTIAL_UPDATE: '/pharmacy/categories/:id/',
+      CATEGORY_DELETE: '/pharmacy/categories/:id/',
+
+      // Orders
+      ORDERS_LIST: '/pharmacy/orders/',
+      ORDER_CREATE: '/pharmacy/orders/',
+      ORDER_DETAIL: '/pharmacy/orders/:id/',
+      ORDER_UPDATE: '/pharmacy/orders/:id/',
+      ORDER_PARTIAL_UPDATE: '/pharmacy/orders/:id/',
+      ORDER_DELETE: '/pharmacy/orders/:id/',
+      ORDER_CANCEL: '/pharmacy/orders/:id/cancel/',
+      ORDERS_STATISTICS: '/pharmacy/orders/statistics/',
+
+      // Products
+      PRODUCTS_LIST: '/pharmacy/products/',
+      PRODUCT_CREATE: '/pharmacy/products/',
+      PRODUCT_DETAIL: '/pharmacy/products/:id/',
+      PRODUCT_UPDATE: '/pharmacy/products/:id/',
+      PRODUCT_PARTIAL_UPDATE: '/pharmacy/products/:id/',
+      PRODUCT_DELETE: '/pharmacy/products/:id/',
+      PRODUCTS_EXPIRED: '/pharmacy/products/expired/',
+      PRODUCTS_LOW_STOCK: '/pharmacy/products/low_stock/',
+      PRODUCTS_NEAR_EXPIRY: '/pharmacy/products/near_expiry/',
+      PRODUCTS_STATISTICS: '/pharmacy/products/statistics/',
     }
   },
 

@@ -114,7 +114,7 @@ const StatCard = ({ title, value, icon, trend, trendUp, loading, gradient, isDar
   const isImageIcon = typeof icon === 'string';
 
   return (
-    <Card className={`relative overflow-hidden ${isDark ? 'border-gray-700' : 'border-gray-200'} shadow-sm hover:shadow-md transition-all duration-300 ${gradient}`}>
+    <Card className={`relative overflow-hidden ${isDark ? 'border-gray-700' : 'border-gray-200'} shadow-sm hover:shadow-md transition-all duration-300`}>
       <div className="p-6 relative z-10">
         <div className="flex items-center justify-between">
           <div className="flex-1">
@@ -625,11 +625,7 @@ const Dashboard = () => {
         {/* Charts Row 1 */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
           {/* Revenue Chart */}
-          <Card className={`p-6 ${isDark ? 'border-gray-700' : 'border-gray-200'} shadow-sm hover:shadow-md transition-shadow duration-300 ${
-            isDark
-              ? 'bg-gradient-to-br from-gray-800 to-gray-900/50'
-              : 'bg-gradient-to-br from-white to-gray-50/30'
-          }`}>
+          <Card className={`p-6 ${isDark ? 'border-gray-700' : 'border-gray-200'} shadow-sm hover:shadow-md transition-shadow duration-300 `}>
             <h3 className={`text-base font-semibold mb-4 flex items-center gap-2 ${
               isDark ? 'text-gray-200' : 'text-gray-700'
             }`}>
@@ -651,11 +647,7 @@ const Dashboard = () => {
           </Card>
 
           {/* Visit Types Chart */}
-          <Card className={`p-6 ${isDark ? 'border-gray-700' : 'border-gray-200'} shadow-sm hover:shadow-md transition-shadow duration-300 ${
-            isDark
-              ? 'bg-gradient-to-br from-gray-800 to-gray-900/50'
-              : 'bg-gradient-to-br from-white to-gray-50/30'
-          }`}>
+          <Card className={`p-6 ${isDark ? 'border-gray-700' : 'border-gray-200'} shadow-sm hover:shadow-md transition-shadow duration-300 `}>
             <h3 className={`text-base font-semibold mb-4 flex items-center gap-2 ${
               isDark ? 'text-gray-200' : 'text-gray-700'
             }`}>
@@ -680,11 +672,7 @@ const Dashboard = () => {
         {/* Charts Row 2 */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
           {/* Payment Status Chart */}
-          <Card className={`p-6 ${isDark ? 'border-gray-700' : 'border-gray-200'} shadow-sm hover:shadow-md transition-shadow duration-300 ${
-            isDark
-              ? 'bg-gradient-to-br from-gray-800 to-gray-900/50'
-              : 'bg-gradient-to-br from-white to-gray-50/30'
-          }`}>
+          <Card className={`p-6 ${isDark ? 'border-gray-700' : 'border-gray-200'} shadow-sm hover:shadow-md transition-shadow duration-300 `}>
             <h3 className={`text-base font-semibold mb-4 flex items-center gap-2 ${
               isDark ? 'text-gray-200' : 'text-gray-700'
             }`}>
@@ -706,11 +694,7 @@ const Dashboard = () => {
           </Card>
 
           {/* Patient Growth Chart */}
-          <Card className={`p-6 ${isDark ? 'border-gray-700' : 'border-gray-200'} shadow-sm hover:shadow-md transition-shadow duration-300 ${
-            isDark
-              ? 'bg-gradient-to-br from-gray-800 to-gray-900/50'
-              : 'bg-gradient-to-br from-white to-gray-50/30'
-          }`}>
+          <Card className={`p-6 ${isDark ? 'border-gray-700' : 'border-gray-200'} shadow-sm hover:shadow-md transition-shadow duration-300 `}>
             <h3 className={`text-base font-semibold mb-4 flex items-center gap-2 ${
               isDark ? 'text-gray-200' : 'text-gray-700'
             }`}>
@@ -735,11 +719,7 @@ const Dashboard = () => {
         {/* Charts Row 3 */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           {/* Visit Status Chart */}
-          <Card className={`p-6 ${isDark ? 'border-gray-700' : 'border-gray-200'} shadow-sm hover:shadow-md transition-shadow duration-300 ${
-            isDark
-              ? 'bg-gradient-to-br from-gray-800 to-gray-900/50'
-              : 'bg-gradient-to-br from-white to-gray-50/30'
-          }`}>
+          <Card className={`p-6 ${isDark ? 'border-gray-700' : 'border-gray-200'} shadow-sm hover:shadow-md transition-shadow duration-300 `}>
             <h3 className={`text-base font-semibold mb-4 flex items-center gap-2 ${
               isDark ? 'text-gray-200' : 'text-gray-700'
             }`}>
@@ -761,11 +741,7 @@ const Dashboard = () => {
           </Card>
 
           {/* Gender Distribution Chart */}
-          <Card className={`p-6 ${isDark ? 'border-gray-700' : 'border-gray-200'} shadow-sm hover:shadow-md transition-shadow duration-300 ${
-            isDark
-              ? 'bg-gradient-to-br from-gray-800 to-gray-900/50'
-              : 'bg-gradient-to-br from-white to-gray-50/30'
-          }`}>
+          <Card className={`p-6 ${isDark ? 'border-gray-700' : 'border-gray-200'} shadow-sm hover:shadow-md transition-shadow duration-300 `}>
             <h3 className={`text-base font-semibold mb-4 flex items-center gap-2 ${
               isDark ? 'text-gray-200' : 'text-gray-700'
             }`}>

@@ -116,7 +116,7 @@ const AppLayout = () => {
               {/* Payment Routes */}
               <Route path="/payments/transactions" element={<Transactions />} />
               <Route path="/payments/categories" element={<PaymentCategories />} />
-              <Route path="/payments/accounting-periods" element={<AccountingPeriods />} />
+              <Route path="/payments/periods" element={<AccountingPeriods />} />
 
               {/* WhatsApp Routes */}
               <Route path="/whatsapp/onboarding" element={<WhatsAppOnboarding />} />

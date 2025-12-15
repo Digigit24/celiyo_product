@@ -93,17 +93,7 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
       <SideDrawer
         open={open}
         onOpenChange={onOpenChange}
-        title={
-          <div className="flex items-center gap-2">
-            <ShoppingCart className="h-5 w-5" />
-            <span>Shopping Cart</span>
-            {cartItemsCount > 0 && (
-              <Badge variant="default" className="rounded-full">
-                {cartItemsCount}
-              </Badge>
-            )}
-          </div>
-        }
+        title="Shopping Cart"
       >
         <div className="flex flex-col h-full">
           {/* Cart Items */}

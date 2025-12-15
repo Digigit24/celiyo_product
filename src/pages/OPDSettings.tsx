@@ -3,19 +3,18 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Settings2, FileText, Microscope, ListChecks, ClipboardList, Layers } from 'lucide-react';
-import { GeneralSettingsTab } from '@/components/opd-settings/GeneralSettingsTab';
 import { BillingSettingsTab } from '@/components/opd-settings/BillingSettingsTab';
 import { ProcedureSettingsTab } from '@/components/opd-settings/ProcedureSettingsTab';
 import { TemplatesTab } from '@/components/opd-settings/TemplatesTab';
 import { TemplateFieldsTab } from '@/components/opd-settings/TemplateFieldsTab';
 
-type SettingsTab = 'general' | 'billing' | 'procedures' | 'templates' | 'template-fields';
+type SettingsTab = 'billing' | 'procedures' | 'templates' | 'template-fields';
 
 export const OPDSettings: React.FC = () => {
   const { tab } = useParams<{ tab?: string }>();
   const navigate = useNavigate();
 
-  const activeTab = (tab as SettingsTab) || 'general';
+  const activeTab = (tab as SettingsTab) || 'templates';
 
   const handleTabChange = (newTab: string) => {
     navigate(`/opd/settings/${newTab}`, { replace: true });
@@ -34,14 +33,7 @@ export const OPDSettings: React.FC = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5 h-auto">
-          <TabsTrigger
-            value="general"
-            className="flex items-center gap-2 data-[state=active]:border-b-2 data-[state=active]:border-primary"
-          >
-            <Settings2 className="h-4 w-4" />
-            <span className="hidden sm:inline">General</span>
-          </TabsTrigger>
+        <TabsList className="grid w-full grid-cols-4 h-auto">
           <TabsTrigger
             value="templates"
             className="flex items-center gap-2 data-[state=active]:border-b-2 data-[state=active]:border-primary"
@@ -71,10 +63,6 @@ export const OPDSettings: React.FC = () => {
             <span className="hidden sm:inline">Procedures</span>
           </TabsTrigger>
         </TabsList>
-
-        <TabsContent value="general" className="space-y-4">
-          <GeneralSettingsTab />
-        </TabsContent>
 
         <TabsContent value="templates" className="space-y-4">
           <TemplatesTab />

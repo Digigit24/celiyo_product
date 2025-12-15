@@ -778,12 +778,12 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
                     />
                   </div>
                 )}
-                <div>
-                  <h1 className="text-3xl font-bold">
+                <div className="max-w-md">
+                  <h1 className="text-xl font-bold">
                     {tenantData?.name || 'Medical Center'}
                   </h1>
-                  <p className="text-sm mt-1 opacity-90">
-                    {tenantSettings.address?.split('\n')[0] || 'Excellence in Healthcare'}
+                  <p className="text-sm mt-1 opacity-90 whitespace-pre-wrap break-words">
+                    {tenantSettings.address || 'Excellence in Healthcare'}
                   </p>
                 </div>
               </div>

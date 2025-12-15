@@ -210,8 +210,8 @@ export const CurrencySettingsTab: React.FC<CurrencySettingsTabProps> = ({
             <div className="space-y-2">
               <Label htmlFor="thousand-separator">Thousand Separator</Label>
               <Select
-                value={currencyThousandSeparator}
-                onValueChange={onCurrencyThousandSeparatorChange}
+                value={currencyThousandSeparator || "none"}
+                onValueChange={(value) => onCurrencyThousandSeparatorChange(value === "none" ? "" : value)}
               >
                 <SelectTrigger id="thousand-separator">
                   <SelectValue />
@@ -220,7 +220,7 @@ export const CurrencySettingsTab: React.FC<CurrencySettingsTabProps> = ({
                   <SelectItem value=",">Comma (,)</SelectItem>
                   <SelectItem value=".">Period (.)</SelectItem>
                   <SelectItem value=" ">Space ( )</SelectItem>
-                  <SelectItem value="">None</SelectItem>
+                  <SelectItem value="none">None</SelectItem>
                 </SelectContent>
               </Select>
             </div>

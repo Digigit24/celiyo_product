@@ -1,7 +1,10 @@
-import React from 'react';
+import React, { useMemo } from 'react';
+import Chart from 'react-apexcharts';
+import { ApexOptions } from 'apexcharts';
 import { usePharmacy } from '@/hooks/usePharmacy';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { useTheme } from 'next-themes';
 import {
   Package,
   AlertTriangle,
@@ -13,6 +16,8 @@ import {
   CheckCircle,
   XCircle,
   Loader2,
+  BarChart3,
+  PieChart,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -54,6 +59,8 @@ function StatCard({ title, value, icon, variant = 'default', subtitle }: StatCar
 
 export const PharmacyStatisticsPage: React.FC = () => {
   const { usePharmacyProductStats, usePharmacyOrderStats } = usePharmacy();
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
 
   const {
     data: productStats,
@@ -69,6 +76,227 @@ export const PharmacyStatisticsPage: React.FC = () => {
 
   const isLoading = productStatsLoading || orderStatsLoading;
   const hasError = productStatsError || orderStatsError;
+
+  // Theme-aware colors
+  const colors = useMemo(() => ({
+    text: isDark ? '#9CA3AF' : '#6B7280',
+    grid: isDark ? '#374151' : '#E5E7EB',
+    primary: '#3B82F6',
+    success: '#10B981',
+    warning: '#F59E0B',
+    danger: '#EF4444',
+  }), [isDark]);
+
+  // Chart data preparations
+  const inventoryStatusData = useMemo(() => {
+    if (!productStats) return [0, 0, 0];
+    return [
+      productStats.in_stock_products || 0,
+      productStats.out_of_stock_products || 0,
+      productStats.low_stock_products || 0,
+    ];
+  }, [productStats]);
+
+  const stockAlertsData = useMemo(() => {
+    if (!productStats) return [0, 0, 0, 0];
+    return [
+      productStats.low_stock_products || 0,
+      productStats.near_expiry_products || 0,
+      productStats.expired_products || 0,
+      productStats.out_of_stock_products || 0,
+    ];
+  }, [productStats]);
+
+  const orderStatusData = useMemo(() => {
+    if (!orderStats) return [0, 0, 0];
+    return [
+      orderStats.pending_orders || 0,
+      orderStats.completed_orders || 0,
+      orderStats.cancelled_orders || 0,
+    ];
+  }, [orderStats]);
+
+  const productActivityData = useMemo(() => {
+    if (!productStats) return [0, 0];
+    return [
+      productStats.active_products || 0,
+      productStats.inactive_products || 0,
+    ];
+  }, [productStats]);
+
+  // Chart Options
+  const inventoryStatusOptions: ApexOptions = {
+    chart: {
+      type: 'donut',
+      height: 320,
+      background: 'transparent',
+      dropShadow: {
+        enabled: true,
+        blur: 3,
+        opacity: isDark ? 0.3 : 0.1,
+      },
+    },
+    theme: { mode: isDark ? 'dark' : 'light' },
+    labels: ['In Stock', 'Out of Stock', 'Low Stock'],
+    colors: [colors.success, colors.danger, colors.warning],
+    legend: {
+      position: 'bottom',
+      fontSize: '13px',
+      labels: { colors: colors.text },
+    },
+    plotOptions: {
+      pie: {
+        donut: {
+          size: '70%',
+          labels: {
+            show: true,
+            total: {
+              show: true,
+              label: 'Total Products',
+              fontSize: '14px',
+              color: colors.text,
+              formatter: () => (productStats?.total_products || 0).toString(),
+            },
+          },
+        },
+      },
+    },
+    dataLabels: { enabled: false },
+    stroke: { width: 0 },
+    tooltip: {
+      y: { formatter: (value) => `${value} products` },
+      theme: isDark ? 'dark' : 'light',
+    },
+  };
+
+  const stockAlertsOptions: ApexOptions = {
+    chart: {
+      type: 'bar',
+      height: 320,
+      toolbar: { show: false },
+      background: 'transparent',
+      dropShadow: {
+        enabled: true,
+        top: 0,
+        left: 0,
+        blur: 3,
+        opacity: isDark ? 0.3 : 0.1,
+      },
+    },
+    theme: { mode: isDark ? 'dark' : 'light' },
+    plotOptions: {
+      bar: {
+        borderRadius: 10,
+        horizontal: true,
+        distributed: true,
+      },
+    },
+    dataLabels: { enabled: false },
+    xaxis: {
+      categories: ['Low Stock', 'Near Expiry', 'Expired', 'Out of Stock'],
+      labels: { style: { colors: colors.text, fontSize: '12px' } },
+      axisBorder: { show: false },
+      axisTicks: { show: false },
+    },
+    yaxis: {
+      labels: { style: { colors: colors.text, fontSize: '12px' } },
+    },
+    colors: [colors.warning, colors.warning, colors.danger, colors.danger],
+    grid: { borderColor: colors.grid, strokeDashArray: 4 },
+    legend: { show: false },
+    tooltip: {
+      y: { formatter: (value) => `${value} items` },
+      theme: isDark ? 'dark' : 'light',
+    },
+  };
+
+  const orderStatusOptions: ApexOptions = {
+    chart: {
+      type: 'donut',
+      height: 320,
+      background: 'transparent',
+      dropShadow: {
+        enabled: true,
+        blur: 3,
+        opacity: isDark ? 0.3 : 0.1,
+      },
+    },
+    theme: { mode: isDark ? 'dark' : 'light' },
+    labels: ['Pending', 'Completed', 'Cancelled'],
+    colors: [colors.warning, colors.success, colors.danger],
+    legend: {
+      position: 'bottom',
+      fontSize: '13px',
+      labels: { colors: colors.text },
+    },
+    plotOptions: {
+      pie: {
+        donut: {
+          size: '70%',
+          labels: {
+            show: true,
+            total: {
+              show: true,
+              label: 'Total Orders',
+              fontSize: '14px',
+              color: colors.text,
+              formatter: () => (orderStats?.total_orders || 0).toString(),
+            },
+          },
+        },
+      },
+    },
+    dataLabels: { enabled: false },
+    stroke: { width: 0 },
+    tooltip: {
+      y: { formatter: (value) => `${value} orders` },
+      theme: isDark ? 'dark' : 'light',
+    },
+  };
+
+  const productActivityOptions: ApexOptions = {
+    chart: {
+      type: 'donut',
+      height: 320,
+      background: 'transparent',
+      dropShadow: {
+        enabled: true,
+        blur: 3,
+        opacity: isDark ? 0.3 : 0.1,
+      },
+    },
+    theme: { mode: isDark ? 'dark' : 'light' },
+    labels: ['Active', 'Inactive'],
+    colors: [colors.success, colors.text],
+    legend: {
+      position: 'bottom',
+      fontSize: '13px',
+      labels: { colors: colors.text },
+    },
+    plotOptions: {
+      pie: {
+        donut: {
+          size: '70%',
+          labels: {
+            show: true,
+            total: {
+              show: true,
+              label: 'Total Products',
+              fontSize: '14px',
+              color: colors.text,
+              formatter: () => (productStats?.total_products || 0).toString(),
+            },
+          },
+        },
+      },
+    },
+    dataLabels: { enabled: false },
+    stroke: { width: 0 },
+    tooltip: {
+      y: { formatter: (value) => `${value} products` },
+      theme: isDark ? 'dark' : 'light',
+    },
+  };
 
   if (isLoading) {
     return (
@@ -289,6 +517,88 @@ export const PharmacyStatisticsPage: React.FC = () => {
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Charts Section */}
+      <div>
+        <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+          <BarChart3 className="h-5 w-5" />
+          Visual Analytics
+        </h2>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Inventory Status Chart */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <PieChart className="h-4 w-4" />
+                Inventory Status
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Chart
+                options={inventoryStatusOptions}
+                series={inventoryStatusData}
+                type="donut"
+                height={320}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Stock Alerts Chart */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4" />
+                Stock Alerts
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Chart
+                options={stockAlertsOptions}
+                series={[{ name: 'Items', data: stockAlertsData }]}
+                type="bar"
+                height={320}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Order Status Chart */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <ShoppingCart className="h-4 w-4" />
+                Order Status
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Chart
+                options={orderStatusOptions}
+                series={orderStatusData}
+                type="donut"
+                height={320}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Product Activity Chart */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Package className="h-4 w-4" />
+                Product Activity
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Chart
+                options={productActivityOptions}
+                series={productActivityData}
+                type="donut"
+                height={320}
+              />
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );

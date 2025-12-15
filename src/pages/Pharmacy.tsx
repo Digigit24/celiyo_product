@@ -3,13 +3,16 @@ import React, { useState, useMemo } from 'react';
 import { usePharmacy } from '@/hooks/usePharmacy';
 import { DataTable, DataTableColumn } from '@/components/DataTable';
 import { ProductFormDrawer } from '@/components/pharmacy/ProductFormDrawer';
+import { PharmacyProductCard } from '@/components/pharmacy/PharmacyProductCard';
+import { FloatingCart } from '@/components/pharmacy/FloatingCart';
 import { DrawerMode } from '@/components/SideDrawer';
 import { PharmacyProduct } from '@/types/pharmacy';
 import { Button } from '@/components/ui/button';
-import { PlusCircle } from 'lucide-react';
+import { PlusCircle, Grid3x3, List } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
-;
+import { addItemToCart, useCart } from '@/hooks/usePharmacy';
+import { toast } from 'sonner';
 
 export const PharmacyPage: React.FC = () => {
   const { usePharmacyProducts, deleteProduct } = usePharmacy();
@@ -19,9 +22,13 @@ export const PharmacyPage: React.FC = () => {
     error: productsError,
   } = usePharmacyProducts();
 
+  const { data: cart, mutate: refreshCart } = useCart();
+  const addToCartMutation = addItemToCart(refreshCart);
+
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerMode, setDrawerMode] = useState<DrawerMode>('create');
   const [selectedProduct, setSelectedProduct] = useState<PharmacyProduct | undefined>(undefined);
+  const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
 
   const handleCreate = () => {
     setDrawerMode('create');
@@ -44,7 +51,20 @@ export const PharmacyPage: React.FC = () => {
   const handleDelete = async (product: PharmacyProduct) => {
     await deleteProduct.mutateAsync(product.id);
   };
-  
+
+  const handleAddToCart = async (product: PharmacyProduct, quantity: number) => {
+    try {
+      await addToCartMutation.mutateAsync({
+        product_id: product.id,
+        quantity,
+      });
+      toast.success(`${product.product_name} added to cart`);
+    } catch (error) {
+      console.error('Failed to add to cart:', error);
+      toast.error('Failed to add item to cart');
+    }
+  };
+
   const columns = useMemo((): DataTableColumn<PharmacyProduct>[] => [
     {
       header: 'Product Name',
@@ -133,15 +153,34 @@ export const PharmacyPage: React.FC = () => {
                 <span className="font-bold">{products.length}</span>
               </div>
             </div>
-            {productsError && (
-              <div className="text-sm text-destructive">
-                Error: {productsError?.message || 'Failed to fetch products'}
-              </div>
-            )}
+            <div className="flex items-center gap-2">
+              <Button
+                variant={viewMode === 'table' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setViewMode('table')}
+              >
+                <List className="h-4 w-4 mr-2" />
+                Table
+              </Button>
+              <Button
+                variant={viewMode === 'grid' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setViewMode('grid')}
+              >
+                <Grid3x3 className="h-4 w-4 mr-2" />
+                Grid
+              </Button>
+            </div>
           </div>
+          {productsError && (
+            <div className="text-sm text-destructive mt-2">
+              Error: {productsError?.message || 'Failed to fetch products'}
+            </div>
+          )}
         </div>
 
         <div className="flex-1 overflow-auto">
+          {viewMode === 'table' ? (
              <DataTable
                 rows={products}
                 columns={columns}
@@ -179,6 +218,36 @@ export const PharmacyPage: React.FC = () => {
                     </div>
                 )}
             />
+          ) : (
+            <div className="p-4">
+              {productsLoading ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {[...Array(8)].map((_, i) => (
+                    <div key={i} className="h-80 bg-muted animate-pulse rounded-lg" />
+                  ))}
+                </div>
+              ) : products.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full py-12">
+                  <PlusCircle className="h-16 w-16 text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">No Products Found</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Click 'Create Product' to add your first item.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {products.map((product) => (
+                    <PharmacyProductCard
+                      key={product.id}
+                      product={product}
+                      onAddToCart={handleAddToCart}
+                      onViewDetails={handleView}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
       <ProductFormDrawer
@@ -187,6 +256,8 @@ export const PharmacyPage: React.FC = () => {
         mode={drawerMode}
         product={selectedProduct}
       />
+
+      <FloatingCart />
     </div>
   );
 };

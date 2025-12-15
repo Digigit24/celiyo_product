@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { RefreshCw, Loader2, AlertCircle, Save, Building2, Database, Settings as SettingsIcon, Image as ImageIcon, X, User, Plus, Trash2, Moon, Sun } from 'lucide-react';
+import { RefreshCw, Loader2, AlertCircle, Save, Building2, Database, Settings as SettingsIcon, Image as ImageIcon, X, User, Plus, Trash2, Moon, Sun, DollarSign } from 'lucide-react';
 import { useTenant } from '@/hooks/useTenant';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
@@ -15,6 +15,7 @@ import type { TenantUpdateData, TenantSettings } from '@/types/tenant.types';
 import type { UserPreferences } from '@/types/user.types';
 import { authClient } from '@/lib/client';
 import { API_CONFIG, buildUrl } from '@/lib/apiConfig';
+import { CurrencySettingsTab } from '@/components/admin-settings/CurrencySettingsTab';
 
 export const AdminSettings: React.FC = () => {
   // Get tenant from current session
@@ -71,6 +72,16 @@ export const AdminSettings: React.FC = () => {
   const [headerUseGradient, setHeaderUseGradient] = useState(false);
   const [footerUseGradient, setFooterUseGradient] = useState(false);
 
+  // Currency settings (all go into settings JSON)
+  const [currencyCode, setCurrencyCode] = useState('INR');
+  const [currencySymbol, setCurrencySymbol] = useState('₹');
+  const [currencyName, setCurrencyName] = useState('Indian Rupee');
+  const [currencyDecimals, setCurrencyDecimals] = useState(2);
+  const [currencyThousandSeparator, setCurrencyThousandSeparator] = useState(',');
+  const [currencyDecimalSeparator, setCurrencyDecimalSeparator] = useState('.');
+  const [currencySymbolPosition, setCurrencySymbolPosition] = useState<'before' | 'after'>('before');
+  const [currencyUseIndianNumbering, setCurrencyUseIndianNumbering] = useState(true);
+
   // Initialize form with tenant data
   useEffect(() => {
     if (tenantData) {
@@ -106,6 +117,16 @@ export const AdminSettings: React.FC = () => {
       if (settings.logo) {
         setLogoPreview(settings.logo);
       }
+
+      // Currency settings
+      setCurrencyCode(settings.currency_code || 'INR');
+      setCurrencySymbol(settings.currency_symbol || '₹');
+      setCurrencyName(settings.currency_name || 'Indian Rupee');
+      setCurrencyDecimals(settings.currency_decimals || 2);
+      setCurrencyThousandSeparator(settings.currency_thousand_separator || ',');
+      setCurrencyDecimalSeparator(settings.currency_decimal_separator || '.');
+      setCurrencySymbolPosition(settings.currency_symbol_position || 'before');
+      setCurrencyUseIndianNumbering(settings.currency_use_indian_numbering ?? true);
     }
   }, [tenantData]);
 
@@ -151,6 +172,15 @@ export const AdminSettings: React.FC = () => {
         footer_bg_color: footerBgColor,
         footer_text_color: footerTextColor,
         logo: logoPreview, // Base64 or URL
+        // Currency settings
+        currency_code: currencyCode,
+        currency_symbol: currencySymbol,
+        currency_name: currencyName,
+        currency_decimals: currencyDecimals,
+        currency_thousand_separator: currencyThousandSeparator,
+        currency_decimal_separator: currencyDecimalSeparator,
+        currency_symbol_position: currencySymbolPosition,
+        currency_use_indian_numbering: currencyUseIndianNumbering,
       };
 
       const updateData: TenantUpdateData = {
@@ -355,8 +385,12 @@ export const AdminSettings: React.FC = () => {
       {/* Tenant Settings Forms */}
       {tenantData && (
         <Tabs defaultValue="tenant" className="w-full max-w-6xl">
-          <TabsList className="grid w-full grid-cols-2 max-w-md">
+          <TabsList className="grid w-full grid-cols-3 max-w-2xl">
             <TabsTrigger value="tenant">Tenant Settings</TabsTrigger>
+            <TabsTrigger value="currency">
+              <DollarSign className="h-4 w-4 mr-2" />
+              Currency
+            </TabsTrigger>
             <TabsTrigger value="user" onClick={() => fetchUserPreferences()}>
               <User className="h-4 w-4 mr-2" />
               User Preferences
@@ -763,6 +797,43 @@ export const AdminSettings: React.FC = () => {
               Save Settings
             </Button>
           </div>
+            </div>
+          </TabsContent>
+
+          {/* Currency Settings Tab */}
+          <TabsContent value="currency">
+            <CurrencySettingsTab
+              currencyCode={currencyCode}
+              currencySymbol={currencySymbol}
+              currencyName={currencyName}
+              currencyDecimals={currencyDecimals}
+              currencyThousandSeparator={currencyThousandSeparator}
+              currencyDecimalSeparator={currencyDecimalSeparator}
+              currencySymbolPosition={currencySymbolPosition}
+              currencyUseIndianNumbering={currencyUseIndianNumbering}
+              onCurrencyCodeChange={setCurrencyCode}
+              onCurrencySymbolChange={setCurrencySymbol}
+              onCurrencyNameChange={setCurrencyName}
+              onCurrencyDecimalsChange={setCurrencyDecimals}
+              onCurrencyThousandSeparatorChange={setCurrencyThousandSeparator}
+              onCurrencyDecimalSeparatorChange={setCurrencyDecimalSeparator}
+              onCurrencySymbolPositionChange={setCurrencySymbolPosition}
+              onCurrencyUseIndianNumberingChange={setCurrencyUseIndianNumbering}
+            />
+
+            {/* Save Button */}
+            <div className="flex justify-end mt-6">
+              <Button
+                onClick={handleSave}
+                disabled={isMutating}
+              >
+                {isMutating ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4 mr-2" />
+                )}
+                Save Currency Settings
+              </Button>
             </div>
           </TabsContent>
 

@@ -1,6 +1,17 @@
 // src/types/tenant.types.ts
 
-export interface TenantSettings {
+export interface CurrencySettings {
+  currency_code: string;
+  currency_symbol: string;
+  currency_name: string;
+  currency_decimals: number;
+  currency_thousand_separator: string;
+  currency_decimal_separator: string;
+  currency_symbol_position: 'before' | 'after';
+  currency_use_indian_numbering: boolean;
+}
+
+export interface TenantSettings extends Partial<CurrencySettings> {
   [key: string]: any;
 }
 

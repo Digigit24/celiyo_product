@@ -130,9 +130,9 @@ export const PharmacyPage: React.FC = () => {
   const cartItemsCount = cart?.items?.length || 0;
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full p-6">
       {/* Header with Cart Button */}
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <h2 className="text-2xl font-bold">Products</h2>
           <Badge variant="secondary">{filteredProducts.length} items</Badge>
@@ -153,7 +153,7 @@ export const PharmacyPage: React.FC = () => {
       </div>
 
       {/* Filters Section */}
-      <div className="mb-4 space-y-3">
+      <div className="mb-6 space-y-3">
         <div className="flex items-center gap-2">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -166,7 +166,7 @@ export const PharmacyPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <Select value={selectedCategory} onValueChange={setSelectedCategory}>
             <SelectTrigger>
               <SelectValue placeholder="All Categories" />
@@ -208,41 +208,39 @@ export const PharmacyPage: React.FC = () => {
       </div>
 
       {/* Products Grid */}
-      <div className="flex-1 overflow-auto">
-        <div className="p-2">
-          {productsLoading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-              {[...Array(10)].map((_, i) => (
-                <div key={i} className="h-64 bg-muted animate-pulse rounded-lg" />
-              ))}
-            </div>
-          ) : filteredProducts.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full py-12">
-              <PlusCircle className="h-16 w-16 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">
-                {searchQuery || selectedCategory !== 'all' || stockFilter !== 'all' || statusFilter !== 'all'
-                  ? 'No products match your filters'
-                  : 'No Products Found'}
-              </h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                {searchQuery || selectedCategory !== 'all' || stockFilter !== 'all' || statusFilter !== 'all'
-                  ? 'Try adjusting your filters'
-                  : 'Click "Create Product" to add your first item.'}
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-              {filteredProducts.map((product) => (
-                <PharmacyProductCard
-                  key={product.id}
-                  product={product}
-                  onAddToCart={handleAddToCart}
-                  onViewDetails={handleView}
-                />
-              ))}
-            </div>
-          )}
-        </div>
+      <div className="flex-1 overflow-auto -mx-2">
+        {productsLoading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 px-2">
+            {[...Array(10)].map((_, i) => (
+              <div key={i} className="h-64 bg-muted animate-pulse rounded-lg" />
+            ))}
+          </div>
+        ) : filteredProducts.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full py-12">
+            <PlusCircle className="h-16 w-16 text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold mb-2">
+              {searchQuery || selectedCategory !== 'all' || stockFilter !== 'all' || statusFilter !== 'all'
+                ? 'No products match your filters'
+                : 'No Products Found'}
+            </h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              {searchQuery || selectedCategory !== 'all' || stockFilter !== 'all' || statusFilter !== 'all'
+                ? 'Try adjusting your filters'
+                : 'Click "Create Product" to add your first item.'}
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 px-2">
+            {filteredProducts.map((product) => (
+              <PharmacyProductCard
+                key={product.id}
+                product={product}
+                onAddToCart={handleAddToCart}
+                onViewDetails={handleView}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
       <ProductFormDrawer

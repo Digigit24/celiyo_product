@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useCRM } from '@/hooks/useCRM';
 import { useAuth } from '@/hooks/useAuth';
 import { usePatient } from '@/hooks/usePatient';
+import { useCurrency } from '@/hooks/useCurrency';
 import { DataTable, type DataTableColumn } from '@/components/DataTable';
 import { LeadsFormDrawer } from '@/components/LeadsFormDrawer';
 import { LeadStatusFormDrawer } from '@/components/LeadStatusFormDrawer';
@@ -28,6 +29,7 @@ export const CRMLeads: React.FC = () => {
   const { user, hasModuleAccess } = useAuth();
   const { hasCRMAccess, useLeads, useLeadStatuses, useFieldConfigurations, deleteLead, patchLead, updateLeadStatus, deleteLeadStatus, bulkCreateLeads, exportLeads, importLeads } = useCRM();
   const { hasHMSAccess, createPatient } = usePatient();
+  const { formatCurrency: formatCurrencyDynamic, getCurrencyCode, getCurrencySymbol } = useCurrency();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // View mode state
@@ -525,14 +527,14 @@ export const CRMLeads: React.FC = () => {
     return luminance > 0.5 ? '#000000' : '#FFFFFF';
   };
 
-  // Format currency
-  const formatCurrency = (amount?: string, currency?: string) => {
+  // Format currency using tenant settings
+  const formatCurrency = (amount?: string, currencyCode?: string) => {
     if (!amount) return '-';
-    const formatted = parseFloat(amount).toLocaleString('en-US', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
-    return `${currency || '$'}${formatted}`;
+    const numericAmount = parseFloat(amount);
+    if (isNaN(numericAmount)) return '-';
+
+    // Use dynamic currency formatting from tenant settings
+    return formatCurrencyDynamic(numericAmount, true, 2);
   };
 
   // Create field visibility map

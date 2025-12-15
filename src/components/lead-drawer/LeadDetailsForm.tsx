@@ -37,6 +37,7 @@ import type { LeadFormHandle } from '../LeadsFormDrawer';
 import { useCRM } from '@/hooks/useCRM';
 import { useAuth } from '@/hooks/useAuth';
 import { useUsers } from '@/hooks/useUsers';
+import { useCurrency } from '@/hooks/useCurrency';
 import { PRIORITY_OPTIONS } from '@/types/crmTypes';
 
 interface LeadDetailsFormProps {
@@ -48,6 +49,7 @@ const LeadDetailsForm = forwardRef<LeadFormHandle, LeadDetailsFormProps>(
   ({ lead, mode }, ref) => {
     const { user } = useAuth();
     const { useLeadStatuses, useFieldConfigurations } = useCRM();
+    const { getCurrencyCode } = useCurrency();
     const { useUsersList } = useUsers();
 
     // Fetch data
@@ -224,7 +226,7 @@ const LeadDetailsForm = forwardRef<LeadFormHandle, LeadDetailsFormProps>(
         status: typeof lead?.status === 'object' ? lead.status?.id : lead?.status,
         priority: lead?.priority || 'MEDIUM',
         value_amount: lead?.value_amount || '',
-        value_currency: lead?.value_currency || 'USD',
+        value_currency: lead?.value_currency || getCurrencyCode(),
         source: lead?.source || '',
         owner_user_id: lead?.owner_user_id || user?.id || '',
         assigned_to: lead?.assigned_to || '',

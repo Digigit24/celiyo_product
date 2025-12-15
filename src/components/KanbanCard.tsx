@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import type { Lead, PriorityEnum } from '@/types/crmTypes';
+import { useCurrency } from '@/hooks/useCurrency';
 
 interface KanbanCardProps {
   lead: Lead;
@@ -33,6 +34,8 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({
   isDragging = false,
   dragHandleProps
 }) => {
+  const { formatCurrency: formatCurrencyDynamic } = useCurrency();
+
   // Priority badge helper
   const getPriorityBadge = (priority: PriorityEnum) => {
     const variants = {
@@ -48,14 +51,14 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({
     );
   };
 
-  // Format currency
-  const formatCurrency = (amount?: string, currency?: string) => {
+  // Format currency using tenant settings
+  const formatCurrency = (amount?: string, currencyCode?: string) => {
     if (!amount) return null;
-    const formatted = parseFloat(amount).toLocaleString('en-US', {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    });
-    return `${currency || '$'}${formatted}`;
+    const numericAmount = parseFloat(amount);
+    if (isNaN(numericAmount)) return null;
+
+    // Use dynamic currency formatting from tenant settings (no decimals for Kanban)
+    return formatCurrencyDynamic(numericAmount, true, 0);
   };
 
   return (

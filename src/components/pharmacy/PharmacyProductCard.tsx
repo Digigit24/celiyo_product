@@ -72,61 +72,60 @@ export function PharmacyProductCard({
   return (
     <Card
       className={cn(
-        "hover:shadow-lg transition-all duration-300 flex flex-col h-full",
+        "hover:shadow-md transition-all duration-200 flex flex-col h-full",
         !product.is_active && "opacity-60",
         isOutOfStock && "border-red-200",
         className
       )}
     >
-      <CardHeader className="pb-3">
+      <CardHeader className="pb-2 pt-3 px-3">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
             <h3
-              className="font-semibold text-lg leading-tight line-clamp-2 cursor-pointer hover:text-primary"
+              className="font-semibold text-sm leading-tight line-clamp-2 cursor-pointer hover:text-primary"
               onClick={() => onViewDetails?.(product)}
             >
               {product.product_name}
             </h3>
             {product.company && (
-              <p className="text-sm text-muted-foreground mt-1 line-clamp-1">
+              <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
                 {product.company}
               </p>
             )}
           </div>
 
           {!product.is_active && (
-            <Badge variant="secondary" className="shrink-0">
+            <Badge variant="secondary" className="shrink-0 text-xs h-5">
               Inactive
             </Badge>
           )}
         </div>
 
         {product.category && (
-          <Badge variant="outline" className="w-fit mt-2">
+          <Badge variant="outline" className="w-fit mt-1.5 text-xs h-5">
             {product.category.name}
           </Badge>
         )}
       </CardHeader>
 
-      <CardContent className="flex-1 pb-3 space-y-3">
+      <CardContent className="flex-1 pb-2 px-3 space-y-2">
         {/* Price Section */}
-        <div className="flex items-baseline gap-2">
-          <div className="flex items-center text-2xl font-bold text-primary">
-            <IndianRupee className="h-5 w-5" />
-            <span>{parseFloat(product.selling_price).toFixed(2)}</span>
+        <div className="flex items-baseline gap-1.5">
+          <div className="flex items-center text-lg font-bold text-primary">
+            <IndianRupee className="h-4 w-4" />
+            <span>{parseFloat(product.selling_price).toFixed(0)}</span>
           </div>
           {parseFloat(product.mrp) > parseFloat(product.selling_price) && (
-            <div className="flex items-center text-sm text-muted-foreground line-through">
-              <IndianRupee className="h-3 w-3" />
-              <span>{parseFloat(product.mrp).toFixed(2)}</span>
+            <div className="flex items-center text-xs text-muted-foreground line-through">
+              <IndianRupee className="h-2.5 w-2.5" />
+              <span>{parseFloat(product.mrp).toFixed(0)}</span>
             </div>
           )}
         </div>
 
         {/* Stock Section */}
-        <div className="flex items-center gap-2 text-sm">
-          <Package className="h-4 w-4 text-muted-foreground" />
-          <span className="text-muted-foreground">Stock:</span>
+        <div className="flex items-center gap-1.5 text-xs">
+          <Package className="h-3 w-3 text-muted-foreground" />
           <span className={cn(
             "font-medium",
             isOutOfStock && "text-red-600",
@@ -136,85 +135,75 @@ export function PharmacyProductCard({
             {product.quantity}
           </span>
           {isOutOfStock && (
-            <Badge variant="destructive" className="ml-auto text-xs">
-              Out of Stock
+            <Badge variant="destructive" className="ml-auto text-xs h-4 px-1.5">
+              Out
             </Badge>
           )}
           {isLowStock && !isOutOfStock && (
-            <Badge variant="secondary" className="ml-auto text-xs bg-orange-100 text-orange-700">
-              <AlertTriangle className="h-3 w-3 mr-1" />
-              Low Stock
+            <Badge variant="secondary" className="ml-auto text-xs h-4 px-1.5 bg-orange-100 text-orange-700">
+              Low
             </Badge>
           )}
         </div>
 
         {/* Expiry Section */}
-        <div className="flex items-center gap-2 text-sm">
-          <Calendar className="h-4 w-4 text-muted-foreground" />
-          <span className="text-muted-foreground">Expiry:</span>
+        <div className="flex items-center gap-1.5 text-xs">
+          <Calendar className="h-3 w-3 text-muted-foreground" />
           <span className={cn(
-            "font-medium",
+            "font-medium text-xs",
             isExpired && "text-red-600",
             isNearExpiry && "text-orange-600"
           )}>
-            {format(new Date(product.expiry_date), "MMM dd, yyyy")}
+            {format(new Date(product.expiry_date), "MMM dd, yy")}
           </span>
           {isExpired && (
-            <Badge variant="destructive" className="ml-auto text-xs">
+            <Badge variant="destructive" className="ml-auto text-xs h-4 px-1.5">
               Expired
             </Badge>
           )}
           {isNearExpiry && !isExpired && (
-            <Badge variant="secondary" className="ml-auto text-xs bg-yellow-100 text-yellow-700">
-              Expiring Soon
+            <Badge variant="secondary" className="ml-auto text-xs h-4 px-1.5 bg-yellow-100 text-yellow-700">
+              Soon
             </Badge>
           )}
         </div>
-
-        {/* Batch Number */}
-        {product.batch_no && (
-          <div className="text-xs text-muted-foreground">
-            Batch: <span className="font-mono">{product.batch_no}</span>
-          </div>
-        )}
       </CardContent>
 
       {showActions && product.is_active && !isExpired && (
-        <CardFooter className="pt-0 flex flex-col gap-2">
+        <CardFooter className="pt-0 pb-2 px-3 flex flex-col gap-1.5">
           {/* Quantity Selector */}
-          <div className="flex items-center justify-between w-full gap-2">
-            <span className="text-sm text-muted-foreground">Quantity:</span>
-            <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between w-full">
+            <div className="flex items-center gap-1">
               <Button
                 variant="outline"
                 size="icon"
-                className="h-8 w-8"
+                className="h-6 w-6"
                 onClick={decrementQuantity}
                 disabled={quantity <= 1 || isOutOfStock}
               >
-                <Minus className="h-4 w-4" />
+                <Minus className="h-3 w-3" />
               </Button>
-              <span className="font-semibold min-w-[2rem] text-center">{quantity}</span>
+              <span className="font-semibold text-sm min-w-[1.5rem] text-center">{quantity}</span>
               <Button
                 variant="outline"
                 size="icon"
-                className="h-8 w-8"
+                className="h-6 w-6"
                 onClick={incrementQuantity}
                 disabled={quantity >= product.quantity || isOutOfStock}
               >
-                <Plus className="h-4 w-4" />
+                <Plus className="h-3 w-3" />
               </Button>
             </div>
           </div>
 
           {/* Add to Cart Button */}
           <Button
-            className="w-full"
+            className="w-full h-8 text-xs"
             onClick={handleAddToCart}
             disabled={isOutOfStock || isAddingToCart || !onAddToCart}
           >
-            <ShoppingCart className="h-4 w-4 mr-2" />
-            {isAddingToCart ? "Adding..." : "Add to Cart"}
+            <ShoppingCart className="h-3 w-3 mr-1.5" />
+            {isAddingToCart ? "Adding..." : "Add"}
           </Button>
         </CardFooter>
       )}

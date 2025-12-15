@@ -57,6 +57,7 @@ import { Transactions } from "./pages/Transactions";
 import { PaymentCategories } from "./pages/PaymentCategories";
 import { AccountingPeriods } from "./pages/AccountingPeriods";
 import { PharmacyPage } from "./pages/Pharmacy"; // Import PharmacyPage
+import { PharmacyStatisticsPage } from "./pages/PharmacyStatistics"; // Import PharmacyStatisticsPage
 import { CartListPage } from "./pages/CartList";   // Import CartListPage
 
 import { WebSocketProvider } from "./context/WebSocketProvider";
@@ -122,6 +123,7 @@ const AppLayout = () => {
 
               {/* Pharmacy Routes */}
               <Route path="/pharmacy" element={<PharmacyPage />} />
+              <Route path="/pharmacy/statistics" element={<PharmacyStatisticsPage />} />
               <Route path="/cart" element={<CartListPage />} />
 
               {/* WhatsApp Routes */}

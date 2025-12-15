@@ -1,34 +1,47 @@
 // src/pages/Pharmacy.tsx
 import React, { useState, useMemo } from 'react';
 import { usePharmacy } from '@/hooks/usePharmacy';
-import { DataTable, DataTableColumn } from '@/components/DataTable';
 import { ProductFormDrawer } from '@/components/pharmacy/ProductFormDrawer';
 import { PharmacyProductCard } from '@/components/pharmacy/PharmacyProductCard';
-import { FloatingCart } from '@/components/pharmacy/FloatingCart';
+import { CartDrawer } from '@/components/pharmacy/CartDrawer';
 import { DrawerMode } from '@/components/SideDrawer';
 import { PharmacyProduct } from '@/types/pharmacy';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Grid3x3, List } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
+import { Input } from '@/components/ui/input';
+import { PlusCircle, ShoppingCart, Search, Filter } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { addItemToCart, useCart } from '@/hooks/usePharmacy';
 import { toast } from 'sonner';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export const PharmacyPage: React.FC = () => {
-  const { usePharmacyProducts, deleteProduct } = usePharmacy();
+  const { usePharmacyProducts, deleteProduct, useProductCategories } = usePharmacy();
   const {
     data: pharmacyProductsData,
     isLoading: productsLoading,
     error: productsError,
   } = usePharmacyProducts();
 
+  const { data: categoriesData } = useProductCategories();
   const { data: cart, mutate: refreshCart } = useCart();
   const addToCartMutation = addItemToCart(refreshCart);
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerMode, setDrawerMode] = useState<DrawerMode>('create');
   const [selectedProduct, setSelectedProduct] = useState<PharmacyProduct | undefined>(undefined);
-  const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
+  const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
+
+  // Filter states
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [stockFilter, setStockFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
 
   const handleCreate = () => {
     setDrawerMode('create');
@@ -65,190 +78,172 @@ export const PharmacyPage: React.FC = () => {
     }
   };
 
-  const columns = useMemo((): DataTableColumn<PharmacyProduct>[] => [
-    {
-      header: 'Product Name',
-      key: 'product_name',
-      accessor: (row) => row.product_name,
-      sortable: true,
-      filterable: true,
-      cell: (row) => (
-        <div>
-          <div className="font-medium">{row.product_name}</div>
-          <div className="text-xs text-muted-foreground">{row.company}</div>
-        </div>
-      ),
-    },
-    {
-      header: 'Category',
-      key: 'category',
-      accessor: (row) => row.category?.name || 'N/A',
-      sortable: true,
-      filterable: true,
-      cell: (row) => row.category?.name || <span className="text-muted-foreground italic">No Category</span>,
-    },
-    {
-      header: 'Stock',
-      key: 'stock',
-      sortable: true,
-      accessor: (row) => row.quantity,
-      cell: (row) => (
-        <div className="text-center">
-          <div>{row.quantity}</div>
-           {row.low_stock_warning && <Badge variant="destructive" className="mt-1 text-xs">Low Stock</Badge>}
-        </div>
-      ),
-    },
-    {
-      header: 'Price (₹)',
-      key: 'price',
-      sortable: true,
-      accessor: (row) => Number(row.selling_price),
-      cell: (row) => (
-        <div>
-          <div className="font-medium">₹{row.selling_price}</div>
-          <div className="text-xs text-muted-foreground line-through">₹{row.mrp}</div>
-        </div>
-      ),
-    },
-    {
-      header: 'Expiry Date',
-      key: 'expiry_date',
-      sortable: true,
-      accessor: (row) => row.expiry_date,
-      cell: (row) => format(parseISO(row.expiry_date), 'MMM, yyyy'),
-    },
-    {
-        header: 'Status',
-        key: 'is_active',
-        accessor: (row) => row.is_active,
-        cell: (row) => (
-            <Badge variant={row.is_active ? 'default' : 'secondary'}>
-                {row.is_active ? 'Active' : 'Inactive'}
-            </Badge>
-        ),
+  // Optimistic filtering
+  const filteredProducts = useMemo(() => {
+    let filtered = pharmacyProductsData?.results || [];
+
+    // Search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(
+        (product) =>
+          product.product_name.toLowerCase().includes(query) ||
+          product.company?.toLowerCase().includes(query) ||
+          product.batch_no?.toLowerCase().includes(query)
+      );
     }
-  ], []);
+
+    // Category filter
+    if (selectedCategory && selectedCategory !== 'all') {
+      filtered = filtered.filter(
+        (product) => product.category?.id === parseInt(selectedCategory)
+      );
+    }
+
+    // Stock filter
+    if (stockFilter !== 'all') {
+      if (stockFilter === 'in-stock') {
+        filtered = filtered.filter((product) => product.quantity > 0);
+      } else if (stockFilter === 'out-of-stock') {
+        filtered = filtered.filter((product) => product.quantity === 0);
+      } else if (stockFilter === 'low-stock') {
+        filtered = filtered.filter((product) => product.low_stock_warning);
+      }
+    }
+
+    // Status filter
+    if (statusFilter !== 'all') {
+      if (statusFilter === 'active') {
+        filtered = filtered.filter((product) => product.is_active);
+      } else if (statusFilter === 'inactive') {
+        filtered = filtered.filter((product) => !product.is_active);
+      } else if (statusFilter === 'expired') {
+        filtered = filtered.filter((product) => new Date(product.expiry_date) < new Date());
+      }
+    }
+
+    return filtered;
+  }, [pharmacyProductsData?.results, searchQuery, selectedCategory, stockFilter, statusFilter]);
 
   const products = pharmacyProductsData?.results || [];
+  const categories = categoriesData?.results || [];
+  const cartItemsCount = cart?.items?.length || 0;
 
   return (
     <div className="flex flex-col h-full">
-        {/* Debug Status Section */}
-        <div className="mb-4 p-4 bg-muted/50 rounded-lg border">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div>
-                <span className="text-sm font-medium">API Status: </span>
-                {productsLoading && <Badge variant="secondary">Loading...</Badge>}
-                {productsError && <Badge variant="destructive">Error</Badge>}
-                {!productsLoading && !productsError && <Badge variant="default" className="bg-green-600">Success</Badge>}
-              </div>
-              <div className="text-sm">
-                <span className="font-medium">Products Fetched: </span>
-                <span className="font-bold">{pharmacyProductsData?.count || 0}</span>
-              </div>
-              <div className="text-sm">
-                <span className="font-medium">Displaying: </span>
-                <span className="font-bold">{products.length}</span>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant={viewMode === 'table' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setViewMode('table')}
-              >
-                <List className="h-4 w-4 mr-2" />
-                Table
-              </Button>
-              <Button
-                variant={viewMode === 'grid' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setViewMode('grid')}
-              >
-                <Grid3x3 className="h-4 w-4 mr-2" />
-                Grid
-              </Button>
-            </div>
-          </div>
-          {productsError && (
-            <div className="text-sm text-destructive mt-2">
-              Error: {productsError?.message || 'Failed to fetch products'}
-            </div>
+      {/* Header with Cart Button */}
+      <div className="mb-4 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <h2 className="text-2xl font-bold">Products</h2>
+          <Badge variant="secondary">{filteredProducts.length} items</Badge>
+        </div>
+        <Button
+          variant="default"
+          onClick={() => setCartDrawerOpen(true)}
+          className="relative"
+        >
+          <ShoppingCart className="h-4 w-4 mr-2" />
+          Cart
+          {cartItemsCount > 0 && (
+            <Badge className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0 flex items-center justify-center">
+              {cartItemsCount}
+            </Badge>
           )}
+        </Button>
+      </div>
+
+      {/* Filters Section */}
+      <div className="mb-4 space-y-3">
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by name, company, or batch..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
         </div>
 
-        <div className="flex-1 overflow-auto">
-          {viewMode === 'table' ? (
-             <DataTable
-                rows={products}
-                columns={columns}
-                isLoading={productsLoading}
-                onEdit={handleEdit}
-                onView={handleView}
-                onDelete={handleDelete}
-                getRowId={(row) => row.id}
-                getRowLabel={(row) => row.product_name}
-                emptyTitle="No Products Found"
-                emptySubtitle="Click 'Create Product' to add your first item."
-                renderMobileCard={(row, actions) => (
-                    <div>
-                        <div className="flex justify-between items-start">
-                            <div>
-                                <div className="font-bold">{row.product_name}</div>
-                                <div className="text-sm text-muted-foreground">{row.category?.name || 'No Category'}</div>
-                            </div>
-                            {actions.dropdown}
-                        </div>
-                        <div className="mt-4 flex justify-between text-sm">
-                            <div>
-                                <div className="text-muted-foreground">Price</div>
-                                <div>₹{row.selling_price}</div>
-                            </div>
-                            <div className="text-center">
-                                <div className="text-muted-foreground">Stock</div>
-                                <div>{row.quantity}</div>
-                            </div>
-                            <div className="text-right">
-                                <div className="text-muted-foreground">Expiry</div>
-                                <div>{format(parseISO(row.expiry_date), 'MMM yyyy')}</div>
-                            </div>
-                        </div>
-                    </div>
-                )}
-            />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+            <SelectTrigger>
+              <SelectValue placeholder="All Categories" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Categories</SelectItem>
+              {categories.map((category) => (
+                <SelectItem key={category.id} value={category.id.toString()}>
+                  {category.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={stockFilter} onValueChange={setStockFilter}>
+            <SelectTrigger>
+              <SelectValue placeholder="Stock Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Stock</SelectItem>
+              <SelectItem value="in-stock">In Stock</SelectItem>
+              <SelectItem value="low-stock">Low Stock</SelectItem>
+              <SelectItem value="out-of-stock">Out of Stock</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger>
+              <SelectValue placeholder="Product Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="inactive">Inactive</SelectItem>
+              <SelectItem value="expired">Expired</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* Products Grid */}
+      <div className="flex-1 overflow-auto">
+        <div className="p-2">
+          {productsLoading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+              {[...Array(10)].map((_, i) => (
+                <div key={i} className="h-64 bg-muted animate-pulse rounded-lg" />
+              ))}
+            </div>
+          ) : filteredProducts.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full py-12">
+              <PlusCircle className="h-16 w-16 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-semibold mb-2">
+                {searchQuery || selectedCategory !== 'all' || stockFilter !== 'all' || statusFilter !== 'all'
+                  ? 'No products match your filters'
+                  : 'No Products Found'}
+              </h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                {searchQuery || selectedCategory !== 'all' || stockFilter !== 'all' || statusFilter !== 'all'
+                  ? 'Try adjusting your filters'
+                  : 'Click "Create Product" to add your first item.'}
+              </p>
+            </div>
           ) : (
-            <div className="p-4">
-              {productsLoading ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                  {[...Array(8)].map((_, i) => (
-                    <div key={i} className="h-80 bg-muted animate-pulse rounded-lg" />
-                  ))}
-                </div>
-              ) : products.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full py-12">
-                  <PlusCircle className="h-16 w-16 text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">No Products Found</h3>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Click 'Create Product' to add your first item.
-                  </p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                  {products.map((product) => (
-                    <PharmacyProductCard
-                      key={product.id}
-                      product={product}
-                      onAddToCart={handleAddToCart}
-                      onViewDetails={handleView}
-                    />
-                  ))}
-                </div>
-              )}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+              {filteredProducts.map((product) => (
+                <PharmacyProductCard
+                  key={product.id}
+                  product={product}
+                  onAddToCart={handleAddToCart}
+                  onViewDetails={handleView}
+                />
+              ))}
             </div>
           )}
         </div>
+      </div>
 
       <ProductFormDrawer
         open={drawerOpen}
@@ -257,7 +252,10 @@ export const PharmacyPage: React.FC = () => {
         product={selectedProduct}
       />
 
-      <FloatingCart />
+      <CartDrawer
+        open={cartDrawerOpen}
+        onOpenChange={setCartDrawerOpen}
+      />
     </div>
   );
 };

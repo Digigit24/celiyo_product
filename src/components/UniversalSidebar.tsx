@@ -40,6 +40,7 @@ import {
   UserPlus,
   Pill, // Added Pill icon for Pharmacy module
   ShoppingCart, // Added ShoppingCart icon for Cart
+  BarChart3, // Added for Statistics
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -303,6 +304,12 @@ const menuItems: MenuItem[] = [
         label: "Products",
         icon: Package,
         path: "/pharmacy",
+      },
+      {
+        id: "pharmacy-statistics",
+        label: "Statistics",
+        icon: BarChart3,
+        path: "/pharmacy/statistics",
       },
       {
         id: "pharmacy-cart",

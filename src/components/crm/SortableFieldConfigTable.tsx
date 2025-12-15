@@ -1,5 +1,5 @@
 // src/components/crm/SortableFieldConfigTable.tsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   DndContext,
   closestCenter,
@@ -200,9 +200,9 @@ export function SortableFieldConfigTable({
   );
 
   // Update local state when props change
-  useState(() => {
+  useEffect(() => {
     setLocalFields(fields);
-  });
+  }, [fields]);
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;

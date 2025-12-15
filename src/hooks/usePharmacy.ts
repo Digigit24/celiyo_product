@@ -223,7 +223,7 @@ export const usePharmacy = () => {
     },
   });
 
-  const clearCart = useMutation({
+  const clearCartMutation = useMutation({
     mutationFn: () => cartService.clearCart(),
     onSuccess: () => {
       swrMutate('userCart');
@@ -342,7 +342,7 @@ export const usePharmacy = () => {
     addItemToCart,
     updateCartItem,
     removeItemFromCart,
-    clearCart,
+    clearCart: clearCartMutation,
 
     // Orders
     usePharmacyOrders,
@@ -354,4 +354,78 @@ export const usePharmacy = () => {
 cancelPharmacyOrder,
     usePharmacyOrderStats,
   };
+};
+
+// ==================== INDIVIDUAL EXPORTS ====================
+// Export individual cart hooks for direct import
+
+export const useCart = (id?: number) => {
+  return useSWR<Cart>(
+    ['userCart', id],
+    () => cartService.getCart(id)
+  );
+};
+
+export const addItemToCart = (mutate?: any) => {
+  const { mutate: swrMutate } = useSWRConfig();
+  const mutateFn = mutate || swrMutate;
+
+  return useMutation({
+    mutationFn: (payload: AddToCartPayload) => cartService.addItem(payload),
+    onSuccess: () => {
+      mutateFn(['userCart']);
+      toast.success('Item added to cart successfully');
+    },
+    onError: (error: any) => {
+      toast.error(error?.message || 'Failed to add item to cart');
+    },
+  });
+};
+
+export const updateCartItem = (mutate?: any) => {
+  const { mutate: swrMutate } = useSWRConfig();
+  const mutateFn = mutate || swrMutate;
+
+  return useMutation({
+    mutationFn: (payload: UpdateCartItemPayload) => cartService.updateItem(payload),
+    onSuccess: () => {
+      mutateFn(['userCart']);
+      toast.success('Cart item updated successfully');
+    },
+    onError: (error: any) => {
+      toast.error(error?.message || 'Failed to update cart item');
+    },
+  });
+};
+
+export const removeItemFromCart = (mutate?: any) => {
+  const { mutate: swrMutate } = useSWRConfig();
+  const mutateFn = mutate || swrMutate;
+
+  return useMutation({
+    mutationFn: (payload: RemoveFromCartPayload) => cartService.removeItem(payload),
+    onSuccess: () => {
+      mutateFn(['userCart']);
+      toast.success('Item removed from cart successfully');
+    },
+    onError: (error: any) => {
+      toast.error(error?.message || 'Failed to remove item from cart');
+    },
+  });
+};
+
+export const clearCart = (mutate?: any) => {
+  const { mutate: swrMutate } = useSWRConfig();
+  const mutateFn = mutate || swrMutate;
+
+  return useMutation({
+    mutationFn: () => cartService.clearCart(),
+    onSuccess: () => {
+      mutateFn(['userCart']);
+      toast.success('Cart cleared successfully');
+    },
+    onError: (error: any) => {
+      toast.error(error?.message || 'Failed to clear cart');
+    },
+  });
 };

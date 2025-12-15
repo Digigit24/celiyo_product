@@ -3,21 +3,30 @@ import React, { useState, useMemo } from 'react';
 import { usePharmacy } from '@/hooks/usePharmacy';
 import { DataTable, DataTableColumn } from '@/components/DataTable';
 import { ProductFormDrawer } from '@/components/pharmacy/ProductFormDrawer';
+import { PharmacyDashboard } from '@/components/pharmacy/PharmacyDashboard';
 import { DrawerMode } from '@/components/SideDrawer';
 import { PharmacyProduct } from '@/types/pharmacy';
 import { Button } from '@/components/ui/button';
 import { PlusCircle } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
-;
 
 export const PharmacyPage: React.FC = () => {
-  const { usePharmacyProducts, deleteProduct } = usePharmacy();
+  const {
+    usePharmacyProducts,
+    deletePharmacyProduct,
+    usePharmacyProductStats,
+    usePharmacyOrderStats
+  } = usePharmacy();
+
   const {
     data: pharmacyProductsData,
     isLoading: productsLoading,
     error: productsError,
   } = usePharmacyProducts();
+
+  const { data: productStats, isLoading: statsLoading } = usePharmacyProductStats();
+  const { data: orderStats, isLoading: orderStatsLoading } = usePharmacyOrderStats();
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerMode, setDrawerMode] = useState<DrawerMode>('create');
@@ -42,7 +51,7 @@ export const PharmacyPage: React.FC = () => {
   };
 
   const handleDelete = async (product: PharmacyProduct) => {
-    await deleteProduct.mutateAsync(product.id);
+    await deletePharmacyProduct.mutateAsync(product.id);
   };
   
   const columns = useMemo((): DataTableColumn<PharmacyProduct>[] => [
@@ -114,6 +123,15 @@ export const PharmacyPage: React.FC = () => {
 
   return (
     <div className="flex flex-col h-full">
+        {/* Pharmacy Dashboard with Charts */}
+        <div className="mb-6">
+          <PharmacyDashboard
+            productStats={productStats}
+            orderStats={orderStats}
+            isLoading={statsLoading || orderStatsLoading}
+          />
+        </div>
+
         {/* Debug Status Section */}
         <div className="mb-4 p-4 bg-muted/50 rounded-lg border">
           <div className="flex items-center justify-between">

@@ -1,7 +1,7 @@
 // src/components/AppointmentFormDrawer.tsx
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Pencil, Trash2, Calendar, DollarSign, Clock } from 'lucide-react';
+import { Pencil, Trash2, Calendar, IndianRupee, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 
 import type { Appointment, AppointmentCreateData, AppointmentUpdateData } from '@/types/appointment.types';
@@ -179,7 +179,7 @@ export default function AppointmentFormDrawer({
             variant: 'ghost',
           },
           {
-            icon: DollarSign,
+            icon: IndianRupee,
             onClick: () => {
               console.log('Process payment');
               toast.info('Payment feature coming soon');

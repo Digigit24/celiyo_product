@@ -1,7 +1,7 @@
 // src/components/OPDVisitFormDrawer.tsx
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Pencil, Trash2, DollarSign, FileText, CheckCircle } from 'lucide-react';
+import { Pencil, Trash2, IndianRupee, FileText, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 import type { OpdVisit, OpdVisitCreateData, OpdVisitUpdateData } from '@/types/opdVisit.types';
@@ -203,7 +203,7 @@ export default function OPDVisitFormDrawer({
             variant: 'ghost',
           },
           {
-            icon: DollarSign,
+            icon: IndianRupee,
             onClick: () => {
               console.log('Process payment');
               toast.info('Payment feature coming soon');

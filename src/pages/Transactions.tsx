@@ -10,7 +10,7 @@ import TransactionDetailsDrawer from '@/components/transaction-drawer/Transactio
 import {
   Plus,
   CreditCard,
-  DollarSign,
+  IndianRupee,
   TrendingUp,
   TrendingDown,
   RefreshCw,
@@ -175,7 +175,7 @@ export const Transactions: React.FC = () => {
         key: 'amount',
         cell: (transaction) => (
           <div className="flex items-center gap-1.5">
-            <DollarSign className="h-3.5 w-3.5 text-muted-foreground" />
+            <IndianRupee className="h-3.5 w-3.5 text-muted-foreground" />
             <span className="font-semibold">
               ₹{parseFloat(transaction.amount).toLocaleString()}
             </span>
@@ -246,7 +246,7 @@ export const Transactions: React.FC = () => {
 
       {/* Amount */}
       <div className="flex items-center gap-1.5">
-        <DollarSign className="h-4 w-4 text-muted-foreground" />
+        <IndianRupee className="h-4 w-4 text-muted-foreground" />
         <span className="text-lg font-semibold">
           ₹{parseFloat(transaction.amount).toLocaleString()}
         </span>
@@ -373,7 +373,7 @@ export const Transactions: React.FC = () => {
             <CardContent className="p-4 sm:p-6">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-purple-100 rounded-lg">
-                  <DollarSign className="h-5 w-5 text-purple-600" />
+                  <IndianRupee className="h-5 w-5 text-purple-600" />
                 </div>
                 <div>
                   <p className="text-xs sm:text-sm text-muted-foreground">Net Amount</p>

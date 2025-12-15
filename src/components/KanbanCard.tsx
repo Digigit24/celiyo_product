@@ -7,7 +7,7 @@ import {
   Building2,
   Phone,
   Mail,
-  DollarSign,
+  IndianRupee,
   Calendar,
   GripVertical,
   Eye,
@@ -152,7 +152,7 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({
         {/* Value */}
         {lead.value_amount && (
           <div className="flex items-center gap-2 text-sm font-medium text-green-600">
-            <DollarSign className="h-3 w-3 flex-shrink-0" />
+            <IndianRupee className="h-3 w-3 flex-shrink-0" />
             <span>{formatCurrency(lead.value_amount, lead.value_currency)}</span>
           </div>
         )}

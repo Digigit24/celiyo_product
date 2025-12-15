@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { RefreshCw, Loader2, AlertCircle, Save, Building2, Database, Settings as SettingsIcon, Image as ImageIcon, X, User, Plus, Trash2, Moon, Sun, DollarSign } from 'lucide-react';
+import { RefreshCw, Loader2, AlertCircle, Save, Building2, Database, Settings as SettingsIcon, Image as ImageIcon, X, User, Plus, Trash2, Moon, Sun, IndianRupee } from 'lucide-react';
 import { useTenant } from '@/hooks/useTenant';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
@@ -388,7 +388,7 @@ export const AdminSettings: React.FC = () => {
           <TabsList className="grid w-full grid-cols-3 max-w-2xl">
             <TabsTrigger value="tenant">Tenant Settings</TabsTrigger>
             <TabsTrigger value="currency">
-              <DollarSign className="h-4 w-4 mr-2" />
+              <IndianRupee className="h-4 w-4 mr-2" />
               Currency
             </TabsTrigger>
             <TabsTrigger value="user" onClick={() => fetchUserPreferences()}>

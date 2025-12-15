@@ -11,7 +11,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { DollarSign } from 'lucide-react';
+import { IndianRupee } from 'lucide-react';
 
 interface CurrencySettings {
   currency_code: string;
@@ -128,7 +128,7 @@ export const CurrencySettingsTab: React.FC<CurrencySettingsTabProps> = ({
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
-            <DollarSign className="h-5 w-5" />
+            <IndianRupee className="h-5 w-5" />
             <CardTitle>Currency Configuration</CardTitle>
           </div>
           <CardDescription>

@@ -14,7 +14,7 @@ import {
   Plus,
   Search,
   Calendar,
-  DollarSign,
+  IndianRupee,
   Clock,
   CheckCircle2,
   Stethoscope,
@@ -306,7 +306,7 @@ export const OPDVisits: React.FC = () => {
             }}
             className="flex-1"
           >
-            <DollarSign className="h-3.5 w-3.5 mr-1.5" />
+            <IndianRupee className="h-3.5 w-3.5 mr-1.5" />
             Billing
           </Button>
           <Button
@@ -413,7 +413,7 @@ export const OPDVisits: React.FC = () => {
           <CardContent className="p-4 sm:p-6">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-purple-100 rounded-lg">
-                <DollarSign className="h-5 w-5 text-purple-600" />
+                <IndianRupee className="h-5 w-5 text-purple-600" />
               </div>
               <div>
                 <p className="text-xs sm:text-sm text-muted-foreground">Revenue Today</p>

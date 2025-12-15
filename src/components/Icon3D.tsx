@@ -12,7 +12,7 @@ const iconColors: Record<string, [string, string]> = {
   MessageCircle: ['#4ade80', '#10b981'], // green to emerald
   Building2: ['#fb923c', '#dc2626'], // orange to red
   Stethoscope: ['#22d3ee', '#3b82f6'], // cyan to blue
-  DollarSign: ['#facc15', '#f97316'], // yellow to orange
+  IndianRupee: ['#facc15', '#f97316'], // yellow to orange
   Shield: ['#a855f7', '#ec4899'], // purple to pink
   Users: ['#2dd4bf', '#06b6d4'], // teal to cyan
   Calendar: ['#818cf8', '#a855f7'], // indigo to purple

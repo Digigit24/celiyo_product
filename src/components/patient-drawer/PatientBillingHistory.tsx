@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DataTable, DataTableColumn } from '@/components/DataTable';
 import { OPDBill } from '@/types/opdBill.types';
-import { Loader2, Eye, Calendar, DollarSign, FileText } from 'lucide-react';
+import { Loader2, Eye, Calendar, IndianRupee, FileText } from 'lucide-react';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 

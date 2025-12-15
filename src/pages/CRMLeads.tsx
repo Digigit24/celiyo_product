@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Plus, RefreshCw, Building2, Phone, Mail, DollarSign, LayoutGrid, List, Download, Upload, FileSpreadsheet, ChevronDown, MessageCircle } from 'lucide-react';
+import { Plus, RefreshCw, Building2, Phone, Mail, IndianRupee, LayoutGrid, List, Download, Upload, FileSpreadsheet, ChevronDown, MessageCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 import type { Lead, LeadsQueryParams, PriorityEnum, LeadStatus } from '@/types/crmTypes';
@@ -679,7 +679,7 @@ export const CRMLeads: React.FC = () => {
         key: 'value',
         cell: (lead) => (
           <div className="flex items-center gap-1.5">
-            <DollarSign className="h-3.5 w-3.5 text-muted-foreground" />
+            <IndianRupee className="h-3.5 w-3.5 text-muted-foreground" />
             <span className="font-medium">
               {formatCurrency(lead.value_amount, lead.value_currency)}
             </span>
@@ -826,7 +826,7 @@ export const CRMLeads: React.FC = () => {
       {/* Value */}
       {lead.value_amount && isFieldVisible('value_amount') && (
         <div className="flex items-center gap-1.5 text-sm font-medium">
-          <DollarSign className="h-4 w-4 text-muted-foreground" />
+          <IndianRupee className="h-4 w-4 text-muted-foreground" />
           <span>{formatCurrency(lead.value_amount, lead.value_currency)}</span>
         </div>
       )}

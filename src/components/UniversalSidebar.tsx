@@ -32,7 +32,7 @@ import {
   UserCog,
   ShieldCheck,
   Bug,
-  DollarSign,
+  IndianRupee,
   CreditCard,
   TrendingUp,
   Workflow,
@@ -271,7 +271,7 @@ const menuItems: MenuItem[] = [
   {
     id: "payments",
     label: "Payments",
-    icon: DollarSign,
+    icon: IndianRupee,
     children: [
       {
         id: "payment-transactions",

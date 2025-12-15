@@ -17,7 +17,7 @@ import {
   Plus,
   Search,
   Calendar,
-  DollarSign,
+  IndianRupee,
   Clock,
   Users,
   CheckCircle2,
@@ -417,7 +417,7 @@ export const Appointments: React.FC = () => {
           <CardContent className="p-4 sm:p-6">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-orange-100 rounded-lg">
-                <DollarSign className="h-5 w-5 text-orange-600" />
+                <IndianRupee className="h-5 w-5 text-orange-600" />
               </div>
               <div>
                 <p className="text-xs sm:text-sm text-muted-foreground">Pending Payment</p>

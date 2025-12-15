@@ -20,7 +20,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { DollarSign, Plus, X, Package, FileText, Check, ChevronsUpDown } from 'lucide-react';
+import { IndianRupee, Plus, X, Package, FileText, Check, ChevronsUpDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { useProcedureMaster } from '@/hooks/useProcedureMaster';
 import { useProcedurePackage } from '@/hooks/useProcedurePackage';
@@ -423,7 +423,7 @@ export const OPDBillFormDrawer: React.FC<OPDBillFormDrawerProps> = ({
           Cancel
         </Button>
         <Button className="flex-1">
-          <DollarSign className="h-4 w-4 mr-2" />
+          <IndianRupee className="h-4 w-4 mr-2" />
           {mode === 'create' ? 'Create Bill' : 'Update Bill'}
         </Button>
       </div>

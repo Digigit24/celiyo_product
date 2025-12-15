@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { DollarSign, CreditCard, FileText } from 'lucide-react';
+import { IndianRupee, CreditCard, FileText } from 'lucide-react';
 import { OpdVisit } from '@/types/opdVisit.types';
 import { toast } from 'sonner';
 
@@ -27,7 +27,7 @@ export const BillingTab: React.FC<BillingTabProps> = ({ visit }) => {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <DollarSign className="h-5 w-5" />
+            <IndianRupee className="h-5 w-5" />
             Billing Summary
           </CardTitle>
         </CardHeader>

@@ -6,7 +6,7 @@ import { useTheme } from 'next-themes';
 import {
   Activity,
   Users,
-  DollarSign,
+  IndianRupee,
   Calendar,
   TrendingUp,
   FileText,
@@ -597,8 +597,8 @@ const Dashboard = () => {
           <StatCard
             title="Total Revenue"
             value={`₹${parseFloat(billStats?.received_amount || '0').toLocaleString('en-IN', { maximumFractionDigits: 0 })}`}
-            icon={customIcons.totalRevenue || <DollarSign className="w-7 h-7 text-amber-600" />}
-            // icon={<DollarSign className="w-7 h-7 text-amber-600" />}
+            icon={customIcons.totalRevenue || <IndianRupee className="w-7 h-7 text-amber-600" />}
+            // icon={<IndianRupee className="w-7 h-7 text-amber-600" />}
             loading={isLoading && !USE_DEMO_DATA}
             gradient={isDark
               ? 'bg-gradient-to-br from-amber-900/20 via-gray-800 to-amber-900/10'
@@ -676,7 +676,7 @@ const Dashboard = () => {
             <h3 className={`text-base font-semibold mb-4 flex items-center gap-2 ${
               isDark ? 'text-gray-200' : 'text-gray-700'
             }`}>
-              <DollarSign className="w-5 h-5 text-emerald-500" />
+              <IndianRupee className="w-5 h-5 text-emerald-500" />
               Payment Status
             </h3>
             {isLoading && !USE_DEMO_DATA ? (

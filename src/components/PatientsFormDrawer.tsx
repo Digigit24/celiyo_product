@@ -1,7 +1,7 @@
 // src/components/PatientsFormDrawer.tsx
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Pencil, Trash2, Phone, Mail, FileText, Calendar, DollarSign, ClipboardList } from 'lucide-react';
+import { Pencil, Trash2, Phone, Mail, FileText, Calendar, IndianRupee, ClipboardList } from 'lucide-react';
 import { toast } from 'sonner';
 
 import type { Patient, PatientCreateData, PatientUpdateData } from '@/types/patient.types';
@@ -289,7 +289,7 @@ export default function PatientsFormDrawer({
                 Visits
               </TabsTrigger>
               <TabsTrigger value="billing">
-                <DollarSign className="h-4 w-4 mr-2" />
+                <IndianRupee className="h-4 w-4 mr-2" />
                 Billing
               </TabsTrigger>
               <TabsTrigger value="appointments">

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { DataTable, DataTableColumn } from '@/components/DataTable';
-import { Loader2, Plus, Search, DollarSign, FileText, CreditCard, AlertCircle } from 'lucide-react';
+import { Loader2, Plus, Search, IndianRupee, FileText, CreditCard, AlertCircle } from 'lucide-react';
 import { ProcedureBill, ProcedureBillListParams } from '@/types/procedureBill.types';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
@@ -174,7 +174,7 @@ export const ProcedureBills: React.FC = () => {
           <CardContent className="p-4 sm:p-6">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-green-100 rounded-lg">
-                <DollarSign className="h-5 w-5 text-green-600" />
+                <IndianRupee className="h-5 w-5 text-green-600" />
               </div>
               <div>
                 <p className="text-xs sm:text-sm text-muted-foreground">Collected</p>

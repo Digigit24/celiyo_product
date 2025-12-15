@@ -41,6 +41,7 @@ import {
   Pill, // Added Pill icon for Pharmacy module
   ShoppingCart, // Added ShoppingCart icon for Cart
   BarChart3, // Added for Statistics
+  Loader2, // Added for loading state
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -434,7 +435,11 @@ export function UniversalSidebar({
       <div className="h-16 flex items-center justify-between px-4 border-b border-sidebar-border">
         {!collapsed && (
           <div className="flex items-center gap-3">
-            {tenantLogo && !logoError ? (
+            {isTenantLoading ? (
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0">
+                <Loader2 className="w-6 h-6 animate-spin text-primary" />
+              </div>
+            ) : tenantLogo && !logoError ? (
               <img
                 src={tenantLogo}
                 alt={`${tenantName} logo`}
@@ -454,7 +459,11 @@ export function UniversalSidebar({
           </div>
         )}
         {collapsed && (
-          tenantLogo && !logoError ? (
+          isTenantLoading ? (
+            <div className="w-8 h-8 flex items-center justify-center mx-auto">
+              <Loader2 className="w-5 h-5 animate-spin text-primary" />
+            </div>
+          ) : tenantLogo && !logoError ? (
             <img
               src={tenantLogo}
               alt={`${tenantName} logo`}

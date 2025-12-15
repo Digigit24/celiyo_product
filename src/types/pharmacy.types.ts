@@ -25,7 +25,7 @@ export interface ProductCategoryPayload {
 export interface PharmacyProduct {
   id: number;
   product_name: string;
-  category: ProductCategory;
+  category: ProductCategory | null;
   company: string;
   batch_no: string;
   mrp: string;

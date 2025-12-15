@@ -62,10 +62,10 @@ export const PharmacyPage: React.FC = () => {
     {
       header: 'Category',
       key: 'category',
-      accessor: (row) => row.category.name,
+      accessor: (row) => row.category?.name || 'N/A',
       sortable: true,
       filterable: true,
-      cell: (row) => row.category.name,
+      cell: (row) => row.category?.name || <span className="text-muted-foreground italic">No Category</span>,
     },
     {
       header: 'Stock',
@@ -114,7 +114,33 @@ export const PharmacyPage: React.FC = () => {
 
   return (
     <div className="flex flex-col h-full">
-       
+        {/* Debug Status Section */}
+        <div className="mb-4 p-4 bg-muted/50 rounded-lg border">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div>
+                <span className="text-sm font-medium">API Status: </span>
+                {productsLoading && <Badge variant="secondary">Loading...</Badge>}
+                {productsError && <Badge variant="destructive">Error</Badge>}
+                {!productsLoading && !productsError && <Badge variant="default" className="bg-green-600">Success</Badge>}
+              </div>
+              <div className="text-sm">
+                <span className="font-medium">Products Fetched: </span>
+                <span className="font-bold">{pharmacyProductsData?.count || 0}</span>
+              </div>
+              <div className="text-sm">
+                <span className="font-medium">Displaying: </span>
+                <span className="font-bold">{products.length}</span>
+              </div>
+            </div>
+            {productsError && (
+              <div className="text-sm text-destructive">
+                Error: {productsError?.message || 'Failed to fetch products'}
+              </div>
+            )}
+          </div>
+        </div>
+
         <div className="flex-1 overflow-auto">
              <DataTable
                 rows={products}
@@ -132,7 +158,7 @@ export const PharmacyPage: React.FC = () => {
                         <div className="flex justify-between items-start">
                             <div>
                                 <div className="font-bold">{row.product_name}</div>
-                                <div className="text-sm text-muted-foreground">{row.category.name}</div>
+                                <div className="text-sm text-muted-foreground">{row.category?.name || 'No Category'}</div>
                             </div>
                             {actions.dropdown}
                         </div>

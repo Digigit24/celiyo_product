@@ -443,18 +443,13 @@ export function UniversalSidebar({
               <img
                 src={tenantLogo}
                 alt={`${tenantName} logo`}
-                className="w-10 h-10 object-contain rounded-lg"
+                className="w-20 h-20 object-contain rounded-lg"
                 onError={handleLogoError}
               />
             ) : (
               <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center shrink-0">
                 <Icon3D icon={Stethoscope} className="w-6 h-6" />
               </div>
-            )}
-            {isTenantLoading ? (
-              <span className="font-bold text-lg text-muted-foreground">Loading...</span>
-            ) : (
-              <span className="font-bold text-lg">{tenantName}</span>
             )}
           </div>
         )}

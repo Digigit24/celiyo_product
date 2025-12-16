@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { whatsappClient } from '@/lib/whatsappClient';
 
 interface MediaWithAuthProps {
@@ -7,16 +7,47 @@ interface MediaWithAuthProps {
   className?: string;
   previewSrc?: string;
   type: 'image' | 'video' | 'audio';
+  lazy?: boolean;
 }
 
-const MediaWithAuth: React.FC<MediaWithAuthProps> = ({ src, alt, className, previewSrc, type }) => {
+const MediaWithAuth: React.FC<MediaWithAuthProps> = ({ src, alt, className, previewSrc, type, lazy = true }) => {
   const [mediaSrc, setMediaSrc] = useState<string | null>(previewSrc || null);
   const [isLoading, setIsLoading] = useState(!previewSrc);
   const [error, setError] = useState<string | null>(null);
+  const [isInView, setIsInView] = useState(!lazy);
+  const mediaRef = useRef<HTMLDivElement>(null);
+
+  // Intersection Observer for lazy loading
+  useEffect(() => {
+    if (!lazy || isInView) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setIsInView(true);
+            observer.disconnect();
+          }
+        });
+      },
+      {
+        rootMargin: '50px', // Start loading 50px before the element comes into view
+        threshold: 0.01,
+      }
+    );
+
+    if (mediaRef.current) {
+      observer.observe(mediaRef.current);
+    }
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [lazy, isInView]);
 
   useEffect(() => {
     const fetchMedia = async () => {
-      if (!src || previewSrc) {
+      if (!src || previewSrc || !isInView) {
         setIsLoading(false);
         return;
       }
@@ -28,7 +59,7 @@ const MediaWithAuth: React.FC<MediaWithAuthProps> = ({ src, alt, className, prev
         const response = await whatsappClient.get(src, {
           responseType: 'blob',
         });
-        
+
         const mimeType = response.headers['content-type'] || 'application/octet-stream';
         const blob = new Blob([response.data], { type: mimeType });
         const url = URL.createObjectURL(blob);
@@ -49,41 +80,59 @@ const MediaWithAuth: React.FC<MediaWithAuthProps> = ({ src, alt, className, prev
         URL.revokeObjectURL(mediaSrc);
       }
     };
-  }, [src, previewSrc]);
+  }, [src, previewSrc, isInView]);
 
-  if (isLoading) {
+  if (isLoading || !isInView) {
     return (
-      <div className={`flex items-center justify-center bg-muted rounded-md ${className}`}>
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <div
+        ref={mediaRef}
+        className={`flex items-center justify-center bg-muted rounded-md ${className} min-h-[120px]`}
+      >
+        {isInView && <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>}
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className={`flex items-center justify-center bg-destructive/10 text-destructive text-xs rounded-md ${className}`}>
+      <div
+        ref={mediaRef}
+        className={`flex items-center justify-center bg-destructive/10 text-destructive text-xs rounded-md ${className}`}
+      >
         {error}
       </div>
     );
   }
 
   if (!mediaSrc) {
-    return null;
+    return <div ref={mediaRef} />;
   }
 
   if (type === 'image') {
-    return <img src={mediaSrc} alt={alt} className={className} />;
+    return (
+      <div ref={mediaRef}>
+        <img src={mediaSrc} alt={alt} className={className} loading="lazy" />
+      </div>
+    );
   }
 
   if (type === 'video') {
-    return <video src={mediaSrc} controls className={className} />;
+    return (
+      <div ref={mediaRef}>
+        <video src={mediaSrc} controls className={className} preload="metadata" />
+      </div>
+    );
   }
 
   if (type === 'audio') {
-    return <audio src={mediaSrc} controls className={className} />;
+    return (
+      <div ref={mediaRef}>
+        <audio src={mediaSrc} controls className={className} preload="metadata" />
+      </div>
+    );
   }
 
-  return null;
+  return <div ref={mediaRef} />;
 };
 
 export default MediaWithAuth;

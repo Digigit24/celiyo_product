@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import {
   Send,
   ArrowLeft,
@@ -116,6 +116,27 @@ const attachmentOptions = [
   },
 ];
 
+// Helper function to get date label
+const getDateLabel = (date: Date): string => {
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  const isToday = date.toDateString() === today.toDateString();
+  const isYesterday = date.toDateString() === yesterday.toDateString();
+
+  if (isToday) return 'Today';
+  if (isYesterday) return 'Yesterday';
+
+  // Format as "Dec 15, 2024"
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+};
+
+// Helper function to check if two dates are on the same day
+const isSameDay = (date1: Date, date2: Date): boolean => {
+  return date1.toDateString() === date2.toDateString();
+};
+
 export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onBack }: Props) => {
   const { messages, isLoading, error, sendMessage, sendMediaMessage } = useMessages(selectedConversation?.phone || null);
 
@@ -126,6 +147,8 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
     status: msg.status,
     type: msg.type,
     metadata: msg.metadata,
+    timestamp: msg.timestamp,
+    date: new Date(msg.timestamp),
   }));
 
   // Log messages for debugging
@@ -506,14 +529,32 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
           </div>
         ) : (
           <>
-            {transformedMessages.map((msg, idx) => (
-              <div
-                key={idx}
-                className={cn(
-                  "flex animate-in fade-in slide-in-from-bottom-2 duration-200",
-                  msg.from === "me" ? "justify-end" : "justify-start"
-                )}
-              >
+            {transformedMessages.map((msg, idx) => {
+              // Check if we need to show a date separator
+              const showDateSeparator =
+                idx === 0 ||
+                !isSameDay(msg.date, transformedMessages[idx - 1].date);
+
+              return (
+                <React.Fragment key={idx}>
+                  {/* Date Separator */}
+                  {showDateSeparator && (
+                    <div className="flex justify-center my-4">
+                      <div className="bg-white/80 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-sm border border-gray-200">
+                        <span className="text-xs font-medium text-gray-600">
+                          {getDateLabel(msg.date)}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Message Bubble */}
+                  <div
+                    className={cn(
+                      "flex animate-in fade-in slide-in-from-bottom-2 duration-200",
+                      msg.from === "me" ? "justify-end" : "justify-start"
+                    )}
+                  >
                 <div
                   className={cn(
                     "relative max-w-[85%] sm:max-w-[70%] md:max-w-[65%] rounded-lg px-3 py-2 shadow-sm",
@@ -598,7 +639,9 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
                   </div>
                 </div>
               </div>
-            ))}
+                </React.Fragment>
+              );
+            })}
             <div ref={messagesEndRef} />
           </>
         )}

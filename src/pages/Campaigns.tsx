@@ -89,14 +89,14 @@ export default function Campaigns() {
     contacts,
     isLoading: contactsLoading,
     error: contactsError,
-  } = useContacts({ limit: 1000, offset: 0 });
+  } = useContacts({ limit: 500, offset: 0 });
 
   // Groups hook - fetch all groups for selection
   const {
     groups,
     isLoading: groupsLoading,
     error: groupsError,
-  } = useGroups({ limit: 1000, offset: 0 });
+  } = useGroups({ limit: 500, offset: 0 });
 
   // Header actions
   const [createOpen, setCreateOpen] = useState(false);

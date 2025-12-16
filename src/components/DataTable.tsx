@@ -22,6 +22,21 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination';
 import { MoreHorizontal, Eye, Edit, Trash2, Stethoscope, IndianRupee, ArrowUpDown, ArrowUp, ArrowDown, Filter, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 
@@ -145,6 +160,10 @@ export function DataTable<T>({
   const [filters, setFilters] = useState<ColumnFilter[]>([]);
   const [filterMenuOpen, setFilterMenuOpen] = useState<string | null>(null);
 
+  // pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [entriesPerPage, setEntriesPerPage] = useState(10);
+
   // Handle column sort
   const handleSort = (column: DataTableColumn<T>) => {
     if (!column.sortable) return;
@@ -182,7 +201,7 @@ export function DataTable<T>({
   };
 
   // Apply sorting and filtering
-  const processedRows = React.useMemo(() => {
+  const filteredAndSortedRows = React.useMemo(() => {
     let result = [...rows];
 
     // Apply filters
@@ -228,6 +247,17 @@ export function DataTable<T>({
     return result;
   }, [rows, filters, sortConfig, columns]);
 
+  // Calculate pagination
+  const totalPages = Math.ceil(filteredAndSortedRows.length / entriesPerPage);
+  const startIndex = (currentPage - 1) * entriesPerPage;
+  const endIndex = startIndex + entriesPerPage;
+  const processedRows = filteredAndSortedRows.slice(startIndex, endIndex);
+
+  // Reset to page 1 when filters or entries per page changes
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [filters, entriesPerPage]);
+
   const handleAskDelete = (row: T) => {
     if (!onDelete) return; // if no delete handler, no dialog
     setRowToDelete(row);
@@ -268,7 +298,7 @@ export function DataTable<T>({
   // ---------------------------
   // LOADING STATE
   // ---------------------------
-  if (isLoading && processedRows.length === 0) {
+  if (isLoading && filteredAndSortedRows.length === 0) {
     return (
       <div className="flex items-center justify-center h-full p-12 w-full">
         <div className="text-center">
@@ -303,7 +333,7 @@ export function DataTable<T>({
   // ---------------------------
   // EMPTY STATE (no rows, not loading)
   // ---------------------------
-  if (!isLoading && processedRows.length === 0) {
+  if (!isLoading && filteredAndSortedRows.length === 0) {
     return (
       <>
         <div className="flex items-center justify-center h-full p-8 w-full">
@@ -365,22 +395,99 @@ export function DataTable<T>({
   if (isMobile) {
     return (
       <>
-        <div className="p-4 space-y-3">
-          {processedRows.map((row) => {
-            const rowActions: RowActions<T> = {
-              view: onView ? () => onView(row) : undefined,
-              edit: onEdit ? () => onEdit(row) : undefined,
-              askDelete: onDelete ? () => handleAskDelete(row) : undefined,
-              consultation: onConsultation ? () => onConsultation(row) : undefined,
-              billing: onBilling ? () => onBilling(row) : undefined,
-            };
+        <div className="flex flex-col h-full">
+          <div className="flex-1 p-4 space-y-3 overflow-auto">
+            {processedRows.map((row) => {
+              const rowActions: RowActions<T> = {
+                view: onView ? () => onView(row) : undefined,
+                edit: onEdit ? () => onEdit(row) : undefined,
+                askDelete: onDelete ? () => handleAskDelete(row) : undefined,
+                consultation: onConsultation ? () => onConsultation(row) : undefined,
+                billing: onBilling ? () => onBilling(row) : undefined,
+              };
 
-            return (
-              <div key={getRowId(row)} className="bg-card border rounded-lg p-4 space-y-3 hover:shadow-md transition-shadow">
-                {renderMobileCard(row, rowActions)}
+              return (
+                <div key={getRowId(row)} className="bg-card border rounded-lg p-4 space-y-3 hover:shadow-md transition-shadow">
+                  {renderMobileCard(row, rowActions)}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Pagination controls for mobile */}
+          {filteredAndSortedRows.length > 0 && (
+            <div className="border-t bg-background p-4 space-y-3">
+              {/* Entries per page selector */}
+              <div className="flex items-center justify-center gap-2">
+                <span className="text-sm text-muted-foreground">Show</span>
+                <Select
+                  value={entriesPerPage.toString()}
+                  onValueChange={(value) => setEntriesPerPage(Number(value))}
+                >
+                  <SelectTrigger className="w-[70px] h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="10">10</SelectItem>
+                    <SelectItem value="15">15</SelectItem>
+                    <SelectItem value="20">20</SelectItem>
+                  </SelectContent>
+                </Select>
+                <span className="text-sm text-muted-foreground">entries</span>
               </div>
-            );
-          })}
+
+              {/* Page info */}
+              <div className="text-center text-sm text-muted-foreground">
+                Showing {startIndex + 1} to {Math.min(endIndex, filteredAndSortedRows.length)} of {filteredAndSortedRows.length}
+              </div>
+
+              {/* Page navigation */}
+              {totalPages > 1 && (
+                <Pagination>
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious
+                        onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                        className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                      />
+                    </PaginationItem>
+
+                    {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                      let page: number;
+                      if (totalPages <= 5) {
+                        page = i + 1;
+                      } else if (currentPage <= 3) {
+                        page = i + 1;
+                      } else if (currentPage >= totalPages - 2) {
+                        page = totalPages - 4 + i;
+                      } else {
+                        page = currentPage - 2 + i;
+                      }
+
+                      return (
+                        <PaginationItem key={page}>
+                          <PaginationLink
+                            onClick={() => setCurrentPage(page)}
+                            isActive={currentPage === page}
+                            className="cursor-pointer"
+                          >
+                            {page}
+                          </PaginationLink>
+                        </PaginationItem>
+                      );
+                    })}
+
+                    <PaginationItem>
+                      <PaginationNext
+                        onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                        className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Delete dialog */}
@@ -588,6 +695,91 @@ export function DataTable<T>({
             })}
           </TableBody>
         </Table>
+
+        {/* Pagination controls */}
+        {filteredAndSortedRows.length > 0 && (
+          <div className="flex items-center justify-between px-4 py-4 border-t">
+            {/* Entries per page selector */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Show</span>
+              <Select
+                value={entriesPerPage.toString()}
+                onValueChange={(value) => setEntriesPerPage(Number(value))}
+              >
+                <SelectTrigger className="w-[70px] h-8">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="15">15</SelectItem>
+                  <SelectItem value="20">20</SelectItem>
+                </SelectContent>
+              </Select>
+              <span className="text-sm text-muted-foreground">
+                entries
+              </span>
+            </div>
+
+            {/* Page info and navigation */}
+            <div className="flex items-center gap-4">
+              <span className="text-sm text-muted-foreground">
+                Showing {startIndex + 1} to {Math.min(endIndex, filteredAndSortedRows.length)} of {filteredAndSortedRows.length} entries
+              </span>
+
+              {totalPages > 1 && (
+                <Pagination>
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious
+                        onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                        className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                      />
+                    </PaginationItem>
+
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                      // Show first page, last page, current page, and pages around current
+                      const showPage =
+                        page === 1 ||
+                        page === totalPages ||
+                        (page >= currentPage - 1 && page <= currentPage + 1);
+
+                      if (!showPage) {
+                        // Show ellipsis for skipped pages
+                        if (page === currentPage - 2 || page === currentPage + 2) {
+                          return (
+                            <PaginationItem key={page}>
+                              <span className="px-2 text-muted-foreground">...</span>
+                            </PaginationItem>
+                          );
+                        }
+                        return null;
+                      }
+
+                      return (
+                        <PaginationItem key={page}>
+                          <PaginationLink
+                            onClick={() => setCurrentPage(page)}
+                            isActive={currentPage === page}
+                            className="cursor-pointer"
+                          >
+                            {page}
+                          </PaginationLink>
+                        </PaginationItem>
+                      );
+                    })}
+
+                    <PaginationItem>
+                      <PaginationNext
+                        onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                        className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Delete dialog */}

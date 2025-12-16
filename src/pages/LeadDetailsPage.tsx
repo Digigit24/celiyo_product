@@ -222,6 +222,13 @@ export const LeadDetailsPage = () => {
     mutateMeetings();
   }, [mutateMeetings]);
 
+  // Handle meeting card click
+  const handleMeetingClick = useCallback((meetingId: number) => {
+    setSelectedMeetingId(meetingId);
+    setMeetingDrawerMode('view');
+    setMeetingDrawerOpen(true);
+  }, []);
+
   // Get meeting status badge
   const getMeetingStatusBadge = (meeting: Meeting) => {
     const now = new Date();
@@ -229,13 +236,13 @@ export const LeadDetailsPage = () => {
     const end = new Date(meeting.end_at);
 
     if (isPast(end)) {
-      return <Badge variant="secondary" className="bg-gray-600">Completed</Badge>;
+      return <Badge variant="secondary" className="bg-gray-600 text-white hover:bg-gray-700">Completed</Badge>;
     } else if (now >= start && now <= end) {
-      return <Badge variant="default" className="bg-green-600">In Progress</Badge>;
+      return <Badge variant="default" className="bg-green-600 text-white hover:bg-green-700">In Progress</Badge>;
     } else if (isToday(start)) {
-      return <Badge variant="default" className="bg-blue-600">Today</Badge>;
+      return <Badge variant="default" className="bg-blue-600 text-white hover:bg-blue-700">Today</Badge>;
     } else if (isFuture(start)) {
-      return <Badge variant="default" className="bg-purple-600">Upcoming</Badge>;
+      return <Badge variant="default" className="bg-purple-600 text-white hover:bg-purple-700">Upcoming</Badge>;
     }
     return <Badge variant="outline">Unknown</Badge>;
   };
@@ -440,6 +447,7 @@ export const LeadDetailsPage = () => {
                       <div
                         key={meeting.id}
                         className="p-4 border rounded-lg hover:bg-accent transition-colors cursor-pointer hover:shadow-md"
+                        onClick={() => handleMeetingClick(meeting.id)}
                       >
                         <div className="flex flex-col h-full">
                           <div className="flex-1">

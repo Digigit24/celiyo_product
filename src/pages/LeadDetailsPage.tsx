@@ -433,40 +433,43 @@ export const LeadDetailsPage = () => {
                   </Button>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {meetings.map((meeting) => {
                     const { dateStr, timeStr } = formatMeetingTime(meeting.start_at, meeting.end_at);
                     return (
                       <div
                         key={meeting.id}
-                        className="p-4 border rounded-lg hover:bg-accent transition-colors"
+                        className="p-4 border rounded-lg hover:bg-accent transition-colors cursor-pointer hover:shadow-md"
                       >
-                        <div className="flex items-start justify-between">
+                        <div className="flex flex-col h-full">
                           <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                              <h3 className="font-semibold">{meeting.title}</h3>
+                            <div className="flex items-start justify-between gap-2 mb-3">
+                              <h3 className="font-semibold text-base line-clamp-2">{meeting.title}</h3>
+                            </div>
+
+                            <div className="mb-2">
                               {getMeetingStatusBadge(meeting)}
                             </div>
 
-                            <div className="space-y-1 text-sm text-muted-foreground">
+                            <div className="space-y-2 text-sm text-muted-foreground">
                               <div className="flex items-center gap-2">
-                                <Calendar className="h-3 w-3" />
-                                <span>{dateStr}</span>
+                                <Calendar className="h-3.5 w-3.5 flex-shrink-0" />
+                                <span className="truncate">{dateStr}</span>
                               </div>
                               <div className="flex items-center gap-2">
-                                <Clock className="h-3 w-3" />
-                                <span>{timeStr}</span>
+                                <Clock className="h-3.5 w-3.5 flex-shrink-0" />
+                                <span className="truncate">{timeStr}</span>
                               </div>
                               {meeting.location && (
                                 <div className="flex items-center gap-2">
-                                  <MapPin className="h-3 w-3" />
-                                  <span>{meeting.location}</span>
+                                  <MapPin className="h-3.5 w-3.5 flex-shrink-0" />
+                                  <span className="truncate">{meeting.location}</span>
                                 </div>
                               )}
                             </div>
 
                             {meeting.description && (
-                              <p className="mt-2 text-sm">{meeting.description}</p>
+                              <p className="mt-3 text-sm text-foreground line-clamp-2">{meeting.description}</p>
                             )}
                           </div>
                         </div>

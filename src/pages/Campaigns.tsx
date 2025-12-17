@@ -71,6 +71,7 @@ export default function Campaigns() {
     refetch,
     createCampaign,
     createTemplateCampaign,
+    sendTemplateBroadcastBulk,
     getCampaign,
     stats,
   } = useCampaigns({ autoFetch: true });
@@ -205,40 +206,55 @@ export default function Campaigns() {
       return;
     }
 
-    // Build payload for template broadcast
-    const payload: CreateTemplateCampaignPayload = {
-      campaign_name: campaignTitle.trim() || selectedTemplate.name,
-      template_name: selectedTemplate.name,
-      template_language: selectedTemplate.language,
-    };
+    // Collect all phone numbers based on selected method
+    let allPhoneNumbers: string[] = [];
 
-    // Add recipients based on selected method
     if (recipientMethod === 'phone' && recipientsText.trim()) {
-      const recipients = parseRecipients(recipientsText);
-      if (recipients.length > 0) {
-        payload.recipients = recipients;
-      }
+      // Direct phone numbers
+      const phoneNumbers = parseRecipients(recipientsText);
+      allPhoneNumbers.push(...phoneNumbers);
+    } else if (recipientMethod === 'contacts' && selectedContactIds.length > 0) {
+      // Resolve contact IDs to phone numbers
+      const selectedContacts = contacts.filter(c => selectedContactIds.includes(String(c.id)));
+      const phoneNumbers = selectedContacts.map(c => c.phone);
+      allPhoneNumbers.push(...phoneNumbers);
+      console.log(`Resolved ${phoneNumbers.length} phone numbers from ${selectedContactIds.length} contacts`);
+    } else if (recipientMethod === 'groups' && selectedGroupIds.length > 0) {
+      // Resolve group IDs to participant phone numbers
+      const selectedGroups = groups.filter(g => selectedGroupIds.includes(String(g.id)));
+      selectedGroups.forEach(group => {
+        if (Array.isArray(group.participants)) {
+          allPhoneNumbers.push(...group.participants);
+        }
+      });
+      console.log(`Resolved ${allPhoneNumbers.length} phone numbers from ${selectedGroups.length} groups`);
     }
 
-    if (recipientMethod === 'contacts' && selectedContactIds.length > 0) {
-      payload.contact_ids = selectedContactIds.map(id => Number(id));
-    }
+    // Remove duplicates
+    const uniquePhoneNumbers = Array.from(new Set(allPhoneNumbers));
 
-    if (recipientMethod === 'groups' && selectedGroupIds.length > 0) {
-      payload.group_ids = selectedGroupIds;
-    }
-
-    // Validate at least one recipient method has data
-    if (!payload.recipients && !payload.contact_ids && !payload.group_ids) {
-      toast.error('At least one recipient is required');
+    // Validate we have recipients
+    if (uniquePhoneNumbers.length === 0) {
+      toast.error('No recipients found. Please select at least one contact or group.');
       return;
     }
 
+    // Build payload for template broadcast bulk send (bypasses 24hr window)
+    const payload: any = {
+      campaign_name: campaignTitle.trim() || selectedTemplate.name,
+      template_name: selectedTemplate.name,
+      template_language: selectedTemplate.language,
+      recipients: uniquePhoneNumbers, // Only send phone numbers
+    };
+
     try {
       setCreating(true);
-      const created = await createTemplateCampaign(payload);
-      if (created) {
-        toast.success('Template campaign created and sending in background');
+      console.log(`Sending campaign to ${uniquePhoneNumbers.length} unique recipients`);
+      const result = await sendTemplateBroadcastBulk(payload);
+      if (result) {
+        toast.success(`Campaign sent! ${result.sent}/${result.total} messages delivered successfully`, {
+          duration: 5000
+        });
         setCreateOpen(false);
       }
     } finally {
@@ -444,9 +460,30 @@ export default function Campaigns() {
               {/* Contacts Selection Method */}
               {recipientMethod === 'contacts' && (
                 <div className="space-y-3">
-                  <Label className="text-base font-semibold">
-                    Select Contacts <span className="text-destructive">*</span>
-                  </Label>
+                  <div className="flex items-center justify-between">
+                    <Label className="text-base font-semibold">
+                      Select Contacts <span className="text-destructive">*</span>
+                    </Label>
+                    {!contactsLoading && contacts.length > 0 && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          if (selectedContactIds.length === contacts.length) {
+                            // Deselect all
+                            setSelectedContactIds([]);
+                            toast.info('All contacts deselected');
+                          } else {
+                            // Select all
+                            setSelectedContactIds(contacts.map(c => String(c.id)));
+                            toast.success(`All ${contacts.length} contacts selected`);
+                          }
+                        }}
+                      >
+                        {selectedContactIds.length === contacts.length ? 'Deselect All' : 'Select All'}
+                      </Button>
+                    )}
+                  </div>
                   {contactsLoading ? (
                     <div className="flex items-center justify-center py-8">
                       <div className="text-center">
@@ -502,9 +539,30 @@ export default function Campaigns() {
               {/* Groups Selection Method */}
               {recipientMethod === 'groups' && (
                 <div className="space-y-3">
-                  <Label className="text-base font-semibold">
-                    Select Groups <span className="text-destructive">*</span>
-                  </Label>
+                  <div className="flex items-center justify-between">
+                    <Label className="text-base font-semibold">
+                      Select Groups <span className="text-destructive">*</span>
+                    </Label>
+                    {!groupsLoading && groups.length > 0 && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          if (selectedGroupIds.length === groups.length) {
+                            // Deselect all
+                            setSelectedGroupIds([]);
+                            toast.info('All groups deselected');
+                          } else {
+                            // Select all
+                            setSelectedGroupIds(groups.map(g => String(g.id)));
+                            toast.success(`All ${groups.length} groups selected`);
+                          }
+                        }}
+                      >
+                        {selectedGroupIds.length === groups.length ? 'Deselect All' : 'Select All'}
+                      </Button>
+                    )}
+                  </div>
                   {groupsLoading ? (
                     <div className="flex items-center justify-center py-8">
                       <div className="text-center">
@@ -564,10 +622,25 @@ export default function Campaigns() {
 
       case 'review':
         const recipientsList = parseRecipients(recipientsText);
-        const totalRecipientCount =
-          (recipientMethod === 'phone' ? recipientsList.length : 0) +
-          (recipientMethod === 'contacts' ? selectedContactIds.length : 0) +
-          (recipientMethod === 'groups' ? selectedGroupIds.length : 0);
+
+        // Calculate total recipients by resolving phone numbers
+        let totalRecipientCount = 0;
+        if (recipientMethod === 'phone') {
+          totalRecipientCount = recipientsList.length;
+        } else if (recipientMethod === 'contacts') {
+          totalRecipientCount = selectedContactIds.length;
+        } else if (recipientMethod === 'groups') {
+          // Count participants from selected groups
+          const selectedGroups = groups.filter(g => selectedGroupIds.includes(String(g.id)));
+          const allParticipants: string[] = [];
+          selectedGroups.forEach(group => {
+            if (Array.isArray(group.participants)) {
+              allParticipants.push(...group.participants);
+            }
+          });
+          // Remove duplicates
+          totalRecipientCount = Array.from(new Set(allParticipants)).length;
+        }
 
         return (
           <div className="space-y-6">
@@ -599,7 +672,7 @@ export default function Campaigns() {
                     <span className="text-muted-foreground">Recipients:</span>
                     <span className="col-span-2 font-medium flex items-center gap-2">
                       <Users className="h-3 w-3" />
-                      {totalRecipientCount} {recipientMethod === 'phone' ? 'phone numbers' : recipientMethod === 'contacts' ? 'contacts' : 'groups'}
+                      {totalRecipientCount} unique {totalRecipientCount === 1 ? 'recipient' : 'recipients'}
                     </span>
                   </div>
                   <div className="grid grid-cols-3 gap-2 text-sm">
@@ -633,7 +706,7 @@ export default function Campaigns() {
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <p className="text-sm text-blue-800">
                   <strong>Note:</strong> Template variables like {'{{1}}, {{2}}'} will be replaced with actual values when sending.
-                  Campaign will be sent in background immediately after creation.
+                  Campaign will be sent immediately to all selected contacts, bypassing the 24-hour messaging window restriction.
                 </p>
               </div>
             </div>
@@ -786,7 +859,7 @@ export default function Campaigns() {
               ) : (
                 <Button onClick={handleCreate} disabled={creating}>
                   <Send className="h-4 w-4 mr-2" />
-                  {creating ? 'Scheduling...' : 'Schedule Campaign'}
+                  {creating ? 'Sending...' : 'Send Campaign'}
                 </Button>
               )}
             </div>

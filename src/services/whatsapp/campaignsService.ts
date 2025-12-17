@@ -14,6 +14,8 @@ import {
   CreateCampaignPayload,
   CreateTemplateCampaignPayload,
   CampaignListQuery,
+  TemplateBroadcastBulkPayload,
+  TemplateBroadcastBulkResponse,
 } from '@/types/whatsappTypes';
 
 class CampaignsService {
@@ -355,6 +357,60 @@ class CampaignsService {
       template_name: templateName,
       template_variables: variables,
     });
+  }
+
+  /**
+   * NEW: Send template broadcast using /templates/send/bulk endpoint
+   * This bypasses the 24-hour window restriction and works for all contacts
+   * NOTE: Recipients must be phone numbers (resolved in UI before calling this)
+   */
+  async sendTemplateBroadcastBulk(payload: TemplateBroadcastBulkPayload): Promise<TemplateBroadcastBulkResponse> {
+    try {
+      console.log('📤 Sending template broadcast (bulk):', {
+        campaign_name: payload.campaign_name,
+        template_name: payload.template_name,
+        template_language: payload.template_language,
+        recipients: payload.recipients?.length || 0
+      });
+
+      if (!payload.recipients || payload.recipients.length === 0) {
+        throw new Error('No recipients provided');
+      }
+
+      // Build the payload for templates/send/bulk endpoint
+      const bulkSendPayload = {
+        template_name: payload.template_name,
+        language: payload.template_language,
+        recipients: payload.recipients,
+        parameters_per_recipient: payload.parameters_per_recipient,
+        default_parameters: payload.default_parameters
+      };
+
+      // Call the templates/send/bulk endpoint
+      const response = await whatsappClient.post<any>(
+        API_CONFIG.WHATSAPP.TEMPLATE_SEND_BULK,
+        bulkSendPayload
+      );
+
+      console.log('✅ Template broadcast sent:', {
+        total: response.data.total,
+        sent: response.data.sent,
+        failed: response.data.failed
+      });
+
+      // Return campaign-like response
+      return {
+        campaign_name: payload.campaign_name,
+        total: response.data.total || payload.recipients.length,
+        sent: response.data.sent || 0,
+        failed: response.data.failed || 0,
+        results: response.data.results || []
+      };
+    } catch (error: any) {
+      console.error('❌ Failed to send template broadcast (bulk):', error);
+      const message = error.response?.data?.detail || 'Failed to send template broadcast';
+      throw new Error(message);
+    }
   }
 }
 

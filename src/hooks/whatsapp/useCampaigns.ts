@@ -7,6 +7,8 @@ import type {
   CampaignListQuery,
   CreateCampaignPayload,
   CreateTemplateCampaignPayload,
+  TemplateBroadcastBulkPayload,
+  TemplateBroadcastBulkResponse,
 } from '@/types/whatsappTypes';
 
 export interface UseCampaignsOptions {
@@ -33,6 +35,7 @@ export interface UseCampaignsReturn {
   fetchCampaigns: (newQuery?: CampaignListQuery) => Promise<void>;
   createCampaign: (payload: CreateCampaignPayload) => Promise<WACampaign | null>;
   createTemplateCampaign: (payload: CreateTemplateCampaignPayload) => Promise<WACampaign | null>;
+  sendTemplateBroadcastBulk: (payload: TemplateBroadcastBulkPayload) => Promise<TemplateBroadcastBulkResponse | null>;
   getCampaign: (campaignId: string) => Promise<WACampaign | null>;
   refetch: () => Promise<void>;
 
@@ -123,6 +126,35 @@ export function useCampaigns(options: UseCampaignsOptions = {}): UseCampaignsRet
     }
   }, []);
 
+  /**
+   * NEW: Send template broadcast using bulk send endpoint (bypasses 24hr window)
+   */
+  const sendTemplateBroadcastBulk = useCallback(async (payload: TemplateBroadcastBulkPayload) => {
+    try {
+      setIsCreating(true);
+      setError(null);
+
+      const result = await campaignsService.sendTemplateBroadcastBulk(payload);
+
+      toast.success(
+        `Campaign "${result.campaign_name}" sent: ${result.sent}/${result.total} successful`,
+        { duration: 5000 }
+      );
+
+      // Refresh campaigns list to show the new campaign
+      await fetchCampaigns();
+
+      return result;
+    } catch (err: any) {
+      const msg = err?.message || 'Failed to send template broadcast';
+      setError(msg);
+      toast.error(msg);
+      return null;
+    } finally {
+      setIsCreating(false);
+    }
+  }, [fetchCampaigns]);
+
   const getCampaign = useCallback(async (campaignId: string) => {
     try {
       setIsLoading(true);
@@ -176,6 +208,7 @@ export function useCampaigns(options: UseCampaignsOptions = {}): UseCampaignsRet
     fetchCampaigns,
     createCampaign,
     createTemplateCampaign,
+    sendTemplateBroadcastBulk,
     getCampaign,
     refetch,
     successRate,

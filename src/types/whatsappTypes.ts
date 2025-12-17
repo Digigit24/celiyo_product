@@ -520,6 +520,27 @@ export interface CampaignListQuery {
 /** The backend returns a raw array for list */
 export type WACampaignListResponse = WACampaign[];
 
+/** Payload for sending template broadcast using bulk send endpoint (bypasses 24hr window) */
+export interface TemplateBroadcastBulkPayload {
+  campaign_name: string;
+  template_name: string;
+  template_language: string;
+  // Only phone numbers (contact_ids and group_ids resolved in UI)
+  recipients: string[]; // Phone numbers in international format
+  // Template parameters
+  parameters_per_recipient?: Record<string, string>[];
+  default_parameters?: Record<string, string>;
+}
+
+/** Response from template broadcast bulk send */
+export interface TemplateBroadcastBulkResponse {
+  campaign_name: string;
+  total: number;
+  sent: number;
+  failed: number;
+  results: any[];
+}
+
 // ==================== FLOW TYPES ====================
 
 export type FlowStatus = 'DRAFT' | 'PUBLISHED' | 'DEPRECATED';

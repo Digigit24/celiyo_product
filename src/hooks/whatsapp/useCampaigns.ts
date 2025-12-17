@@ -6,6 +6,7 @@ import type {
   WACampaign,
   CampaignListQuery,
   CreateCampaignPayload,
+  CreateTemplateCampaignPayload,
 } from '@/types/whatsappTypes';
 
 export interface UseCampaignsOptions {
@@ -31,6 +32,7 @@ export interface UseCampaignsReturn {
   // Actions
   fetchCampaigns: (newQuery?: CampaignListQuery) => Promise<void>;
   createCampaign: (payload: CreateCampaignPayload) => Promise<WACampaign | null>;
+  createTemplateCampaign: (payload: CreateTemplateCampaignPayload) => Promise<WACampaign | null>;
   getCampaign: (campaignId: string) => Promise<WACampaign | null>;
   refetch: () => Promise<void>;
 
@@ -101,6 +103,26 @@ export function useCampaigns(options: UseCampaignsOptions = {}): UseCampaignsRet
     }
   }, []);
 
+  const createTemplateCampaign = useCallback(async (payload: CreateTemplateCampaignPayload) => {
+    try {
+      setIsCreating(true);
+      setError(null);
+
+      const created = await campaignsService.createTemplateBroadcast(payload);
+      // Optimistic prepend
+      setCampaigns((prev) => [created, ...prev]);
+      toast.success(`Template campaign "${created.campaign_name || created.campaign_id}" created`);
+      return created;
+    } catch (err: any) {
+      const msg = err?.message || 'Failed to create template campaign';
+      setError(msg);
+      toast.error(msg);
+      return null;
+    } finally {
+      setIsCreating(false);
+    }
+  }, []);
+
   const getCampaign = useCallback(async (campaignId: string) => {
     try {
       setIsLoading(true);
@@ -153,6 +175,7 @@ export function useCampaigns(options: UseCampaignsOptions = {}): UseCampaignsRet
     error,
     fetchCampaigns,
     createCampaign,
+    createTemplateCampaign,
     getCampaign,
     refetch,
     successRate,

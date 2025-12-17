@@ -12,6 +12,7 @@ import {
   WACampaign,
   WACampaignListResponse,
   CreateCampaignPayload,
+  CreateTemplateCampaignPayload,
   CampaignListQuery,
 } from '@/types/whatsappTypes';
 
@@ -82,6 +83,59 @@ class CampaignsService {
     } catch (error: any) {
       console.error('❌ Failed to create broadcast:', error);
       const message = error.response?.data?.detail || 'Failed to create broadcast';
+      throw new Error(message);
+    }
+  }
+
+  /**
+   * Backend-aligned: Create template broadcast (POST /campaigns/broadcast/template)
+   * Sends JSON body with campaign_name, template_name, template_language, and recipients
+   */
+  async createTemplateBroadcast(payload: CreateTemplateCampaignPayload): Promise<WACampaign> {
+    try {
+      const recipientInfo = {
+        campaign_name: payload.campaign_name,
+        template_name: payload.template_name,
+        template_language: payload.template_language,
+        direct_recipients: payload.recipients?.length || 0,
+        contact_ids: payload.contact_ids?.length || 0,
+        group_ids: payload.group_ids?.length || 0
+      };
+
+      console.log('📤 Creating template broadcast:', recipientInfo);
+
+      // Build JSON body payload
+      const body: any = {
+        campaign_name: payload.campaign_name,
+        template_name: payload.template_name,
+        template_language: payload.template_language,
+      };
+
+      // Add recipients to body
+      if (payload.contact_ids && payload.contact_ids.length > 0) {
+        body.contact_ids = payload.contact_ids.map(id => Number(id));
+      }
+      if (payload.recipients && payload.recipients.length > 0) {
+        body.recipients = payload.recipients;
+      }
+      if (payload.group_ids && payload.group_ids.length > 0) {
+        body.group_ids = payload.group_ids;
+      }
+
+      const response = await whatsappClient.post<WACampaign>(
+        API_CONFIG.WHATSAPP.CAMPAIGN_BROADCAST_TEMPLATE,
+        body
+      );
+
+      console.log('✅ Template broadcast created:', {
+        campaign_id: response.data.campaign_id,
+        total_recipients: response.data.total_recipients
+      });
+
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ Failed to create template broadcast:', error);
+      const message = error.response?.data?.detail || 'Failed to create template broadcast';
       throw new Error(message);
     }
   }

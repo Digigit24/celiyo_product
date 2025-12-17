@@ -20,7 +20,7 @@ import { useCampaigns } from '@/hooks/whatsapp/useCampaigns';
 import { useTemplates } from '@/hooks/whatsapp/useTemplates';
 import { useContacts } from '@/hooks/whatsapp/useContacts';
 import { useGroups } from '@/hooks/whatsapp/useGroups';
-import type { WACampaign, CreateCampaignPayload, Template, TemplateStatus, Contact, Group } from '@/types/whatsappTypes';
+import type { WACampaign, CreateCampaignPayload, CreateTemplateCampaignPayload, Template, TemplateStatus, Contact, Group } from '@/types/whatsappTypes';
 import CampaignsTable from '@/components/CampaignsTable';
 import { SideDrawer } from '@/components/SideDrawer';
 
@@ -70,6 +70,7 @@ export default function Campaigns() {
     error,
     refetch,
     createCampaign,
+    createTemplateCampaign,
     getCampaign,
     stats,
   } = useCampaigns({ autoFetch: true });
@@ -204,10 +205,11 @@ export default function Campaigns() {
       return;
     }
 
-    // Build payload with appropriate recipient fields
-    const payload: CreateCampaignPayload = {
+    // Build payload for template broadcast
+    const payload: CreateTemplateCampaignPayload = {
       campaign_name: campaignTitle.trim() || selectedTemplate.name,
-      message_text: getTemplateBody(selectedTemplate),
+      template_name: selectedTemplate.name,
+      template_language: selectedTemplate.language,
     };
 
     // Add recipients based on selected method
@@ -219,7 +221,7 @@ export default function Campaigns() {
     }
 
     if (recipientMethod === 'contacts' && selectedContactIds.length > 0) {
-      payload.contact_ids = selectedContactIds;
+      payload.contact_ids = selectedContactIds.map(id => Number(id));
     }
 
     if (recipientMethod === 'groups' && selectedGroupIds.length > 0) {
@@ -234,9 +236,9 @@ export default function Campaigns() {
 
     try {
       setCreating(true);
-      const created = await createCampaign(payload);
+      const created = await createTemplateCampaign(payload);
       if (created) {
-        toast.success('Campaign created and sending in background');
+        toast.success('Template campaign created and sending in background');
         setCreateOpen(false);
       }
     } finally {

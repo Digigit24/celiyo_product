@@ -500,6 +500,17 @@ export interface CreateCampaignPayload {
   group_ids?: string[]; // Group IDs from database
 }
 
+/** Backend create payload for template broadcast campaigns */
+export interface CreateTemplateCampaignPayload {
+  campaign_name: string;
+  template_name: string;
+  template_language: string;
+  // Support three ways to specify recipients
+  recipients?: string[]; // Direct phone numbers
+  contact_ids?: number[]; // Contact IDs from database (as numbers)
+  group_ids?: string[]; // Group IDs from database
+}
+
 /** Backend list query for campaigns */
 export interface CampaignListQuery {
   skip?: number;

@@ -200,7 +200,8 @@ export const ConsultationCanvas: React.FC = () => {
       appState: {
         ...baseData.appState,
         currentItemStrokeWidth: 1, // Set smallest brush size
-        viewBackgroundColor: '#ffffff', // White background
+        viewBackgroundColor: 'transparent', // Transparent to show template below
+        currentItemRoughness: 0, // Smooth lines for medical notes
       },
     };
   }, [initialCanvasData]);
@@ -297,92 +298,112 @@ export const ConsultationCanvas: React.FC = () => {
       </div>
 
       {/* Canvas Area - Vertically Scrollable with A4 Canvas */}
-      <div className="w-full overflow-y-auto overflow-x-hidden">
-        <div className="min-h-full flex items-start justify-center py-8">
+      <div className="w-full overflow-y-auto overflow-x-auto bg-gray-100">
+        <div className="min-h-full flex items-start justify-center p-8">
           {/* A4 Canvas Container */}
           <div
-            className="relative bg-white shadow-2xl"
+            className="relative bg-white shadow-2xl border border-gray-300"
             style={{
               width: '210mm',  // A4 width
-              minHeight: '297mm', // A4 height
+              height: '297mm', // A4 height - fixed height
             }}
           >
             {/* Template Background - Render consultation form fields */}
-            <div className="absolute inset-0 pointer-events-none z-0 p-8 text-sm">
+            <div className="absolute inset-0 pointer-events-none z-0 p-8 text-sm overflow-hidden">
               {/* DPU Header */}
-              <div className="text-center mb-6 border-b-2 border-gray-800 pb-4">
-                <div className="flex items-center justify-between">
-                  <div className="w-16 h-16 bg-gray-200 rounded-full" /> {/* Logo placeholder */}
-                  <div className="flex-1">
-                    <h1 className="text-2xl font-bold text-red-700">DPU</h1>
-                    <p className="text-base font-semibold">डॉ. डी. वाय. पाटील कॉलेज ऑफ आयुर्वेद</p>
-                    <p className="text-sm">रुज्णालय व संशोधन केंद्र</p>
-                    <p className="text-xs">पिंपरी, पुणे - ४११०१८</p>
+              <div className="text-center mb-4 border-b-2 border-gray-700 pb-2">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="w-12 h-12 bg-blue-100 rounded-full border-2 border-blue-300" /> {/* Logo placeholder */}
+                  <div className="flex-1 px-4">
+                    <h1 className="text-xl font-bold text-red-700">DPU</h1>
+                    <p className="text-sm font-semibold text-gray-800">डॉ. डी. वाय. पाटील कॉलेज ऑफ आयुर्वेद</p>
+                    <p className="text-xs text-gray-700">रुज्णालय व संशोधन केंद्र</p>
+                    <p className="text-xs text-gray-600">पिंपरी, पुणे - ४११०१८</p>
                   </div>
-                  <div className="w-16 h-16 bg-gray-200 rounded-full" /> {/* Logo placeholder */}
+                  <div className="w-12 h-12 bg-red-100 rounded-full border-2 border-red-300" /> {/* Logo placeholder */}
                 </div>
               </div>
 
-              {/* Patient Info */}
-              <div className="mb-4 text-xs">
-                <p><span className="font-semibold">Patient:</span> {patient?.name || 'N/A'}</p>
-                <p><span className="font-semibold">UHID:</span> {patient?.patient_id || 'N/A'}</p>
-                <p><span className="font-semibold">OPD No:</span> {visit.visit_number || 'N/A'}</p>
-                <p><span className="font-semibold">Age:</span> {patient?.age || 'N/A'} | <span className="font-semibold">Gender:</span> {patient?.gender || 'N/A'}</p>
-                <p><span className="font-semibold">Consultant:</span> Dr. {visit.doctor_details?.full_name || 'N/A'}</p>
-                <p><span className="font-semibold">Date:</span> {formatVisitDate(visit.visit_date)}</p>
+              {/* Patient Info Header */}
+              <div className="grid grid-cols-2 gap-x-4 mb-3 text-xs bg-blue-50 p-2 rounded border border-blue-200">
+                <div>
+                  <p><span className="font-bold text-blue-900">Patient:</span> <span className="text-gray-800">{patient?.name || 'N/A'}</span></p>
+                  <p><span className="font-bold text-blue-900">UHID:</span> <span className="text-gray-800">{patient?.patient_id || 'N/A'}</span></p>
+                  <p><span className="font-bold text-blue-900">OPD No:</span> <span className="text-gray-800">{visit.visit_number || 'N/A'}</span></p>
+                </div>
+                <div>
+                  <p><span className="font-bold text-blue-900">Age:</span> <span className="text-gray-800">{patient?.age || 'N/A'}</span> | <span className="font-bold text-blue-900">Gender:</span> <span className="text-gray-800">{patient?.gender || 'N/A'}</span></p>
+                  <p><span className="font-bold text-blue-900">Consultant:</span> <span className="text-gray-800">Dr. {visit.doctor_details?.full_name || 'N/A'}</span></p>
+                  <p><span className="font-bold text-blue-900">Date:</span> <span className="text-gray-800">{formatVisitDate(visit.visit_date)}</span></p>
+                </div>
               </div>
 
               {/* Form Section */}
-              <div className="border-t-2 border-gray-400 pt-4">
-                <h2 className="text-center font-bold mb-4 text-base">* कायाचिकित्सा विभाग *</h2>
+              <div className="border-t-2 border-gray-600 pt-2">
+                <h2 className="text-center font-bold mb-3 text-base text-orange-700">* कायाचिकित्सा विभाग *</h2>
 
                 {/* Chief Complaints */}
-                <div className="mb-4">
-                  <p className="font-semibold underline">Chief Complaints (वैदना विशेष) :</p>
-                  <div className="border-b border-gray-300 h-12 mt-1"></div>
+                <div className="mb-3">
+                  <p className="font-bold text-xs text-gray-800 underline">Chief Complaints (वैदना विशेष) :</p>
+                  <div className="border-b border-dashed border-gray-400 h-8 mt-0.5"></div>
                 </div>
 
                 {/* Past History */}
-                <div className="mb-4">
-                  <p className="font-semibold">Past History (पूर्वाग्नानी वृतांत) :</p>
-                  <div className="border-b border-gray-300 h-10 mt-1"></div>
+                <div className="mb-3">
+                  <p className="font-semibold text-xs text-gray-800">Past History (पूर्वाग्नानी वृतांत) :</p>
+                  <div className="border-b border-dashed border-gray-400 h-6 mt-0.5"></div>
                 </div>
 
                 {/* Family History */}
-                <div className="mb-4">
-                  <p className="font-semibold">Family History (कुल वृतांत) :</p>
-                  <div className="border-b border-gray-300 h-10 mt-1"></div>
+                <div className="mb-3">
+                  <p className="font-semibold text-xs text-gray-800">Family History (कुल वृतांत) :</p>
+                  <div className="border-b border-dashed border-gray-400 h-6 mt-0.5"></div>
                 </div>
 
                 {/* Personal History */}
-                <div className="mb-4">
-                  <p className="font-semibold">Personal History (वैयक्तिक वृतांत) :</p>
-                  <div className="border-b border-gray-300 h-10 mt-1"></div>
+                <div className="mb-3">
+                  <p className="font-semibold text-xs text-gray-800">Personal History (वैयक्तिक वृतांत) :</p>
+                  <div className="border-b border-dashed border-gray-400 h-6 mt-0.5"></div>
                 </div>
 
                 {/* Gynecological History */}
-                <div className="mb-4">
-                  <p className="font-semibold">Gynecological History (स्त्रीरोग वृतांत) :</p>
-                  <div className="border-b border-gray-300 h-8 mt-1"></div>
+                <div className="mb-2">
+                  <p className="font-semibold text-xs text-gray-800">Gynecological History (स्त्रीरोग वृतांत) :</p>
+                  <div className="border-b border-dashed border-gray-400 h-5 mt-0.5"></div>
                 </div>
 
                 {/* Obstetric History */}
-                <div className="mb-4">
-                  <p className="font-semibold">Obstetric History (प्रसुति वृतांत) :</p>
-                  <div className="border-b border-gray-300 h-8 mt-1"></div>
+                <div className="mb-2">
+                  <p className="font-semibold text-xs text-gray-800">Obstetric History (प्रसुति वृतांत) :</p>
+                  <div className="border-b border-dashed border-gray-400 h-5 mt-0.5"></div>
                 </div>
 
                 {/* Occupation History */}
-                <div className="mb-4">
-                  <p className="font-semibold">Occupation History (व्यवसाय वृतांत) :</p>
-                  <div className="border-b border-gray-300 h-8 mt-1"></div>
+                <div className="mb-2">
+                  <p className="font-semibold text-xs text-gray-800">Occupation History (व्यवसाय वृतांत) :</p>
+                  <div className="border-b border-dashed border-gray-400 h-5 mt-0.5"></div>
+                </div>
+
+                {/* Additional sections with less space */}
+                <div className="mb-2">
+                  <p className="font-semibold text-xs text-gray-800">Examination :</p>
+                  <div className="border-b border-dashed border-gray-400 h-6 mt-0.5"></div>
+                </div>
+
+                <div className="mb-2">
+                  <p className="font-semibold text-xs text-gray-800">Diagnosis :</p>
+                  <div className="border-b border-dashed border-gray-400 h-6 mt-0.5"></div>
+                </div>
+
+                <div className="mb-2">
+                  <p className="font-semibold text-xs text-gray-800">Treatment / Rx :</p>
+                  <div className="border-b border-dashed border-gray-400 h-12 mt-0.5"></div>
                 </div>
               </div>
             </div>
 
             {/* Excalidraw Canvas */}
-            <div className="relative z-10 w-full" style={{ height: '297mm' }}>
+            <div className="absolute inset-0 z-20 [&_.excalidraw]:bg-transparent [&_canvas]:bg-transparent">
               {initialCanvasData !== undefined ? (
                 <Excalidraw
                   ref={handleExcalidrawRefCallback}

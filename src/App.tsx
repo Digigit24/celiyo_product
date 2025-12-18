@@ -43,6 +43,7 @@ import { ThemeSync } from "@/components/ThemeSync";
 import OPDVisits from "./pages/OPDVisits";  // ✅ Updated to new production page
 import OPDBilling from "./pages/opd-production/Billing";
 import OPDConsultation from "./pages/opd-production/Consultation";
+import { ConsultationCanvas } from "./pages/opd-production/ConsultationCanvas";
 import OPDBills from "./pages/opd-production/OPDBills";
 import ClinicalNotes from "./pages/opd-production/ClinicalNotes";
 import VisitFindings from "./pages/opd-production/VisitFindings";
@@ -109,6 +110,7 @@ const AppLayout = () => {
               <Route path="/opd/visits" element={<OPDVisits />} />
               <Route path="/opd/billing/:visitId" element={<OPDBilling />} />
               <Route path="/opd/consultation/:visitId" element={<OPDConsultation />} />
+              <Route path="/opd/consultation/:visitId/canvas/:responseId" element={<ConsultationCanvas />} />
               <Route path="/opd/bills" element={<OPDBills />} />
               <Route path="/opd/clinical-notes" element={<ClinicalNotes />} />
               <Route path="/opd/findings" element={<VisitFindings />} />

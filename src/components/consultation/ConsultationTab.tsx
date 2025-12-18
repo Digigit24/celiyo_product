@@ -1,5 +1,6 @@
 // src/components/consultation/ConsultationTab.tsx
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -42,7 +43,6 @@ import {
   CreateTemplateResponsePayload,
 } from '@/types/opdTemplate.types';
 import ExcalidrawWrapper from './ExcalidrawWrapper';
-import FullscreenA4Canvas from './FullscreenA4Canvas';
 import { useCanvasState } from '@/hooks/useCanvasState';
 import type { ExcalidrawElement, AppState } from '@excalidraw/excalidraw/types/types';
 
@@ -70,6 +70,7 @@ interface ConsultationTabProps {
 }
 
 export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
+  const navigate = useNavigate();
   const {
     useTemplates,
     useTemplate,
@@ -86,7 +87,6 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
   const [activeSubTab, setActiveSubTab] = useState<'fields' | 'canvas'>('fields');
   const [isSaving, setIsSaving] = useState(false);
   const [initialCanvasData, setInitialCanvasData] = useState<CanvasData | null | undefined>(undefined);
-  const [isFullscreenCanvasOpen, setIsFullscreenCanvasOpen] = useState(false);
   const loadedResponseIdRef = useRef<number | null>(null);
   
   const { data: responsesData, isLoading: isLoadingResponses, mutate: mutateResponses } = useTemplateResponses({
@@ -582,7 +582,7 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setIsFullscreenCanvasOpen(true)}
+              onClick={() => navigate(`/opd/consultation/${visit.id}/canvas/${activeResponse.id}`)}
               className="flex items-center gap-2"
             >
               <Maximize2 className="h-4 w-4" />
@@ -695,21 +695,6 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
             </div>
           </CardContent>
         </Card>
-      )}
-
-      {/* Fullscreen A4 Canvas Modal */}
-      {activeResponse && (
-        <FullscreenA4Canvas
-          open={isFullscreenCanvasOpen}
-          onOpenChange={setIsFullscreenCanvasOpen}
-          onChange={canvasState.handleChange}
-          onReady={canvasState.handleReady}
-          onSave={handleSaveCanvas}
-          initialData={initialCanvasData}
-          hasUnsavedChanges={canvasState.hasUnsavedChanges}
-          isReady={canvasState.isReady}
-          isSaving={isSaving}
-        />
       )}
     </div>
   );

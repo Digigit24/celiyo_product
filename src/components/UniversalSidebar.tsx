@@ -436,20 +436,21 @@ export function UniversalSidebar({
         {!collapsed && (
           <div className="flex items-center gap-3">
             {isTenantLoading ? (
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0">
-                <Loader2 className="w-6 h-6 animate-spin text-primary" />
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0">
+                  <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                </div>
+                <span className="text-sm text-muted-foreground">Loading...</span>
               </div>
             ) : tenantLogo && !logoError ? (
               <img
                 src={tenantLogo}
                 alt={`${tenantName} logo`}
-                className="w-20 h-20 object-contain rounded-lg"
+                className="h-12 object-contain"
                 onError={handleLogoError}
               />
             ) : (
-              <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center shrink-0">
-                <Icon3D icon={Stethoscope} className="w-6 h-6" />
-              </div>
+              <span className="text-lg font-semibold">{tenantName}</span>
             )}
           </div>
         )}

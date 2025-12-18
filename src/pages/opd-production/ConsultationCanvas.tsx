@@ -98,6 +98,12 @@ export const ConsultationCanvas: React.FC = () => {
     autoSaveDelay: 3000,
   });
 
+  // Store canvasState in a ref to prevent callback recreation
+  const canvasStateRef = useRef(canvasState);
+  useEffect(() => {
+    canvasStateRef.current = canvasState;
+  }, [canvasState]);
+
   // Load canvas data when response is loaded (only once)
   useEffect(() => {
     if (!responseData || fieldsData.length === 0 || isLoadingTemplate || hasInitializedCanvasRef.current) {
@@ -137,21 +143,21 @@ export const ConsultationCanvas: React.FC = () => {
   // Safety net: mark ready after a short delay
   useEffect(() => {
     const fallbackTimer = setTimeout(() => {
-      if (!hasNotifiedReadyRef.current && canvasState.handleReady) {
+      if (!hasNotifiedReadyRef.current && canvasStateRef.current?.handleReady) {
         hasNotifiedReadyRef.current = true;
-        canvasState.handleReady();
+        canvasStateRef.current.handleReady();
       }
     }, 1200);
     return () => clearTimeout(fallbackTimer);
-  }, [canvasState.handleReady]);
+  }, []); // Run once on mount
 
   // Notify parent when API is ready
   useEffect(() => {
-    if (excalidrawAPI && canvasState.handleReady && !hasNotifiedReadyRef.current) {
+    if (excalidrawAPI && canvasStateRef.current?.handleReady && !hasNotifiedReadyRef.current) {
       hasNotifiedReadyRef.current = true;
-      canvasState.handleReady();
+      canvasStateRef.current.handleReady();
     }
-  }, [excalidrawAPI, canvasState.handleReady]);
+  }, [excalidrawAPI]);
 
   const handleChange = useCallback((elements: readonly ExcalidrawElement[], appState: AppState) => {
     // Ignore onChange events during initialization
@@ -161,25 +167,25 @@ export const ConsultationCanvas: React.FC = () => {
     }
 
     // Prevent infinite loops by not calling handleChange if canvas isn't ready
-    if (!canvasState.isReady) {
+    if (!canvasStateRef.current?.isReady) {
       return;
     }
 
-    canvasState.handleChange(elements, appState);
-  }, [canvasState]);
+    canvasStateRef.current.handleChange(elements, appState);
+  }, []); // Empty deps - stable callback
 
   const handleExcalidrawRefCallback = useCallback((api: ExcalidrawImperativeAPI | null) => {
     if (api) {
       setExcalidrawAPI(api);
-      if (canvasState.handleReady && !hasNotifiedReadyRef.current) {
+      if (canvasStateRef.current?.handleReady && !hasNotifiedReadyRef.current) {
         hasNotifiedReadyRef.current = true;
-        canvasState.handleReady();
+        canvasStateRef.current.handleReady();
       }
     } else {
       hasNotifiedReadyRef.current = false;
       setExcalidrawAPI(null);
     }
-  }, [canvasState.handleReady]);
+  }, []); // Empty deps - stable callback
 
   // Manual save canvas
   const handleSaveCanvas = async () => {

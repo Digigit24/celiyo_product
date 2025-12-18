@@ -14,6 +14,8 @@ import PatientVisitHistory from '@/components/patient-drawer/PatientVisitHistory
 import PatientBillingHistory from '@/components/patient-drawer/PatientBillingHistory';
 import PatientAppointments from '@/components/patient-drawer/PatientAppointments';
 import OPDVisitFormDrawer from '@/components/OPDVisitFormDrawer';
+import AppointmentFormDrawer from '@/components/AppointmentFormDrawer';
+import OPDBillFormDrawer from '@/components/OPDBillFormDrawer';
 import type { PatientUpdateData } from '@/types/patient.types';
 
 export const PatientDetailsPage = () => {
@@ -27,6 +29,16 @@ export const PatientDetailsPage = () => {
   // Visit drawer state
   const [visitDrawerOpen, setVisitDrawerOpen] = useState(false);
   const [selectedVisitId, setSelectedVisitId] = useState<number | null>(null);
+
+  // Appointment drawer state
+  const [appointmentDrawerOpen, setAppointmentDrawerOpen] = useState(false);
+  const [selectedAppointmentId, setSelectedAppointmentId] = useState<number | null>(null);
+  const [appointmentDrawerMode, setAppointmentDrawerMode] = useState<'view' | 'edit' | 'create'>('view');
+
+  // Bill drawer state
+  const [billDrawerOpen, setBillDrawerOpen] = useState(false);
+  const [selectedBillId, setSelectedBillId] = useState<number | null>(null);
+  const [billDrawerMode, setBillDrawerMode] = useState<'view' | 'edit' | 'create'>('view');
 
   // Hooks
   const { usePatientById, updatePatient, deletePatient } = usePatient();
@@ -127,6 +139,37 @@ export const PatientDetailsPage = () => {
   // Handle visit drawer success
   const handleVisitSuccess = useCallback(() => {
     // Refresh patient data if needed
+    mutatePatient();
+  }, [mutatePatient]);
+
+  // Handle new appointment
+  const handleNewAppointment = useCallback(() => {
+    setSelectedAppointmentId(null);
+    setAppointmentDrawerMode('create');
+    setAppointmentDrawerOpen(true);
+  }, []);
+
+  // Handle appointment drawer success
+  const handleAppointmentSuccess = useCallback(() => {
+    mutatePatient();
+  }, [mutatePatient]);
+
+  // Handle view appointment
+  const handleViewAppointment = useCallback((appointmentId: number) => {
+    setSelectedAppointmentId(appointmentId);
+    setAppointmentDrawerMode('view');
+    setAppointmentDrawerOpen(true);
+  }, []);
+
+  // Handle new bill
+  const handleNewBill = useCallback(() => {
+    setSelectedBillId(null);
+    setBillDrawerMode('create');
+    setBillDrawerOpen(true);
+  }, []);
+
+  // Handle bill drawer success
+  const handleBillSuccess = useCallback(() => {
     mutatePatient();
   }, [mutatePatient]);
 
@@ -379,7 +422,13 @@ export const PatientDetailsPage = () => {
         <TabsContent value="billing" className="mt-6">
           <Card>
             <CardHeader>
-              <CardTitle>Billing History</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle>Billing History</CardTitle>
+                <Button onClick={handleNewBill} size="sm">
+                  <IndianRupee className="h-4 w-4 mr-2" />
+                  Add Bill
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <PatientBillingHistory patientId={patient.id} />
@@ -391,10 +440,19 @@ export const PatientDetailsPage = () => {
         <TabsContent value="appointments" className="mt-6">
           <Card>
             <CardHeader>
-              <CardTitle>Appointments</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle>Appointments</CardTitle>
+                <Button onClick={handleNewAppointment} size="sm">
+                  <Calendar className="h-4 w-4 mr-2" />
+                  Add Appointment
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
-              <PatientAppointments patientId={patient.id} />
+              <PatientAppointments
+                patientId={patient.id}
+                onViewAppointment={handleViewAppointment}
+              />
             </CardContent>
           </Card>
         </TabsContent>
@@ -407,6 +465,28 @@ export const PatientDetailsPage = () => {
         visitId={selectedVisitId}
         mode={selectedVisitId ? 'view' : 'create'}
         onSuccess={handleVisitSuccess}
+        initialPatientId={patientIdNum}
+      />
+
+      {/* Appointment Drawer */}
+      <AppointmentFormDrawer
+        open={appointmentDrawerOpen}
+        onOpenChange={setAppointmentDrawerOpen}
+        appointmentId={selectedAppointmentId}
+        mode={appointmentDrawerMode}
+        onSuccess={handleAppointmentSuccess}
+        onModeChange={setAppointmentDrawerMode}
+        initialPatientId={patientIdNum}
+      />
+
+      {/* Bill Drawer */}
+      <OPDBillFormDrawer
+        open={billDrawerOpen}
+        onOpenChange={setBillDrawerOpen}
+        billId={selectedBillId}
+        mode={billDrawerMode}
+        onSuccess={handleBillSuccess}
+        onModeChange={setBillDrawerMode}
         initialPatientId={patientIdNum}
       />
     </div>

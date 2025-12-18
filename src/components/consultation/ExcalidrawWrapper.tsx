@@ -2,6 +2,8 @@
 import React, { useCallback, useState, useEffect, useRef } from 'react';
 import { Excalidraw } from '@excalidraw/excalidraw';
 import type { ExcalidrawElement, AppState, ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types/types';
+import { Maximize2, Minimize2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface ExcalidrawWrapperProps {
   onChange: (elements: readonly ExcalidrawElement[], appState: AppState) => void;
@@ -15,8 +17,10 @@ interface ExcalidrawWrapperProps {
 
 const ExcalidrawWrapper = React.memo<ExcalidrawWrapperProps>(({ onChange, onReady, initialData, isReadOnly = false }) => {
   const [excalidrawAPI, setExcalidrawAPI] = useState<ExcalidrawImperativeAPI | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const hasNotifiedReadyRef = useRef(false);
   const isInitialLoadRef = useRef(true);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Safety net: in case the ref callback doesn't fire (strict mode quirks), mark ready after a short delay
   useEffect(() => {
@@ -61,13 +65,65 @@ const ExcalidrawWrapper = React.memo<ExcalidrawWrapperProps>(({ onChange, onRead
     }
   }, [onReady]);
 
+  const toggleFullscreen = useCallback(() => {
+    if (!containerRef.current) return;
+
+    if (!isFullscreen) {
+      if (containerRef.current.requestFullscreen) {
+        containerRef.current.requestFullscreen();
+      }
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      }
+    }
+  }, [isFullscreen]);
+
+  // Listen for fullscreen changes
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
+
+  // Prepare initial data with smallest brush size
+  const enhancedInitialData = React.useMemo(() => {
+    const baseData = initialData || { elements: [], appState: {} };
+    return {
+      ...baseData,
+      appState: {
+        ...baseData.appState,
+        currentItemStrokeWidth: 1, // Set smallest brush size
+      },
+    };
+  }, [initialData]);
 
   return (
-    <div className="w-full h-96 md:h-[500px] border rounded-md">
+    <div
+      ref={containerRef}
+      className={`relative w-full border rounded-md ${
+        isFullscreen ? 'h-screen' : 'h-96 md:h-[500px]'
+      }`}
+    >
+      {/* Fullscreen Toggle Button */}
+      <Button
+        variant="outline"
+        size="icon"
+        onClick={toggleFullscreen}
+        className="absolute top-2 right-2 z-50 bg-background/80 backdrop-blur-sm hover:bg-background"
+        title={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+      >
+        {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+      </Button>
+
       <Excalidraw
         ref={handleExcalidrawRefCallback}
         onChange={handleChange}
-        initialData={initialData || undefined}
+        initialData={enhancedInitialData}
         isCollaborating={false}
         viewModeEnabled={isReadOnly}
         UIOptions={{

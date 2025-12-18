@@ -27,6 +27,7 @@ import { Doctors } from "./pages/Doctors";
 import DoctorTest from "./pages/doctor";
 import { Specialties } from "./pages/Specialties";
 import PatientsTest from "./pages/Patients";
+import { PatientDetailsPage } from "./pages/PatientDetailsPage";
 import AppointmentsTest from "./pages/Appointments";
 import  Contacts from "./pages/Contacts";
 import Chats from "./pages/Chats";
@@ -101,6 +102,7 @@ const AppLayout = () => {
               <Route path="/hms/doctor-test" element={<DoctorTest />} />
               <Route path="/hms/specialties" element={<Specialties />} />
               <Route path="/patients" element={<PatientsTest />} />
+              <Route path="/patients/:patientId" element={<PatientDetailsPage />} />
               <Route path="/appointments" element={<AppointmentsTest />} />
 
               {/* OPD Routes */}

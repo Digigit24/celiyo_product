@@ -1,5 +1,6 @@
 // src/pages/Patients.tsx
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { usePatient } from '@/hooks/usePatient';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,6 +23,7 @@ import { PatientListParams, Patient } from '@/types/patient.types';
 
 export const Patients: React.FC = () => {
   const { user, hasModuleAccess } = useAuth();
+  const navigate = useNavigate();
   const {
     hasHMSAccess,
     usePatients,
@@ -33,7 +35,7 @@ export const Patients: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<'active' | 'inactive' | 'deceased' | ''>('');
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Drawer state
+  // Drawer state (only for create mode now)
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedPatientId, setSelectedPatientId] = useState<number | null>(null);
   const [drawerMode, setDrawerMode] = useState<'view' | 'edit' | 'create'>('view');
@@ -70,15 +72,11 @@ export const Patients: React.FC = () => {
   };
 
   const handleView = (patient: Patient) => {
-    setSelectedPatientId(patient.id);
-    setDrawerMode('view');
-    setDrawerOpen(true);
+    navigate(`/patients/${patient.id}`);
   };
 
   const handleEdit = (patient: Patient) => {
-    setSelectedPatientId(patient.id);
-    setDrawerMode('edit');
-    setDrawerOpen(true);
+    navigate(`/patients/${patient.id}`);
   };
 
   const handleCreate = () => {

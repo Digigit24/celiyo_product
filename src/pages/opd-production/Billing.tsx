@@ -1,7 +1,7 @@
 // src/pages/opd/Billing.tsx
 // deps: npm i react-to-print@^3 jspdf html2canvas
 import React, { useState, useEffect, useRef, useCallback, memo, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useOpdVisit } from '@/hooks/useOpdVisit';
 import { useOPDBill } from '@/hooks/useOPDBill';
 import { useProcedureMaster } from '@/hooks/useProcedureMaster';
@@ -253,8 +253,19 @@ const BillingDetailsPanel = memo(function BillingDetailsPanel({
 export default function OPDBilling() {
   const { visitId } = useParams<{ visitId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, getTenant } = useAuth();
   const { useTenantDetail } = useTenant();
+
+  // Handle back navigation - go to the previous page if state is provided, otherwise go to visits
+  const handleBack = useCallback(() => {
+    const from = (location.state as any)?.from;
+    if (from) {
+      navigate(from);
+    } else {
+      navigate('/opd/visits');
+    }
+  }, [location, navigate]);
 
   // Get tenant from current session
   const tenant = getTenant();
@@ -816,9 +827,9 @@ export default function OPDBilling() {
             <CardDescription>{visitError?.message || 'Visit not found'}</CardDescription>
           </CardHeader>
           <CardContent>
-            <Button onClick={() => navigate('/opd/visits')} variant="outline">
+            <Button onClick={handleBack} variant="outline">
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Visits
+              Back
             </Button>
           </CardContent>
         </Card>
@@ -841,7 +852,7 @@ export default function OPDBilling() {
           <Button
             variant="outline"
             size="icon"
-            onClick={() => navigate(`/opd/visits`)}
+            onClick={handleBack}
             className="no-print"
           >
             <ArrowLeft className="h-4 w-4" />

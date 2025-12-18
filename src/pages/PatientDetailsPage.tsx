@@ -130,11 +130,7 @@ export const PatientDetailsPage = () => {
     mutatePatient();
   }, [mutatePatient]);
 
-  // Handle view visit
-  const handleViewVisit = useCallback((visitId: number) => {
-    setSelectedVisitId(visitId);
-    setVisitDrawerOpen(true);
-  }, []);
+  // Note: handleViewVisit removed - visits now navigate directly to consultation page
 
   // Loading state
   if (patientLoading) {
@@ -374,7 +370,6 @@ export const PatientDetailsPage = () => {
             <CardContent>
               <PatientVisitHistory
                 patientId={patient.id}
-                onViewVisit={handleViewVisit}
               />
             </CardContent>
           </Card>

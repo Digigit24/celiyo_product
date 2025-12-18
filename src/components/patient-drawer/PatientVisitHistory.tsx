@@ -1,5 +1,6 @@
 // src/components/patient-drawer/PatientVisitHistory.tsx
 import { useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useOpdVisit } from '@/hooks/useOpdVisit';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -16,6 +17,8 @@ interface PatientVisitHistoryProps {
 
 export default function PatientVisitHistory({ patientId, onViewVisit }: PatientVisitHistoryProps) {
   const { useOpdVisits } = useOpdVisit();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [currentPage, setCurrentPage] = useState(1);
 
   const {
@@ -187,7 +190,15 @@ export default function PatientVisitHistory({ patientId, onViewVisit }: PatientV
   };
 
   const handleView = (visit: OpdVisit) => {
-    onViewVisit?.(visit.id);
+    // If onViewVisit is provided (drawer mode), use it
+    if (onViewVisit) {
+      onViewVisit(visit.id);
+    } else {
+      // Otherwise, navigate to consultation page with return state
+      navigate(`/opd/consultation/${visit.id}`, {
+        state: { from: location.pathname }
+      });
+    }
   };
 
   if (visitsError) {

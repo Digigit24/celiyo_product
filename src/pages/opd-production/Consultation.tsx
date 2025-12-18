@@ -1,6 +1,6 @@
 // src/pages/opd/Consultation.tsx
 import React, { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useOpdVisit } from '@/hooks/useOpdVisit';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -17,8 +17,19 @@ import { ProfileTab } from '@/components/consultation/ProfileTab';
 export const OPDConsultation: React.FC = () => {
   const { visitId } = useParams<{ visitId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { useOpdVisitById } = useOpdVisit();
   const [activeTab, setActiveTab] = useState('consultation');
+
+  // Handle back navigation - go to the previous page if state is provided, otherwise go to visits
+  const handleBack = () => {
+    const from = (location.state as any)?.from;
+    if (from) {
+      navigate(from);
+    } else {
+      navigate('/opd/visits');
+    }
+  };
 
   const { data: visit, isLoading, error } = useOpdVisitById(visitId ? parseInt(visitId) : null);
 
@@ -36,8 +47,8 @@ export const OPDConsultation: React.FC = () => {
         <Card>
           <CardContent className="p-8 text-center">
             <p className="text-destructive">Failed to load visit details</p>
-            <Button onClick={() => navigate('/opd/visits')} className="mt-4">
-              Back to Visits
+            <Button onClick={handleBack} className="mt-4">
+              Back
             </Button>
           </CardContent>
         </Card>
@@ -70,7 +81,7 @@ export const OPDConsultation: React.FC = () => {
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => navigate('/opd/visits')}
+          onClick={handleBack}
         >
           <ArrowLeft className="h-5 w-5" />
         </Button>

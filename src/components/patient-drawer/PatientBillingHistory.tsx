@@ -8,7 +8,7 @@ import { DataTable, DataTableColumn } from '@/components/DataTable';
 import { OPDBill } from '@/types/opdBill.types';
 import { Loader2, Eye, Calendar, IndianRupee, FileText } from 'lucide-react';
 import { format } from 'date-fns';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 interface PatientBillingHistoryProps {
   patientId: number;
@@ -18,6 +18,7 @@ export default function PatientBillingHistory({ patientId }: PatientBillingHisto
   const { useOPDBills, useOPDBillStatistics } = useOPDBill();
   const [currentPage, setCurrentPage] = useState(1);
   const navigate = useNavigate();
+  const location = useLocation();
 
   const {
     data: billsData,
@@ -198,7 +199,9 @@ export default function PatientBillingHistory({ patientId }: PatientBillingHisto
 
   const handleView = (bill: OPDBill) => {
     if (bill.visit) {
-      navigate(`/opd/billing/${bill.visit}`);
+      navigate(`/opd/billing/${bill.visit}`, {
+        state: { from: location.pathname }
+      });
     }
   };
 

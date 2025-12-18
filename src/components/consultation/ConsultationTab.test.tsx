@@ -40,10 +40,6 @@ vi.mock('sonner', () => ({
   },
 }));
 
-vi.mock('@excalidraw/excalidraw', () => ({
-  exportToBlob: vi.fn(),
-}));
-
 describe('ConsultationTab', () => {
   const visit: OpdVisit = {
     id: 1,

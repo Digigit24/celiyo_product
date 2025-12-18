@@ -1,5 +1,5 @@
 // src/components/consultation/ConsultationTab.tsx
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -31,6 +31,7 @@ import {
   PlusCircle,
   Eye,
   Maximize2,
+  Pencil,
 } from 'lucide-react';
 import { OpdVisit } from '@/types/opdVisit.types';
 import { toast } from 'sonner';
@@ -42,28 +43,6 @@ import {
   FieldResponsePayload,
   CreateTemplateResponsePayload,
 } from '@/types/opdTemplate.types';
-import ExcalidrawWrapper from './ExcalidrawWrapper';
-import { useCanvasState } from '@/hooks/useCanvasState';
-import type { ExcalidrawElement, AppState } from '@excalidraw/excalidraw/types/types';
-
-type CanvasData = {
-  elements: readonly ExcalidrawElement[];
-  appState: Partial<AppState>;
-};
-
-const sanitizeCanvasData = (data: CanvasData | null): CanvasData | null => {
-  if (!data) return null;
-
-  const elements = Array.isArray(data.elements) ? [...data.elements] : [];
-  const appState: Partial<AppState> = { ...(data.appState || {}) };
-
-  // Remove/normalize non-serializable or incompatible fields
-  if ((appState as any).collaborators && !((appState as any).collaborators instanceof Map)) {
-    delete (appState as any).collaborators;
-  }
-
-  return { elements, appState };
-};
 
 interface ConsultationTabProps {
   visit: OpdVisit;
@@ -86,9 +65,7 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
   const [activeResponse, setActiveResponse] = useState<TemplateResponse | null>(null);
   const [activeSubTab, setActiveSubTab] = useState<'fields' | 'canvas'>('fields');
   const [isSaving, setIsSaving] = useState(false);
-  const [initialCanvasData, setInitialCanvasData] = useState<CanvasData | null | undefined>(undefined);
-  const loadedResponseIdRef = useRef<number | null>(null);
-  
+
   const { data: responsesData, isLoading: isLoadingResponses, mutate: mutateResponses } = useTemplateResponses({
     visit: visit.id,
     template: selectedTemplate ? parseInt(selectedTemplate) : undefined,
@@ -104,37 +81,6 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
   const { data: detailedActiveResponse } = useTemplateResponse(
     activeResponse?.id || null
   );
-
-  // Canvas state management with custom hook
-  const handleCanvasAutoSave = useCallback(async (canvasData: { elements: readonly ExcalidrawElement[]; appState: Partial<AppState> }) => {
-    if (!activeResponse) return;
-
-    const canvasField = fieldsData.find(f => f.field_type === 'json' || f.field_type === 'canvas');
-    if (!canvasField) return;
-
-    try {
-      const payload = {
-        field_responses: [
-          {
-            field: canvasField.id,
-            full_canvas_json: sanitizeCanvasData(canvasData),
-          }
-        ],
-      };
-
-      await mutateResponses((current) => current, { revalidate: false });
-      await updateTemplateResponse(activeResponse.id, payload);
-      mutateResponses();
-    } catch (error) {
-      console.error('Canvas auto-save failed:', error);
-      throw error;
-    }
-  }, [activeResponse, fieldsData, updateTemplateResponse, mutateResponses]);
-
-  const canvasState = useCanvasState({
-    onAutoSave: handleCanvasAutoSave,
-    autoSaveDelay: 3000,
-  });
 
   useEffect(() => {
     if (!detailedActiveResponse || fieldsData.length === 0 || isLoadingTemplate) {
@@ -166,37 +112,6 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
       });
       setFormData(populatedData);
 
-      // Load canvas data if present
-      const canvasFieldResponse = detailedActiveResponse.field_responses?.find(fr => {
-        const field = fieldsData.find(f => f.id === fr.field);
-        return field?.field_type === 'json' || field?.field_type === 'canvas';
-      });
-
-      // Only update canvas when switching to a different response
-      // This prevents clearing during auto-save revalidations
-      const isNewResponse = loadedResponseIdRef.current !== detailedActiveResponse.id;
-
-      if (isNewResponse) {
-        loadedResponseIdRef.current = detailedActiveResponse.id;
-
-        // Check if we have valid canvas data
-        const fullCanvasJson = canvasFieldResponse?.full_canvas_json;
-        const hasCanvasData = fullCanvasJson &&
-                             typeof fullCanvasJson === 'object' &&
-                             fullCanvasJson.elements &&
-                             Array.isArray(fullCanvasJson.elements) &&
-                             fullCanvasJson.elements.length > 0;
-
-        if (hasCanvasData) {
-          const nextCanvasData = sanitizeCanvasData(fullCanvasJson);
-          setInitialCanvasData(nextCanvasData);
-          canvasState.loadData(nextCanvasData);
-        } else {
-          setInitialCanvasData(null);
-          canvasState.loadData(null);
-        }
-      }
-
     toast.info(`Loaded response #${detailedActiveResponse.response_sequence} by Dr. ${detailedActiveResponse.filled_by_name}`);
   }, [detailedActiveResponse, fieldsData, isLoadingTemplate]);
 
@@ -220,10 +135,6 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
 
   const handleViewResponse = useCallback((response: TemplateResponse) => {
     setActiveResponse(response);
-    // Reset canvas data to show loading state while fetching new response
-    setInitialCanvasData(undefined);
-    loadedResponseIdRef.current = null;
-    // The useEffect for detailedActiveResponse will handle fetching and populating data
   }, []);
 
   const handleAddNewResponse = useCallback(async (isAutoCreation = false) => {
@@ -273,20 +184,6 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
     setFormData(prev => ({ ...prev, [fieldId]: value }));
   }, []);
 
-  // Warn before leaving with unsaved changes
-  useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (canvasState.hasUnsavedChanges) {
-        e.preventDefault();
-        e.returnValue = 'You have unsaved canvas changes. Are you sure you want to leave?';
-        return e.returnValue;
-      }
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [canvasState.hasUnsavedChanges]);
-
   const handleSave = async () => {
     if (!activeResponse) {
       toast.error('No active response to save.');
@@ -334,25 +231,6 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
 
     } catch (error: any) {
       toast.error(error.message || 'Failed to save fields.');
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  // Manual save canvas (with user feedback)
-  const handleSaveCanvas = async () => {
-    if (!activeResponse) {
-      toast.error('No active response to save.');
-      return;
-    }
-
-    setIsSaving(true);
-    try {
-      await canvasState.save();
-      toast.success('Canvas saved successfully!');
-      await mutateResponses();
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to save canvas.');
     } finally {
       setIsSaving(false);
     }
@@ -513,7 +391,7 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
         return null;
     }
   };
-  
+
   return (
     <div className="space-y-4">
       <Card>
@@ -574,20 +452,9 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
 
       {activeResponse && (
         <Card>
-          <CardHeader className="flex flex-row items-start justify-between space-y-0">
-            <div className="space-y-1.5">
-              <CardTitle>Response #{activeResponse.response_sequence}</CardTitle>
-              <CardDescription>Fill out the form fields and draw on the canvas</CardDescription>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate(`/opd/consultation/${visit.id}/canvas/${activeResponse.id}`)}
-              className="flex items-center gap-2"
-            >
-              <Maximize2 className="h-4 w-4" />
-              Open Canvas
-            </Button>
+          <CardHeader>
+            <CardTitle>Response #{activeResponse.response_sequence}</CardTitle>
+            <CardDescription>Fill out the form fields and draw on the canvas</CardDescription>
           </CardHeader>
           <CardContent>
             {/* Custom Tab Navigation */}
@@ -636,60 +503,31 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
               </div>
             </div>
 
-            {/* Canvas Tab Content - Keep mounted to preserve ref */}
+            {/* Canvas Tab Content - Open Canvas Button */}
             <div className={activeSubTab === 'canvas' ? 'block' : 'hidden'}>
               <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center gap-2">
-                    {!canvasState.isReady && (
-                      <span className="text-sm text-muted-foreground flex items-center gap-1">
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                        Initializing canvas...
-                      </span>
-                    )}
-                    {canvasState.isReady && canvasState.hasUnsavedChanges && (
-                      <span className="text-sm text-amber-600 dark:text-amber-400 flex items-center gap-1">
-                        <span className="h-2 w-2 rounded-full bg-amber-600 dark:bg-amber-400 animate-pulse" />
-                        Auto-saving...
-                      </span>
-                    )}
-                    {canvasState.isReady && !canvasState.hasUnsavedChanges && canvasState.canvasData && (
-                      <span className="text-sm text-green-600 dark:text-green-400 flex items-center gap-1">
-                        <span className="h-2 w-2 rounded-full bg-green-600 dark:bg-green-400" />
-                        Saved
-                      </span>
-                    )}
-                  </div>
-                  <Button onClick={handleSaveCanvas} disabled={isSaving || !canvasState.isReady}>
-                    {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                    Save Now
-                  </Button>
-                </div>
-                {activeResponse.canvas_data && (
-                  <div className="space-y-2">
-                    <Label>Last Saved Drawing</Label>
-                    <div className="border rounded-md p-2 flex justify-center bg-muted">
-                      <img src={activeResponse.canvas_data} alt="Saved Canvas Drawing" className="max-w-full h-auto rounded" />
-                    </div>
-                  </div>
-                )}
-                <div className="space-y-2">
-                  <Label>{activeResponse.canvas_data ? 'Draw a new sketch below' : 'Draw on the canvas below'}</Label>
-                  {/* Only mount Excalidraw after initial data is set (or confirmed to be empty) */}
-                  {initialCanvasData !== undefined ? (
-                    <ExcalidrawWrapper
-                      initialData={initialCanvasData}
-                      onChange={canvasState.handleChange}
-                      onReady={canvasState.handleReady}
-                    />
-                  ) : (
-                    <div className="w-full h-96 md:h-[500px] border rounded-md flex items-center justify-center bg-muted">
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Loader2 className="h-5 w-5 animate-spin" />
-                        <span>Loading canvas...</span>
+                <div className="w-full h-96 md:h-[500px] border rounded-md flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-50">
+                  <div className="text-center space-y-4 p-8">
+                    <div className="flex justify-center">
+                      <div className="p-4 bg-white rounded-full shadow-md">
+                        <Pencil className="w-12 h-12 text-blue-500" />
                       </div>
                     </div>
-                  )}
+                    <div className="space-y-2">
+                      <h3 className="text-xl font-semibold text-gray-800">Digital Canvas</h3>
+                      <p className="text-sm text-gray-600 max-w-md">
+                        Open the full-screen canvas to draw, annotate, and create handwritten notes for this consultation.
+                      </p>
+                    </div>
+                    <Button
+                      onClick={() => navigate(`/opd/consultation/${visit.id}/canvas/${activeResponse.id}`)}
+                      className="mt-4 bg-blue-500 hover:bg-blue-600 text-white"
+                      size="lg"
+                    >
+                      <Maximize2 className="mr-2 h-5 w-5" />
+                      Open Canvas
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>

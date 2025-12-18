@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Chart from 'react-apexcharts';
 import { ApexOptions } from 'apexcharts';
 import { Card } from '@/components/ui/card';
@@ -11,6 +12,10 @@ import {
   TrendingUp,
   FileText,
   Loader2,
+  UserPlus,
+  ClipboardList,
+  Receipt,
+  ArrowRight,
 } from 'lucide-react';
 import { usePatient } from '@/hooks/usePatient';
 import { useOpdVisit } from '@/hooks/useOpdVisit';
@@ -164,6 +169,7 @@ const StatCard = ({ title, value, icon, trend, trendUp, loading, gradient, isDar
 const Dashboard = () => {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
+  const navigate = useNavigate();
 
   const { usePatientStatistics } = usePatient();
   const { useOpdVisitStatistics } = useOpdVisit();
@@ -563,6 +569,152 @@ const Dashboard = () => {
                 <p className={`text-xs font-medium ${isDark ? 'text-indigo-300' : 'text-indigo-700'}`}>Demo Mode</p>
               </div>
             )}
+          </div>
+        </div>
+
+        {/* Quick Navigation Tabs */}
+        <div className="mb-8">
+          <h2 className={`text-lg font-semibold mb-4 ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>
+            Quick Access
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Patients Card */}
+            <Card
+              onClick={() => navigate('/patients')}
+              className={`group cursor-pointer relative overflow-hidden transition-all duration-300 hover:scale-[1.02] hover:shadow-lg ${
+                isDark
+                  ? 'border-gray-700 bg-gradient-to-br from-indigo-950/40 via-gray-800/40 to-indigo-900/30 hover:border-indigo-600'
+                  : 'border-gray-200 bg-gradient-to-br from-indigo-50/50 via-white to-indigo-50/30 hover:border-indigo-300'
+              }`}
+            >
+              <div className="p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className={`p-3 rounded-xl transition-all duration-300 ${
+                      isDark
+                        ? 'bg-indigo-900/50 group-hover:bg-indigo-800/70'
+                        : 'bg-indigo-100 group-hover:bg-indigo-200'
+                    }`}>
+                      <UserPlus className={`w-6 h-6 ${
+                        isDark ? 'text-indigo-400' : 'text-indigo-600'
+                      }`} />
+                    </div>
+                    <div>
+                      <h3 className={`text-base font-semibold ${
+                        isDark ? 'text-gray-100' : 'text-gray-900'
+                      }`}>
+                        Patients
+                      </h3>
+                      <p className={`text-sm mt-0.5 ${
+                        isDark ? 'text-gray-400' : 'text-gray-500'
+                      }`}>
+                        Manage patient records
+                      </p>
+                    </div>
+                  </div>
+                  <ArrowRight className={`w-5 h-5 transition-transform duration-300 group-hover:translate-x-1 ${
+                    isDark ? 'text-gray-500' : 'text-gray-400'
+                  }`} />
+                </div>
+              </div>
+              <div className={`absolute inset-0 pointer-events-none transition-opacity duration-300 opacity-0 group-hover:opacity-100 ${
+                isDark
+                  ? 'bg-gradient-to-r from-indigo-600/10 to-transparent'
+                  : 'bg-gradient-to-r from-indigo-100/50 to-transparent'
+              }`} />
+            </Card>
+
+            {/* OPD Visits Card */}
+            <Card
+              onClick={() => navigate('/opd/visits')}
+              className={`group cursor-pointer relative overflow-hidden transition-all duration-300 hover:scale-[1.02] hover:shadow-lg ${
+                isDark
+                  ? 'border-gray-700 bg-gradient-to-br from-emerald-950/40 via-gray-800/40 to-emerald-900/30 hover:border-emerald-600'
+                  : 'border-gray-200 bg-gradient-to-br from-emerald-50/50 via-white to-emerald-50/30 hover:border-emerald-300'
+              }`}
+            >
+              <div className="p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className={`p-3 rounded-xl transition-all duration-300 ${
+                      isDark
+                        ? 'bg-emerald-900/50 group-hover:bg-emerald-800/70'
+                        : 'bg-emerald-100 group-hover:bg-emerald-200'
+                    }`}>
+                      <ClipboardList className={`w-6 h-6 ${
+                        isDark ? 'text-emerald-400' : 'text-emerald-600'
+                      }`} />
+                    </div>
+                    <div>
+                      <h3 className={`text-base font-semibold ${
+                        isDark ? 'text-gray-100' : 'text-gray-900'
+                      }`}>
+                        OPD Visits
+                      </h3>
+                      <p className={`text-sm mt-0.5 ${
+                        isDark ? 'text-gray-400' : 'text-gray-500'
+                      }`}>
+                        Track outpatient visits
+                      </p>
+                    </div>
+                  </div>
+                  <ArrowRight className={`w-5 h-5 transition-transform duration-300 group-hover:translate-x-1 ${
+                    isDark ? 'text-gray-500' : 'text-gray-400'
+                  }`} />
+                </div>
+              </div>
+              <div className={`absolute inset-0 pointer-events-none transition-opacity duration-300 opacity-0 group-hover:opacity-100 ${
+                isDark
+                  ? 'bg-gradient-to-r from-emerald-600/10 to-transparent'
+                  : 'bg-gradient-to-r from-emerald-100/50 to-transparent'
+              }`} />
+            </Card>
+
+            {/* OPD Bills Card */}
+            <Card
+              onClick={() => navigate('/opd/bills')}
+              className={`group cursor-pointer relative overflow-hidden transition-all duration-300 hover:scale-[1.02] hover:shadow-lg ${
+                isDark
+                  ? 'border-gray-700 bg-gradient-to-br from-amber-950/40 via-gray-800/40 to-amber-900/30 hover:border-amber-600'
+                  : 'border-gray-200 bg-gradient-to-br from-amber-50/50 via-white to-amber-50/30 hover:border-amber-300'
+              }`}
+            >
+              <div className="p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className={`p-3 rounded-xl transition-all duration-300 ${
+                      isDark
+                        ? 'bg-amber-900/50 group-hover:bg-amber-800/70'
+                        : 'bg-amber-100 group-hover:bg-amber-200'
+                    }`}>
+                      <Receipt className={`w-6 h-6 ${
+                        isDark ? 'text-amber-400' : 'text-amber-600'
+                      }`} />
+                    </div>
+                    <div>
+                      <h3 className={`text-base font-semibold ${
+                        isDark ? 'text-gray-100' : 'text-gray-900'
+                      }`}>
+                        OPD Bills
+                      </h3>
+                      <p className={`text-sm mt-0.5 ${
+                        isDark ? 'text-gray-400' : 'text-gray-500'
+                      }`}>
+                        View and manage bills
+                      </p>
+                    </div>
+                  </div>
+                  <ArrowRight className={`w-5 h-5 transition-transform duration-300 group-hover:translate-x-1 ${
+                    isDark ? 'text-gray-500' : 'text-gray-400'
+                  }`} />
+                </div>
+              </div>
+              <div className={`absolute inset-0 pointer-events-none transition-opacity duration-300 opacity-0 group-hover:opacity-100 ${
+                isDark
+                  ? 'bg-gradient-to-r from-amber-600/10 to-transparent'
+                  : 'bg-gradient-to-r from-amber-100/50 to-transparent'
+              }`} />
+            </Card>
           </div>
         </div>
 

@@ -52,6 +52,8 @@ const FIELD_TYPE_OPTIONS: { value: FieldType; label: string; icon: string }[] = 
   { value: 'multiselect', label: 'Multi Select', icon: '☑️' },
   { value: 'radio', label: 'Radio Buttons', icon: '🔘' },
   { value: 'checkbox', label: 'Checkboxes', icon: '✅' },
+  { value: 'canvas', label: 'Canvas Drawing', icon: '🎨' },
+  { value: 'json', label: 'JSON Data', icon: '📊' },
 ];
 
 // Sortable Field Row Component with Inline Editing
@@ -123,6 +125,7 @@ function SortableFieldRow({
       image: 'bg-orange-100 text-orange-800 border-orange-200',
       file: 'bg-orange-100 text-orange-800 border-orange-200',
       json: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+      canvas: 'bg-violet-100 text-violet-800 border-violet-200',
     };
 
     const icon = FIELD_TYPE_OPTIONS.find(opt => opt.value === fieldType)?.icon || '📝';
@@ -152,7 +155,7 @@ function SortableFieldRow({
     setIsEditingPlaceholder(false);
   };
 
-  const needsPlaceholder = !['select', 'multiselect', 'radio', 'checkbox', 'boolean'].includes(field.field_type);
+  const needsPlaceholder = !['select', 'multiselect', 'radio', 'checkbox', 'boolean', 'canvas', 'json'].includes(field.field_type);
 
   return (
     <div
@@ -442,7 +445,9 @@ export function TemplateFieldsTab() {
                        fieldType === 'email' ? 'Enter email address...' :
                        fieldType === 'phone' ? 'Enter phone number...' :
                        fieldType === 'date' ? '' :
-                       fieldType === 'datetime' ? '' : '',
+                       fieldType === 'datetime' ? '' :
+                       fieldType === 'canvas' ? '' :
+                       fieldType === 'json' ? '' : '',
           is_required: false,
           display_order: localFields.length,
           is_active: true,

@@ -6,6 +6,7 @@
 
 export const API_CONFIG = {
   // ==================== BASE URLS ====================
+  
   // You can override these via Vite env vars in .env/.env.local
   // VITE_AUTH_BASE_URL, VITE_CRM_BASE_URL, VITE_WHATSAPP_BASE_URL, VITE_WHATSAPP_WS_URL
   AUTH_BASE_URL: import.meta.env.VITE_AUTH_BASE_URL || 'https://admin.celiyo.com/api',
@@ -188,16 +189,46 @@ export const API_CONFIG = {
         DELETE: '/opd/visit-attachments/:id/',
       },
       TEMPLATE_RESPONSES: {
-        // Visit-specific template responses
+        // General Listing/Creation
+        LIST: '/opd/template-responses/', // To get all, can be filtered by visit, template, etc.
+        CREATE: '/opd/template-responses/', // To create a new response instance (e.g., for a new doctor)
+
+        // Visit-specific are convenient shortcuts
         VISIT_LIST: '/opd/visits/:visit_id/template_responses/',
-        VISIT_CREATE: '/opd/visits/:visit_id/template_responses/',
-        // Individual template response operations
+        
+        // Operations on a specific template response
         DETAIL: '/opd/template-responses/:id/',
         UPDATE: '/opd/template-responses/:id/',
         DELETE: '/opd/template-responses/:id/',
-        // Field responses
-        FIELD_RESPONSES: '/opd/template-field-responses/',
-      }
+
+        // New custom actions
+        COMPARE: '/opd/template-responses/:id/compare/',
+        MARK_REVIEWED: '/opd/template-responses/:id/mark_reviewed/',
+        CONVERT_TO_TEMPLATE: '/opd/template-responses/:id/convert_to_template/',
+        APPLY_TEMPLATE: '/opd/template-responses/:id/apply_template/',
+
+        // Nested field responses for a given template response
+        FIELD_RESPONSES_LIST: '/opd/template-responses/:id/field-responses/',
+        FIELD_RESPONSE_CREATE: '/opd/template-responses/:id/field-responses/',
+      },
+
+      // Separate endpoints for individual field responses (for PATCH, DELETE)
+      TEMPLATE_FIELD_RESPONSES: {
+        DETAIL: '/opd/template-field-responses/:id/',
+        UPDATE: '/opd/template-field-responses/:id/',
+        DELETE: '/opd/template-field-responses/:id/',
+      },
+
+      // New endpoints for the reusable response templates
+      RESPONSE_TEMPLATES: {
+        LIST: '/opd/response-templates/',
+        DETAIL: '/opd/response-templates/:id/',
+        CREATE: '/opd/response-templates/',
+        UPDATE: '/opd/response-templates/:id/',
+        DELETE: '/opd/response-templates/:id/',
+        MY_TEMPLATES: '/opd/response-templates/my_templates/',
+        CLONE: '/opd/response-templates/:id/clone/',
+      },
     },
     PAYMENTS: {
       CATEGORIES: {

@@ -32,6 +32,11 @@ import {
   TemplateFieldResponsesQueryParams,
   CreateTemplateFieldResponsePayload,
   UpdateTemplateFieldResponsePayload,
+  ResponseTemplate,
+  ResponseTemplatesResponse,
+  ResponseTemplatesQueryParams,
+  CreateResponseTemplatePayload,
+  UpdateResponseTemplatePayload,
 } from '@/types/opdTemplate.types';
 
 class OPDTemplateService {
@@ -426,12 +431,20 @@ class OPDTemplateService {
     data: UpdateTemplateResponsePayload
   ): Promise<TemplateResponse> {
     try {
+      console.log('[SERVICE DEBUG] updateTemplateResponse called');
+      console.log('[SERVICE DEBUG] Response ID:', id);
+      console.log('[SERVICE DEBUG] Payload:', JSON.stringify(data, null, 2));
+      console.log('[SERVICE DEBUG] Payload field_responses:', data.field_responses);
+
       const response = await hmsClient.patch<TemplateResponse>(
         `${this.baseURL}/template-responses/${id}/`,
         data
       );
+
+      console.log('[SERVICE DEBUG] API Response:', response.data);
       return response.data;
     } catch (error: any) {
+      console.error('[SERVICE DEBUG] Update failed:', error.response?.data);
       const message =
         error.response?.data?.error ||
         error.response?.data?.message ||
@@ -448,6 +461,71 @@ class OPDTemplateService {
         error.response?.data?.error ||
         error.response?.data?.message ||
         'Failed to delete template response';
+      throw new Error(message);
+    }
+  }
+
+  async uploadCanvasForResponse(responseId: number, canvasFile: File): Promise<TemplateResponse> {
+    const formData = new FormData();
+    formData.append('canvas_data', canvasFile);
+
+    try {
+        const response = await hmsClient.patch<TemplateResponse>(
+            `${this.baseURL}/template-responses/${responseId}/`,
+            formData,
+            { headers: { 'Content-Type': 'multipart/form-data' } }
+        );
+        return response.data;
+    } catch (error: any) {
+        const message = error.response?.data?.error || 'Failed to upload canvas image';
+        throw new Error(message);
+    }
+  }
+  
+  // -- Actions for TemplateResponse --
+  async markResponseAsReviewed(id: number): Promise<TemplateResponse> {
+    try {
+      const response = await hmsClient.post<TemplateResponse>(
+        `${this.baseURL}/template-responses/${id}/mark_reviewed/`
+      );
+      return response.data;
+    } catch (error: any) {
+      const message =
+        error.response?.data?.error ||
+        error.response?.data?.message ||
+        'Failed to mark response as reviewed';
+      throw new Error(message);
+    }
+  }
+
+  async convertToResponseTemplate(id: number, name: string, isPublic?: boolean): Promise<ResponseTemplate> {
+    try {
+      const response = await hmsClient.post<ResponseTemplate>(
+        `${this.baseURL}/template-responses/${id}/convert_to_template/`,
+        { name, is_public: isPublic }
+      );
+      return response.data;
+    } catch (error: any) {
+      const message =
+        error.response?.data?.error ||
+        error.response?.data?.message ||
+        'Failed to convert to reusable template';
+      throw new Error(message);
+    }
+  }
+
+  async applyResponseTemplate(responseId: number, templateId: number): Promise<TemplateResponse> {
+    try {
+      const response = await hmsClient.post<TemplateResponse>(
+        `${this.baseURL}/template-responses/${responseId}/apply_template/`,
+        { template_id: templateId }
+      );
+      return response.data;
+    } catch (error: any) {
+      const message =
+        error.response?.data?.error ||
+        error.response?.data?.message ||
+        'Failed to apply reusable template';
       throw new Error(message);
     }
   }
@@ -526,9 +604,10 @@ class OPDTemplateService {
     data: CreateTemplateFieldResponsePayload
   ): Promise<TemplateFieldResponse> {
     try {
+      const { response: templateResponseId, ...payload } = data;
       const response = await hmsClient.post<TemplateFieldResponse>(
-        `${this.baseURL}/template-field-responses/`,
-        data
+        `${this.baseURL}/template-responses/${templateResponseId}/field-responses/`,
+        payload
       );
       return response.data;
     } catch (error: any) {
@@ -567,6 +646,114 @@ class OPDTemplateService {
         error.response?.data?.error ||
         error.response?.data?.message ||
         'Failed to delete template field response';
+      throw new Error(message);
+    }
+  }
+
+  // ==================== RESPONSE TEMPLATES (for Copy-Paste) ====================
+
+  async getResponseTemplates(params?: ResponseTemplatesQueryParams): Promise<ResponseTemplatesResponse> {
+    try {
+      const queryString = buildQueryString(params);
+      const response = await hmsClient.get<ResponseTemplatesResponse>(
+        `${this.baseURL}/response-templates/${queryString}`
+      );
+      return response.data;
+    } catch (error: any) {
+      const message =
+        error.response?.data?.error ||
+        error.response?.data?.message ||
+        'Failed to fetch reusable templates';
+      throw new Error(message);
+    }
+  }
+
+  async getMyResponseTemplates(params?: ResponseTemplatesQueryParams): Promise<ResponseTemplatesResponse> {
+    try {
+      const queryString = buildQueryString(params);
+      const response = await hmsClient.get<ResponseTemplatesResponse>(
+        `${this.baseURL}/response-templates/my_templates/${queryString}`
+      );
+      return response.data;
+    } catch (error: any) {
+      const message =
+        error.response?.data?.error ||
+        error.response?.data?.message ||
+        "Failed to fetch user's reusable templates";
+      throw new Error(message);
+    }
+  }
+
+  async getResponseTemplate(id: number): Promise<ResponseTemplate> {
+    try {
+      const response = await hmsClient.get<ResponseTemplate>(
+        `${this.baseURL}/response-templates/${id}/`
+      );
+      return response.data;
+    } catch (error: any) {
+      const message =
+        error.response?.data?.error ||
+        error.response?.data?.message ||
+        'Failed to fetch reusable template';
+      throw new Error(message);
+    }
+  }
+
+  async createResponseTemplate(data: CreateResponseTemplatePayload): Promise<ResponseTemplate> {
+    try {
+      const response = await hmsClient.post<ResponseTemplate>(
+        `${this.baseURL}/response-templates/`,
+        data
+      );
+      return response.data;
+    } catch (error: any) {
+      const message =
+        error.response?.data?.error ||
+        error.response?.data?.message ||
+        'Failed to create reusable template';
+      throw new Error(message);
+    }
+  }
+
+  async updateResponseTemplate(id: number, data: UpdateResponseTemplatePayload): Promise<ResponseTemplate> {
+    try {
+      const response = await hmsClient.patch<ResponseTemplate>(
+        `${this.baseURL}/response-templates/${id}/`,
+        data
+      );
+      return response.data;
+    } catch (error: any) {
+      const message =
+        error.response?.data?.error ||
+        error.response?.data?.message ||
+        'Failed to update reusable template';
+      throw new Error(message);
+    }
+  }
+
+  async deleteResponseTemplate(id: number): Promise<void> {
+    try {
+      await hmsClient.delete(`${this.baseURL}/response-templates/${id}/`);
+    } catch (error: any) {
+      const message =
+        error.response?.data?.error ||
+        error.response?.data?.message ||
+        'Failed to delete reusable template';
+      throw new Error(message);
+    }
+  }
+
+  async cloneResponseTemplate(id: number): Promise<ResponseTemplate> {
+    try {
+      const response = await hmsClient.post<ResponseTemplate>(
+        `${this.baseURL}/response-templates/${id}/clone/`
+      );
+      return response.data;
+    } catch (error: any) {
+      const message =
+        error.response?.data?.error ||
+        error.response?.data?.message ||
+        'Failed to clone reusable template';
       throw new Error(message);
     }
   }

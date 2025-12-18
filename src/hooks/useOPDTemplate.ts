@@ -33,6 +33,11 @@ import {
   TemplateFieldResponsesQueryParams,
   CreateTemplateFieldResponsePayload,
   UpdateTemplateFieldResponsePayload,
+  ResponseTemplate,
+  ResponseTemplatesResponse,
+  ResponseTemplatesQueryParams,
+  CreateResponseTemplatePayload,
+  UpdateResponseTemplatePayload,
 } from '@/types/opdTemplate.types';
 import { useAuth } from './useAuth';
 
@@ -426,15 +431,13 @@ export const useOPDTemplate = () => {
   // ==================== TEMPLATE RESPONSES HOOKS ====================
 
   const useTemplateResponses = (params?: TemplateResponsesQueryParams) => {
-    const key = ['template-responses', params];
+    const key = params ? ['template-responses', ...Object.values(params)] : ['template-responses'];
 
     return useSWR<TemplateResponsesResponse>(
       key,
       () => opdTemplateService.getTemplateResponses(params),
       {
         revalidateOnFocus: false,
-        revalidateOnReconnect: true,
-        shouldRetryOnError: false,
         onError: (err) => {
           console.error('Failed to fetch template responses:', err);
           setError(err.message || 'Failed to fetch template responses');
@@ -451,8 +454,6 @@ export const useOPDTemplate = () => {
       () => opdTemplateService.getTemplateResponse(id!),
       {
         revalidateOnFocus: false,
-        revalidateOnReconnect: true,
-        shouldRetryOnError: false,
         onError: (err) => {
           console.error('Failed to fetch template response:', err);
           setError(err.message || 'Failed to fetch template response');
@@ -514,6 +515,70 @@ export const useOPDTemplate = () => {
     }
   }, []);
 
+  const markResponseAsReviewed = useCallback(
+    async (id: number): Promise<TemplateResponse> => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        return await opdTemplateService.markResponseAsReviewed(id);
+      } catch (err: any) {
+        setError(err.message);
+        throw err;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    []
+  );
+
+  const uploadCanvasForResponse = useCallback(
+    async (responseId: number, canvasFile: File): Promise<TemplateResponse> => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        return await opdTemplateService.uploadCanvasForResponse(responseId, canvasFile);
+      } catch (err: any) {
+        setError(err.message);
+        throw err;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    []
+  );
+
+  const convertToResponseTemplate = useCallback(
+    async (id: number, name: string, isPublic?: boolean): Promise<ResponseTemplate> => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        return await opdTemplateService.convertToResponseTemplate(id, name, isPublic);
+      } catch (err: any) {
+        setError(err.message);
+        throw err;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    []
+  );
+
+  const applyResponseTemplate = useCallback(
+    async (responseId: number, templateId: number): Promise<TemplateResponse> => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        return await opdTemplateService.applyResponseTemplate(responseId, templateId);
+      } catch (err: any) {
+        setError(err.message);
+        throw err;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    []
+  );
+
   // ==================== TEMPLATE FIELD RESPONSES HOOKS ====================
 
   const useTemplateFieldResponses = (params?: TemplateFieldResponsesQueryParams) => {
@@ -524,8 +589,6 @@ export const useOPDTemplate = () => {
       () => opdTemplateService.getTemplateFieldResponses(params),
       {
         revalidateOnFocus: false,
-        revalidateOnReconnect: true,
-        shouldRetryOnError: false,
         onError: (err) => {
           console.error('Failed to fetch template field responses:', err);
           setError(err.message || 'Failed to fetch template field responses');
@@ -542,8 +605,6 @@ export const useOPDTemplate = () => {
       () => opdTemplateService.getTemplateFieldResponse(id!),
       {
         revalidateOnFocus: false,
-        revalidateOnReconnect: true,
-        shouldRetryOnError: false,
         onError: (err) => {
           console.error('Failed to fetch template field response:', err);
           setError(err.message || 'Failed to fetch template field response');
@@ -608,6 +669,105 @@ export const useOPDTemplate = () => {
     }
   }, []);
 
+  // ==================== RESPONSE TEMPLATES HOOKS (for Copy-Paste) ====================
+
+  const useResponseTemplates = (params?: ResponseTemplatesQueryParams) => {
+    const key = ['response-templates', params];
+    return useSWR<ResponseTemplatesResponse>(
+      key,
+      () => opdTemplateService.getResponseTemplates(params),
+      {
+        revalidateOnFocus: false,
+        onError: (err) => setError(err.message || 'Failed to fetch reusable templates'),
+      }
+    );
+  };
+
+  const useMyResponseTemplates = (params?: ResponseTemplatesQueryParams) => {
+    const key = ['my-response-templates', params];
+    return useSWR<ResponseTemplatesResponse>(
+      key,
+      () => opdTemplateService.getMyResponseTemplates(params),
+      {
+        revalidateOnFocus: false,
+        onError: (err) => setError(err.message || 'Failed to fetch your reusable templates'),
+      }
+    );
+  };
+
+  const useResponseTemplate = (id: number | null) => {
+    const key = id ? ['response-template', id] : null;
+    return useSWR<ResponseTemplate>(
+      key,
+      () => opdTemplateService.getResponseTemplate(id!),
+      {
+        revalidateOnFocus: false,
+        onError: (err) => setError(err.message || 'Failed to fetch reusable template'),
+      }
+    );
+  };
+
+  const createResponseTemplate = useCallback(
+    async (data: CreateResponseTemplatePayload): Promise<ResponseTemplate> => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        return await opdTemplateService.createResponseTemplate(data);
+      } catch (err: any) {
+        setError(err.message);
+        throw err;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    []
+  );
+
+  const updateResponseTemplate = useCallback(
+    async (id: number, data: UpdateResponseTemplatePayload): Promise<ResponseTemplate> => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        return await opdTemplateService.updateResponseTemplate(id, data);
+      } catch (err: any) {
+        setError(err.message);
+        throw err;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    []
+  );
+
+  const deleteResponseTemplate = useCallback(async (id: number): Promise<void> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      await opdTemplateService.deleteResponseTemplate(id);
+    } catch (err: any) {
+      setError(err.message);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const cloneResponseTemplate = useCallback(
+    async (id: number): Promise<ResponseTemplate> => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        return await opdTemplateService.cloneResponseTemplate(id);
+      } catch (err: any) {
+        setError(err.message);
+        throw err;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    []
+  );
+
   return {
     hasHMSAccess,
     isLoading,
@@ -643,11 +803,23 @@ export const useOPDTemplate = () => {
     createTemplateResponse,
     updateTemplateResponse,
     deleteTemplateResponse,
+    uploadCanvasForResponse,
+    markResponseAsReviewed,
+    convertToResponseTemplate,
+    applyResponseTemplate,
     // Template Field Responses
     useTemplateFieldResponses,
     useTemplateFieldResponse,
     createTemplateFieldResponse,
     updateTemplateFieldResponse,
     deleteTemplateFieldResponse,
+    // Response Templates
+    useResponseTemplates,
+    useMyResponseTemplates,
+    useResponseTemplate,
+    createResponseTemplate,
+    updateResponseTemplate,
+    deleteResponseTemplate,
+    cloneResponseTemplate,
   };
 };

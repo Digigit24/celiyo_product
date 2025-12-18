@@ -107,7 +107,8 @@ export type FieldType =
   | 'checkbox'
   | 'image'
   | 'file'
-  | 'json';
+  | 'json'
+  | 'canvas'; // New field type for Excalidraw
 
 export interface TemplateField {
   id: number;
@@ -240,7 +241,7 @@ export interface TemplateFieldOptionsResponse {
 }
 
 // ==================== TEMPLATE RESPONSE ====================
-export type TemplateResponseStatus = 'draft' | 'completed';
+export type TemplateResponseStatus = 'draft' | 'completed' | 'reviewed';
 
 export interface TemplateResponse {
   id: number;
@@ -255,6 +256,13 @@ export interface TemplateResponse {
   created_at: string;
   updated_at: string;
   field_responses?: TemplateFieldResponse[];
+
+  // New fields for multiple doctor support and review workflow
+  response_sequence: number;
+  is_reviewed: boolean;
+  doctor_switched_reason: string | null;
+  original_assigned_doctor_id: number | null;
+  canvas_data: any | null; // For full-template canvas images
 }
 
 export interface FieldResponsePayload {
@@ -265,17 +273,22 @@ export interface FieldResponsePayload {
   value_datetime?: string | null;
   value_boolean?: boolean | null;
   selected_options?: number[];
+  full_canvas_json?: any | null;
 }
 
 export interface CreateTemplateResponsePayload {
+  visit: number;
   template: number;
   status?: TemplateResponseStatus;
+  doctor_switched_reason?: string;
   field_responses?: FieldResponsePayload[];
 }
 
 export interface UpdateTemplateResponsePayload {
   status?: TemplateResponseStatus;
+  is_reviewed?: boolean;
   completed_at?: string | null;
+  canvas_data?: any | null;
   field_responses?: FieldResponsePayload[];
 }
 
@@ -304,15 +317,23 @@ export interface TemplateFieldResponse {
   field: number;
   field_name?: string; // Backend may include field_name for reference
   field_type?: FieldType;
+  
   // Value fields (only one will be populated based on field_type)
   value_text: string | null;
   value_number: number | null;
   value_date: string | null;
   value_datetime: string | null;
   value_boolean: boolean | null;
+  
   // For select/radio/multiselect
   selected_options: number[]; // Array of TemplateFieldOption IDs
   selected_option_labels?: string[]; // Read-only, populated by backend
+  
+  // New canvas-related fields
+  full_canvas_json: any | null; // Stores Excalidraw JSON
+  canvas_thumbnail: string | null; // URL to a generated thumbnail
+  canvas_version_history: any[]; // Tracks changes to the canvas JSON
+
   created_at: string;
   updated_at: string;
 }
@@ -326,6 +347,7 @@ export interface CreateTemplateFieldResponsePayload {
   value_datetime?: string | null;
   value_boolean?: boolean | null;
   selected_options?: number[];
+  full_canvas_json?: any | null;
 }
 
 export interface UpdateTemplateFieldResponsePayload {
@@ -335,6 +357,7 @@ export interface UpdateTemplateFieldResponsePayload {
   value_datetime?: string | null;
   value_boolean?: boolean | null;
   selected_options?: number[];
+  full_canvas_json?: any | null;
 }
 
 export interface TemplateFieldResponsesQueryParams {
@@ -350,4 +373,50 @@ export interface TemplateFieldResponsesResponse {
   next: string | null;
   previous: string | null;
   results: TemplateFieldResponse[];
+}
+
+// ==================== RESPONSE TEMPLATE (for Copy-Paste) ====================
+export interface ResponseTemplate {
+  id: number;
+  tenant_id: string;
+  name: string;
+  template: number; // The original template this was based on
+  template_name?: string;
+  created_by: number;
+  created_by_name?: string;
+  template_field_values: Record<string, any>; // JSON field holding field values
+  usage_count: number;
+  is_public: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateResponseTemplatePayload {
+  name: string;
+  template: number;
+  template_field_values: Record<string, any>;
+  is_public?: boolean;
+}
+
+export interface UpdateResponseTemplatePayload {
+  name?: string;
+  template_field_values?: Record<string, any>;
+  is_public?: boolean;
+}
+
+export interface ResponseTemplatesQueryParams {
+  template?: number;
+  created_by?: number;
+  is_public?: boolean;
+  page?: number;
+  page_size?: number;
+  ordering?: string;
+  search?: string;
+}
+
+export interface ResponseTemplatesResponse {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: ResponseTemplate[];
 }

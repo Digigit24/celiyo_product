@@ -205,19 +205,34 @@ export const ConsultationCanvas: React.FC = () => {
     }
   };
 
-  // Prepare initial data with smallest brush size
-  const enhancedInitialData = React.useMemo(() => {
+  // Prepare initial data with smallest brush size - stable reference
+  // This ref is set ONCE when initialCanvasData is first available
+  const enhancedInitialDataRef = useRef<{elements: any[], appState: any} | null>(null);
+  const hasSetInitialDataRef = useRef(false);
+
+  if (!hasSetInitialDataRef.current && initialCanvasData !== undefined) {
+    hasSetInitialDataRef.current = true;
     const baseData = initialCanvasData || { elements: [], appState: {} };
-    return {
-      ...baseData,
+    enhancedInitialDataRef.current = {
+      elements: baseData.elements || [],
       appState: {
-        ...baseData.appState,
+        ...(baseData.appState || {}),
         currentItemStrokeWidth: 1, // Set smallest brush size
         viewBackgroundColor: 'transparent', // Transparent to show template below
         currentItemRoughness: 0, // Smooth lines for medical notes
       },
     };
-  }, [initialCanvasData]);
+  }
+
+  // Use the stable ref value - this never changes after first set
+  const enhancedInitialData = enhancedInitialDataRef.current || {
+    elements: [],
+    appState: {
+      currentItemStrokeWidth: 1,
+      viewBackgroundColor: 'transparent',
+      currentItemRoughness: 0,
+    }
+  };
 
   // Format visit date
   const formatVisitDate = (date: string) => {

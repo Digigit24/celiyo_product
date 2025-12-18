@@ -44,6 +44,7 @@ export const ConsultationCanvas: React.FC = () => {
   const hasNotifiedReadyRef = useRef(false);
   const isInitialLoadRef = useRef(true);
   const loadedResponseIdRef = useRef<number | null>(null);
+  const hasInitializedCanvasRef = useRef(false);
 
   // Get visit data
   const { data: visit, isLoading: isLoadingVisit } = useOpdVisitById(visitId ? parseInt(visitId) : null);
@@ -97,9 +98,9 @@ export const ConsultationCanvas: React.FC = () => {
     autoSaveDelay: 3000,
   });
 
-  // Load canvas data when response is loaded
+  // Load canvas data when response is loaded (only once)
   useEffect(() => {
-    if (!responseData || fieldsData.length === 0 || isLoadingTemplate) {
+    if (!responseData || fieldsData.length === 0 || isLoadingTemplate || hasInitializedCanvasRef.current) {
       return;
     }
 
@@ -107,6 +108,7 @@ export const ConsultationCanvas: React.FC = () => {
 
     if (isNewResponse) {
       loadedResponseIdRef.current = responseData.id;
+      hasInitializedCanvasRef.current = true;
 
       // Find canvas field response
       const canvasFieldResponse = responseData.field_responses?.find(fr => {
@@ -152,9 +154,14 @@ export const ConsultationCanvas: React.FC = () => {
   }, [excalidrawAPI, canvasState.handleReady]);
 
   const handleChange = useCallback((elements: readonly ExcalidrawElement[], appState: AppState) => {
-    // Ignore the very first onChange event that fires when Excalidraw initializes
+    // Ignore onChange events during initialization
     if (isInitialLoadRef.current) {
       isInitialLoadRef.current = false;
+      return;
+    }
+
+    // Prevent infinite loops by not calling handleChange if canvas isn't ready
+    if (!canvasState.isReady) {
       return;
     }
 
@@ -406,6 +413,7 @@ export const ConsultationCanvas: React.FC = () => {
             <div className="absolute inset-0 z-20 [&_.excalidraw]:bg-transparent [&_canvas]:bg-transparent">
               {initialCanvasData !== undefined ? (
                 <Excalidraw
+                  key={`canvas-${responseId}`}
                   ref={handleExcalidrawRefCallback}
                   onChange={handleChange}
                   initialData={enhancedInitialData}

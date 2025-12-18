@@ -148,7 +148,7 @@ export const PatientDetailsPage = () => {
   // Error state
   if (patientError || !patient) {
     return (
-      <div className="p-6 max-w-7xl mx-auto">
+      <div className="p-6 max-w-8xl mx-auto">
         <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
           <p className="text-destructive text-lg">
             {patientError ? 'Failed to load patient details' : 'Patient not found'}
@@ -170,7 +170,7 @@ export const PatientDetailsPage = () => {
   const config = statusConfig[patient.status];
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
+    <div className="p-6 max-w-8xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div className="flex items-start gap-4">

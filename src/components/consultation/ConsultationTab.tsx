@@ -29,6 +29,7 @@ import {
   Loader2,
   PlusCircle,
   Eye,
+  Maximize2,
 } from 'lucide-react';
 import { OpdVisit } from '@/types/opdVisit.types';
 import { toast } from 'sonner';
@@ -41,6 +42,7 @@ import {
   CreateTemplateResponsePayload,
 } from '@/types/opdTemplate.types';
 import ExcalidrawWrapper from './ExcalidrawWrapper';
+import FullscreenA4Canvas from './FullscreenA4Canvas';
 import { useCanvasState } from '@/hooks/useCanvasState';
 import type { ExcalidrawElement, AppState } from '@excalidraw/excalidraw/types/types';
 
@@ -84,6 +86,7 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
   const [activeSubTab, setActiveSubTab] = useState<'fields' | 'canvas'>('fields');
   const [isSaving, setIsSaving] = useState(false);
   const [initialCanvasData, setInitialCanvasData] = useState<CanvasData | null | undefined>(undefined);
+  const [isFullscreenCanvasOpen, setIsFullscreenCanvasOpen] = useState(false);
   const loadedResponseIdRef = useRef<number | null>(null);
   
   const { data: responsesData, isLoading: isLoadingResponses, mutate: mutateResponses } = useTemplateResponses({
@@ -571,9 +574,20 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
 
       {activeResponse && (
         <Card>
-          <CardHeader>
-            <CardTitle>Response #{activeResponse.response_sequence}</CardTitle>
-            <CardDescription>Fill out the form fields and draw on the canvas</CardDescription>
+          <CardHeader className="flex flex-row items-start justify-between space-y-0">
+            <div className="space-y-1.5">
+              <CardTitle>Response #{activeResponse.response_sequence}</CardTitle>
+              <CardDescription>Fill out the form fields and draw on the canvas</CardDescription>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsFullscreenCanvasOpen(true)}
+              className="flex items-center gap-2"
+            >
+              <Maximize2 className="h-4 w-4" />
+              Open Canvas
+            </Button>
           </CardHeader>
           <CardContent>
             {/* Custom Tab Navigation */}
@@ -681,6 +695,21 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* Fullscreen A4 Canvas Modal */}
+      {activeResponse && (
+        <FullscreenA4Canvas
+          open={isFullscreenCanvasOpen}
+          onOpenChange={setIsFullscreenCanvasOpen}
+          onChange={canvasState.handleChange}
+          onReady={canvasState.handleReady}
+          onSave={handleSaveCanvas}
+          initialData={initialCanvasData}
+          hasUnsavedChanges={canvasState.hasUnsavedChanges}
+          isReady={canvasState.isReady}
+          isSaving={isSaving}
+        />
       )}
     </div>
   );

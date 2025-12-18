@@ -69,11 +69,20 @@ export const ConsultationCanvas: React.FC = () => {
     navigate(`/opd/consultation/${visitId}`);
   };
 
-  // Canvas auto-save handler
-  const handleCanvasAutoSave = useCallback(async (canvasData: { elements: readonly ExcalidrawElement[]; appState: Partial<AppState> }) => {
-    if (!responseData) return;
+  // Store responseData and fieldsData in refs for stable callback
+  const responseDataRef = useRef(responseData);
+  const fieldsDataRef = useRef(fieldsData);
 
-    const canvasField = fieldsData.find(f => f.field_type === 'json' || f.field_type === 'canvas');
+  useEffect(() => {
+    responseDataRef.current = responseData;
+    fieldsDataRef.current = fieldsData;
+  }, [responseData, fieldsData]);
+
+  // Canvas auto-save handler - stable callback
+  const handleCanvasAutoSave = useCallback(async (canvasData: { elements: readonly ExcalidrawElement[]; appState: Partial<AppState> }) => {
+    if (!responseDataRef.current) return;
+
+    const canvasField = fieldsDataRef.current.find(f => f.field_type === 'json' || f.field_type === 'canvas');
     if (!canvasField) return;
 
     try {
@@ -86,12 +95,12 @@ export const ConsultationCanvas: React.FC = () => {
         ],
       };
 
-      await updateTemplateResponse(responseData.id, payload);
+      await updateTemplateResponse(responseDataRef.current.id, payload);
     } catch (error) {
       console.error('Canvas auto-save failed:', error);
       throw error;
     }
-  }, [responseData, fieldsData, updateTemplateResponse]);
+  }, [updateTemplateResponse]); // Only depends on updateTemplateResponse
 
   const canvasState = useCanvasState({
     onAutoSave: handleCanvasAutoSave,
@@ -132,10 +141,8 @@ export const ConsultationCanvas: React.FC = () => {
       if (hasCanvasData) {
         const nextCanvasData = sanitizeCanvasData(fullCanvasJson);
         setInitialCanvasData(nextCanvasData);
-        canvasState.loadData(nextCanvasData);
       } else {
         setInitialCanvasData(null);
-        canvasState.loadData(null);
       }
     }
   }, [responseData, fieldsData, isLoadingTemplate]);

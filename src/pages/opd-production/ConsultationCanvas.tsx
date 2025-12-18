@@ -46,6 +46,9 @@ export const ConsultationCanvas: React.FC = () => {
   const loadedResponseIdRef = useRef<number | null>(null);
   const hasInitializedCanvasRef = useRef(false);
 
+  // Declare canvasStateRef early so it can be used in handleBack
+  const canvasStateRef = useRef<any>(null);
+
   // Get visit data
   const { data: visit, isLoading: isLoadingVisit } = useOpdVisitById(visitId ? parseInt(visitId) : null);
 
@@ -60,25 +63,27 @@ export const ConsultationCanvas: React.FC = () => {
   );
   const fieldsData = useMemo(() => templateData?.fields || [], [templateData]);
 
-  // Handle back navigation
-  const handleBack = () => {
-    if (canvasState.hasUnsavedChanges) {
+  // Handle back navigation - use ref to avoid closure issues
+  const handleBack = useCallback(() => {
+    if (canvasStateRef.current?.hasUnsavedChanges) {
       const confirmLeave = window.confirm('You have unsaved changes. Are you sure you want to leave?');
       if (!confirmLeave) return;
     }
     navigate(`/opd/consultation/${visitId}`);
-  };
+  }, [navigate, visitId]);
 
-  // Store responseData and fieldsData in refs for stable callback
+  // Store all dependencies in refs for completely stable callbacks
   const responseDataRef = useRef(responseData);
   const fieldsDataRef = useRef(fieldsData);
+  const updateTemplateResponseRef = useRef(updateTemplateResponse);
 
   useEffect(() => {
     responseDataRef.current = responseData;
     fieldsDataRef.current = fieldsData;
-  }, [responseData, fieldsData]);
+    updateTemplateResponseRef.current = updateTemplateResponse;
+  }, [responseData, fieldsData, updateTemplateResponse]);
 
-  // Canvas auto-save handler - stable callback
+  // Canvas auto-save handler - completely stable callback with NO dependencies
   const handleCanvasAutoSave = useCallback(async (canvasData: { elements: readonly ExcalidrawElement[]; appState: Partial<AppState> }) => {
     if (!responseDataRef.current) return;
 
@@ -95,20 +100,19 @@ export const ConsultationCanvas: React.FC = () => {
         ],
       };
 
-      await updateTemplateResponse(responseDataRef.current.id, payload);
+      await updateTemplateResponseRef.current(responseDataRef.current.id, payload);
     } catch (error) {
       console.error('Canvas auto-save failed:', error);
       throw error;
     }
-  }, [updateTemplateResponse]); // Only depends on updateTemplateResponse
+  }, []); // ZERO dependencies - completely stable
 
   const canvasState = useCanvasState({
     onAutoSave: handleCanvasAutoSave,
     autoSaveDelay: 3000,
   });
 
-  // Store canvasState in a ref to prevent callback recreation
-  const canvasStateRef = useRef(canvasState);
+  // Update canvasStateRef when canvasState changes
   useEffect(() => {
     canvasStateRef.current = canvasState;
   }, [canvasState]);
@@ -217,6 +221,16 @@ export const ConsultationCanvas: React.FC = () => {
   const enhancedInitialDataRef = useRef<{elements: any[], appState: any} | null>(null);
   const hasSetInitialDataRef = useRef(false);
 
+  // Stable fallback object - created once and never changes
+  const fallbackInitialDataRef = useRef({
+    elements: [],
+    appState: {
+      currentItemStrokeWidth: 1,
+      viewBackgroundColor: 'transparent',
+      currentItemRoughness: 0,
+    }
+  });
+
   if (!hasSetInitialDataRef.current && initialCanvasData !== undefined) {
     hasSetInitialDataRef.current = true;
     const baseData = initialCanvasData || { elements: [], appState: {} };
@@ -232,14 +246,8 @@ export const ConsultationCanvas: React.FC = () => {
   }
 
   // Use the stable ref value - this never changes after first set
-  const enhancedInitialData = enhancedInitialDataRef.current || {
-    elements: [],
-    appState: {
-      currentItemStrokeWidth: 1,
-      viewBackgroundColor: 'transparent',
-      currentItemRoughness: 0,
-    }
-  };
+  // Use stable fallback ref instead of creating new object
+  const enhancedInitialData = enhancedInitialDataRef.current || fallbackInitialDataRef.current;
 
   // Format visit date
   const formatVisitDate = (date: string) => {

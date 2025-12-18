@@ -15,7 +15,7 @@ import PatientBillingHistory from '@/components/patient-drawer/PatientBillingHis
 import PatientAppointments from '@/components/patient-drawer/PatientAppointments';
 import OPDVisitFormDrawer from '@/components/OPDVisitFormDrawer';
 import AppointmentFormDrawer from '@/components/AppointmentFormDrawer';
-import OPDBillFormDrawer from '@/components/OPDBillFormDrawer';
+import { OPDBillFormDrawer } from '@/components/OPDBillFormDrawer';
 import type { PatientUpdateData } from '@/types/patient.types';
 
 export const PatientDetailsPage = () => {
@@ -481,13 +481,11 @@ export const PatientDetailsPage = () => {
 
       {/* Bill Drawer */}
       <OPDBillFormDrawer
-        open={billDrawerOpen}
-        onOpenChange={setBillDrawerOpen}
+        isOpen={billDrawerOpen}
+        onClose={() => setBillDrawerOpen(false)}
         billId={selectedBillId}
         mode={billDrawerMode}
         onSuccess={handleBillSuccess}
-        onModeChange={setBillDrawerMode}
-        initialPatientId={patientIdNum}
       />
     </div>
   );

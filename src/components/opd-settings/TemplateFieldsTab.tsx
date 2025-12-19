@@ -432,6 +432,9 @@ export function TemplateFieldsTab() {
       const defaultLabel = `New ${typeLabel}`;
       const fieldKey = `field_${Date.now()}`; // Temporary unique key
 
+      // Field types that require options
+      const FIELD_TYPES_WITH_OPTIONS: FieldType[] = ['select', 'radio', 'multiselect', 'checkbox'];
+
       try {
         const payload: CreateTemplateFieldPayload = {
           template: selectedTemplateId,
@@ -452,6 +455,15 @@ export function TemplateFieldsTab() {
           display_order: localFields.length,
           is_active: true,
         };
+
+        // Add default options for field types that require them
+        if (FIELD_TYPES_WITH_OPTIONS.includes(fieldType)) {
+          payload.options = [
+            { option_label: 'Option 1', option_value: 'option_1', display_order: 0, is_active: true },
+            { option_label: 'Option 2', option_value: 'option_2', display_order: 1, is_active: true },
+            { option_label: 'Option 3', option_value: 'option_3', display_order: 2, is_active: true },
+          ];
+        }
 
         await createTemplateField(payload);
         toast.success(`${typeLabel} field created! Click to edit.`);
@@ -570,7 +582,7 @@ export function TemplateFieldsTab() {
                           Add Field
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-80 p-2" align="end">
+                      <PopoverContent className="w-80 p-2 max-h-[400px] overflow-y-auto" align="end">
                         <div className="space-y-2">
                           <div className="px-2 py-1.5">
                             <p className="text-sm font-semibold">Choose Field Type</p>
@@ -633,7 +645,7 @@ export function TemplateFieldsTab() {
                         Add First Field
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-80 p-2">
+                    <PopoverContent className="w-80 p-2 max-h-[400px] overflow-y-auto">
                       <div className="space-y-2">
                         <div className="px-2 py-1.5">
                           <p className="text-sm font-semibold">Choose Field Type</p>
@@ -715,7 +727,7 @@ export function TemplateFieldsTab() {
                         Add Another Field
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-80 p-2">
+                    <PopoverContent className="w-80 p-2 max-h-[400px] overflow-y-auto">
                       <div className="space-y-2">
                         <div className="px-2 py-1.5">
                           <p className="text-sm font-semibold">Choose Field Type</p>

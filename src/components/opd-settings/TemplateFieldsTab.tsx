@@ -35,7 +35,16 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { GripVertical, Plus, Settings, Trash2, Save, RefreshCw, Check } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { GripVertical, Plus, Settings, Trash2, Save, RefreshCw, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
 import type { TemplateField, CreateTemplateFieldPayload, FieldType } from '@/types/opdTemplate.types';
 
@@ -320,6 +329,15 @@ export function TemplateFieldsTab() {
   // Add Field Type Popover state
   const [addFieldPopoverOpen, setAddFieldPopoverOpen] = useState(false);
 
+  // Options Dialog state (for field types that require options)
+  const [optionsDialogOpen, setOptionsDialogOpen] = useState(false);
+  const [pendingFieldType, setPendingFieldType] = useState<FieldType | null>(null);
+  const [pendingOptions, setPendingOptions] = useState<Array<{ label: string; value: string }>>([
+    { label: '', value: '' },
+    { label: '', value: '' },
+    { label: '', value: '' },
+  ]);
+
   // Fetch all templates for dropdown
   const { data: templatesData } = useTemplates({
     is_active: true,
@@ -428,12 +446,26 @@ export function TemplateFieldsTab() {
         return;
       }
 
+      // Field types that require options
+      const FIELD_TYPES_WITH_OPTIONS: FieldType[] = ['select', 'radio', 'multiselect', 'checkbox'];
+
+      // If field type requires options, show options dialog
+      if (FIELD_TYPES_WITH_OPTIONS.includes(fieldType)) {
+        setPendingFieldType(fieldType);
+        setPendingOptions([
+          { label: '', value: '' },
+          { label: '', value: '' },
+          { label: '', value: '' },
+        ]);
+        setAddFieldPopoverOpen(false);
+        setOptionsDialogOpen(true);
+        return;
+      }
+
+      // For other field types, create directly
       const typeLabel = FIELD_TYPE_OPTIONS.find(opt => opt.value === fieldType)?.label || fieldType;
       const defaultLabel = `New ${typeLabel}`;
       const fieldKey = `field_${Date.now()}`; // Temporary unique key
-
-      // Field types that require options
-      const FIELD_TYPES_WITH_OPTIONS: FieldType[] = ['select', 'radio', 'multiselect', 'checkbox'];
 
       try {
         const payload: CreateTemplateFieldPayload = {
@@ -456,15 +488,6 @@ export function TemplateFieldsTab() {
           is_active: true,
         };
 
-        // Add default options for field types that require them
-        if (FIELD_TYPES_WITH_OPTIONS.includes(fieldType)) {
-          payload.options = [
-            { option_label: 'Option 1', option_value: 'option_1', display_order: 0, is_active: true },
-            { option_label: 'Option 2', option_value: 'option_2', display_order: 1, is_active: true },
-            { option_label: 'Option 3', option_value: 'option_3', display_order: 2, is_active: true },
-          ];
-        }
-
         await createTemplateField(payload);
         toast.success(`${typeLabel} field created! Click to edit.`);
         setAddFieldPopoverOpen(false);
@@ -475,6 +498,72 @@ export function TemplateFieldsTab() {
     },
     [selectedTemplateId, localFields.length, createTemplateField, mutate]
   );
+
+  // Handle adding a new option
+  const handleAddOption = useCallback(() => {
+    setPendingOptions(prev => [...prev, { label: '', value: '' }]);
+  }, []);
+
+  // Handle removing an option
+  const handleRemoveOption = useCallback((index: number) => {
+    setPendingOptions(prev => prev.filter((_, i) => i !== index));
+  }, []);
+
+  // Handle updating an option
+  const handleUpdateOption = useCallback((index: number, label: string) => {
+    setPendingOptions(prev => {
+      const updated = [...prev];
+      const value = label.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || `option_${index + 1}`;
+      updated[index] = { label, value };
+      return updated;
+    });
+  }, []);
+
+  // Handle confirming options and creating field
+  const handleConfirmOptions = useCallback(async () => {
+    if (!selectedTemplateId || !pendingFieldType) return;
+
+    // Filter out empty options
+    const validOptions = pendingOptions.filter(opt => opt.label.trim() !== '');
+
+    if (validOptions.length === 0) {
+      toast.error('Please add at least one option');
+      return;
+    }
+
+    const typeLabel = FIELD_TYPE_OPTIONS.find(opt => opt.value === pendingFieldType)?.label || pendingFieldType;
+    const defaultLabel = `New ${typeLabel}`;
+    const fieldKey = `field_${Date.now()}`;
+
+    try {
+      const payload: CreateTemplateFieldPayload = {
+        template: selectedTemplateId,
+        field_type: pendingFieldType,
+        field_label: defaultLabel,
+        field_name: fieldKey,
+        field_key: fieldKey,
+        placeholder: '',
+        is_required: false,
+        display_order: localFields.length,
+        is_active: true,
+        options: validOptions.map((opt, index) => ({
+          option_label: opt.label.trim(),
+          option_value: opt.value,
+          display_order: index,
+          is_active: true,
+        })),
+      };
+
+      await createTemplateField(payload);
+      toast.success(`${typeLabel} field created with ${validOptions.length} option(s)!`);
+      setOptionsDialogOpen(false);
+      setPendingFieldType(null);
+      setPendingOptions([{ label: '', value: '' }, { label: '', value: '' }, { label: '', value: '' }]);
+      mutate();
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to create field');
+    }
+  }, [selectedTemplateId, pendingFieldType, pendingOptions, localFields.length, createTemplateField, mutate]);
 
   // Handle create field (opens drawer)
   const handleCreateField = useCallback(() => {
@@ -778,6 +867,81 @@ export function TemplateFieldsTab() {
         onSuccess={handleFieldEditorSuccess}
         onClose={handleFieldEditorClose}
       />
+
+      {/* Options Dialog */}
+      <Dialog open={optionsDialogOpen} onOpenChange={setOptionsDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              Add Options for {pendingFieldType && FIELD_TYPE_OPTIONS.find(opt => opt.value === pendingFieldType)?.label}
+            </DialogTitle>
+            <DialogDescription>
+              Enter the options for this field. The value will be automatically generated from the label.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-3">
+              {pendingOptions.map((option, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <div className="flex-1">
+                    <Input
+                      placeholder={`Option ${index + 1}`}
+                      value={option.label}
+                      onChange={(e) => handleUpdateOption(index, e.target.value)}
+                      className="w-full"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <Input
+                      placeholder="Auto-generated value"
+                      value={option.value}
+                      disabled
+                      className="w-full bg-muted"
+                    />
+                  </div>
+                  {pendingOptions.length > 1 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleRemoveOption(index)}
+                      className="h-10 w-10 p-0 hover:text-destructive"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleAddOption}
+              className="w-full border-dashed"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Another Option
+            </Button>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setOptionsDialogOpen(false);
+                setPendingFieldType(null);
+                setPendingOptions([{ label: '', value: '' }, { label: '', value: '' }, { label: '', value: '' }]);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleConfirmOptions}>
+              Create Field
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

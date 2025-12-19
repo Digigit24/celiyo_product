@@ -34,11 +34,13 @@ import {
   Pencil,
   Download,
   Printer,
+  FileText,
 } from 'lucide-react';
 import { OpdVisit } from '@/types/opdVisit.types';
 import { toast } from 'sonner';
 import { useOPDTemplate } from '@/hooks/useOPDTemplate';
 import { useAuth } from '@/hooks/useAuth';
+import { useTenant } from '@/hooks/useTenant';
 import {
   TemplateField,
   TemplateResponse,
@@ -62,6 +64,10 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
   } = useOPDTemplate();
 
   const { user } = useAuth();
+  const { useCurrentTenant } = useTenant();
+  const { data: tenantData } = useCurrentTenant();
+  const tenantSettings = tenantData?.settings || {};
+
   const [selectedTemplate, setSelectedTemplate] = useState<string>('');
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [activeResponse, setActiveResponse] = useState<TemplateResponse | null>(null);
@@ -684,83 +690,310 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
 
             {/* Preview Tab Content */}
             <div className={activeSubTab === 'preview' ? 'block' : 'hidden'}>
-              <div className="space-y-4">
-                {/* Action Buttons */}
-                <div className="flex justify-end gap-2">
-                  <Button variant="outline" onClick={handlePrint}>
-                    <Printer className="h-4 w-4 mr-2" />
-                    Print
-                  </Button>
-                  <Button variant="outline" onClick={handleDownload}>
-                    <Download className="h-4 w-4 mr-2" />
-                    Download PDF
-                  </Button>
-                </div>
+              {mode === 'preview' ? (
+                <div className="space-y-6">
+                  {/* Mode Toggle - Hidden in Print */}
+                  <div className="flex justify-between items-center print:hidden">
+                    <div className="flex gap-2">
+                      <Button variant="outline" onClick={() => setMode('edit')}>
+                        <FileText className="h-4 w-4 mr-2" />
+                        Edit Mode
+                      </Button>
+                      <Button variant="outline" onClick={handlePrint}>
+                        <Printer className="h-4 w-4 mr-2" />
+                        Print
+                      </Button>
+                      <Button variant="outline" onClick={handleDownload}>
+                        <Download className="h-4 w-4 mr-2" />
+                        Download PDF
+                      </Button>
+                    </div>
+                  </div>
 
-                {/* Preview Content */}
-                <div className="bg-white border rounded-lg p-6">
-                  <div ref={previewRef}>
-                    <div className="mb-6">
-                      <h2 className="text-2xl font-bold text-gray-800 mb-2">{templateData?.name || 'Template Preview'}</h2>
-                      {templateData?.description && (
-                        <p className="text-sm text-gray-600">{templateData.description}</p>
+                  {/* A4 Paper with Letterhead - This is what gets printed */}
+                  <div
+                    ref={previewRef}
+                    className="preview-container mx-auto bg-white shadow-lg print:shadow-none flex flex-col"
+                    style={{ width: '210mm', minHeight: '297mm' }}
+                  >
+                    {/* Letterhead Header */}
+                    <div
+                      className="border-b-4 py-8"
+                      style={{
+                        borderColor: tenantSettings.header_bg_color || '#3b82f6',
+                        background: tenantSettings.header_bg_color || '#3b82f6',
+                        color: tenantSettings.header_text_color || '#ffffff'
+                      }}
+                    >
+                      <div className="flex justify-between items-start px-8">
+                        <div className="flex items-start gap-4">
+                          {/* Logo */}
+                          {tenantSettings.logo && (
+                            <div className="flex-shrink-0">
+                              <img
+                                src={tenantSettings.logo}
+                                alt="Logo"
+                                className="h-16 w-16 object-contain"
+                              />
+                            </div>
+                          )}
+                          <div className="max-w-md">
+                            <h1 className="text-xl font-bold">
+                              {tenantData?.name || 'Medical Center'}
+                            </h1>
+                            <p className="text-sm mt-1 opacity-90 whitespace-pre-wrap break-words">
+                              {tenantSettings.address || 'Excellence in Healthcare'}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right text-sm">
+                          <p className="font-semibold">Contact Information</p>
+                          {tenantSettings.contact_phone && (
+                            <p className="opacity-90">Phone: {tenantSettings.contact_phone}</p>
+                          )}
+                          {tenantSettings.contact_email && (
+                            <p className="opacity-90">Email: {tenantSettings.contact_email}</p>
+                          )}
+                          {tenantSettings.website_url && (
+                            <p className="opacity-90">{tenantSettings.website_url}</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Patient & Visit Information */}
+                    <div className="px-8 py-4 border-t border-b flex-shrink-0">
+                      <h2 className="text-lg font-bold mb-3 text-center">CONSULTATION RECORD</h2>
+
+                      <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm">
+                        <div className="flex items-end">
+                          <span className="font-semibold w-28 flex-shrink-0">Patient Name:</span>
+                          <span className="flex-1 border-b border-dotted border-gray-400 print:border-0 pb-0.5 ml-2">{visit.patient_details?.full_name || 'N/A'}</span>
+                        </div>
+                        <div className="flex items-end">
+                          <span className="font-semibold w-28 flex-shrink-0">Patient ID:</span>
+                          <span className="flex-1 border-b border-dotted border-gray-400 print:border-0 pb-0.5 ml-2">{visit.patient_details?.patient_id || 'N/A'}</span>
+                        </div>
+                        <div className="flex items-end">
+                          <span className="font-semibold w-28 flex-shrink-0">Age/Gender:</span>
+                          <span className="flex-1 border-b border-dotted border-gray-400 print:border-0 pb-0.5 ml-2">
+                            {visit.patient_details?.age || 'N/A'} years / {visit.patient_details?.gender || 'N/A'}
+                          </span>
+                        </div>
+                        <div className="flex items-end">
+                          <span className="font-semibold w-28 flex-shrink-0">Visit Date:</span>
+                          <span className="flex-1 border-b border-dotted border-gray-400 print:border-0 pb-0.5 ml-2">{visit.visit_date || 'N/A'}</span>
+                        </div>
+                        <div className="flex items-end">
+                          <span className="font-semibold w-28 flex-shrink-0">Doctor:</span>
+                          <span className="flex-1 border-b border-dotted border-gray-400 print:border-0 pb-0.5 ml-2">{visit.doctor_details?.full_name || 'N/A'}</span>
+                        </div>
+                        <div className="flex items-end">
+                          <span className="font-semibold w-28 flex-shrink-0">Visit Number:</span>
+                          <span className="flex-1 border-b border-dotted border-gray-400 print:border-0 pb-0.5 ml-2">{visit.visit_number || 'N/A'}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Form Fields Content */}
+                    <div className="px-8 py-4 flex-1 overflow-auto border-b">
+                      {selectedTemplate && fieldsData && fieldsData.length > 0 ? (
+                        <div className="space-y-2">
+                          <h3 className="text-base font-bold pb-1 mb-2">
+                            {templatesData?.results.find(t => t.id.toString() === selectedTemplate)?.name}
+                          </h3>
+
+                          <div className="grid grid-cols-12 gap-x-4 gap-y-1">
+                            {fieldsData
+                              .sort((a, b) => a.display_order - b.display_order)
+                              .map((field) => {
+                                const value = formData[field.id];
+                                if (!value || (Array.isArray(value) && value.length === 0) || value === false) return null;
+
+                                // Determine field width based on type and content
+                                let colSpan = 'col-span-6'; // Default: half width
+
+                                // Full width fields
+                                if (field.field_type === 'textarea' || (typeof value === 'string' && value.length > 50)) {
+                                  colSpan = 'col-span-12';
+                                }
+                                // Small fields (numbers, dates, short text)
+                                else if (
+                                  field.field_type === 'number' ||
+                                  field.field_type === 'date' ||
+                                  field.field_type === 'datetime' ||
+                                  field.field_label.toLowerCase().includes('age') ||
+                                  (typeof value === 'string' && value.length <= 10)
+                                ) {
+                                  colSpan = 'col-span-3';
+                                }
+                                // Medium fields
+                                else if (typeof value === 'string' && value.length <= 25) {
+                                  colSpan = 'col-span-4';
+                                }
+
+                                // For fields with options, convert IDs to labels
+                                let displayValue = value;
+                                if (Array.isArray(value) && field.options && field.options.length > 0) {
+                                  // Map option IDs to labels
+                                  const labels = value
+                                    .map((id: number) => {
+                                      const option = field.options?.find(opt => opt.id === id);
+                                      return option ? option.option_label : String(id);
+                                    })
+                                    .filter(Boolean);
+                                  displayValue = labels.join(', ');
+                                } else if (typeof value === 'number' && field.options && field.options.length > 0) {
+                                  // Single selection field (select/radio)
+                                  const option = field.options.find(opt => opt.id === value);
+                                  displayValue = option ? option.option_label : String(value);
+                                } else if (typeof value === 'boolean') {
+                                  displayValue = value ? '✓ Yes' : 'No';
+                                }
+
+                                return (
+                                  <div
+                                    key={field.id}
+                                    className={`${colSpan} flex items-baseline gap-1 py-1`}
+                                  >
+                                    <span className="text-xs font-semibold text-gray-700 flex-shrink-0">
+                                      {field.field_label}:
+                                    </span>
+                                    <span className={`flex-1 border-b border-dotted border-gray-400 print:border-0 text-sm min-w-0 leading-tight ${colSpan === 'col-span-12' ? 'min-h-[32px]' : ''}`}>
+                                      {displayValue}
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                          </div>
+
+                          {/* Check if no fields have values */}
+                          {fieldsData.every(field => {
+                            const value = formData[field.id];
+                            return !value || (Array.isArray(value) && value.length === 0) || value === false;
+                          }) && (
+                            <div className="text-center py-8 text-gray-400">
+                              <p className="text-sm">No data recorded</p>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="text-center py-8 text-gray-400">
+                          <p className="text-sm">No template selected</p>
+                        </div>
                       )}
                     </div>
 
-                    {isLoadingTemplate ? (
-                      <div className="space-y-4">
-                        <Skeleton className="h-8 w-3/4" />
-                        <Skeleton className="h-20 w-full" />
-                        <Skeleton className="h-8 w-3/4" />
-                        <Skeleton className="h-20 w-full" />
+                    {/* Letterhead Footer */}
+                    <div
+                      className="border-t-4 py-6 flex-shrink-0"
+                      style={{
+                        borderColor: tenantSettings.footer_bg_color || '#3b82f6',
+                        background: tenantSettings.footer_bg_color || '#3b82f6',
+                        color: tenantSettings.footer_text_color || '#ffffff'
+                      }}
+                    >
+                      <div className="flex justify-between items-center text-xs px-8">
+                        <div>
+                          <p className="font-semibold">{tenantData?.name || 'Medical Center'}</p>
+                          {tenantSettings.address && (
+                            <>
+                              {tenantSettings.address.split('\n').map((line: string, index: number) => (
+                                <p key={index} className="opacity-90">{line}</p>
+                              ))}
+                            </>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          <p className="opacity-90">This is an official medical document</p>
+                          <p className="opacity-90">Generated on: {new Date().toLocaleDateString()} at {new Date().toLocaleTimeString()}</p>
+                          <p className="font-semibold mt-1">Confidential Medical Record</p>
+                        </div>
                       </div>
-                    ) : (
-                      <div className="space-y-6">
-                        {fieldsData.filter(f => f.field_type !== 'json' && f.field_type !== 'canvas').map((field) => {
-                          const fieldId = String(field.id);
-                          const value = formData[fieldId];
-
-                          return (
-                            <div key={field.id} className="border-b pb-4 last:border-b-0">
-                              <div className="font-semibold text-gray-700 mb-2">{field.field_label}</div>
-                              <div className="text-gray-900">
-                                {(() => {
-                                  // Display the value based on field type
-                                  if (field.field_type === 'boolean') {
-                                    return value ? 'Yes' : 'No';
-                                  } else if (field.field_type === 'select' || field.field_type === 'radio') {
-                                    const selectedOption = field.options?.find(opt => opt.id === Number(value));
-                                    return selectedOption?.option_label || 'Not selected';
-                                  } else if (field.field_type === 'multiselect' || (field.field_type === 'checkbox' && field.options?.length)) {
-                                    const selectedValues = Array.isArray(value) ? value : [];
-                                    const selectedLabels = field.options
-                                      ?.filter(opt => selectedValues.includes(opt.id))
-                                      .map(opt => opt.option_label)
-                                      .join(', ');
-                                    return selectedLabels || 'None selected';
-                                  } else if (value !== null && value !== undefined && value !== '') {
-                                    return String(value);
-                                  } else {
-                                    return <span className="text-gray-400 italic">Not filled</span>;
-                                  }
-                                })()}
-                              </div>
-                              {field.help_text && (
-                                <div className="text-xs text-gray-500 mt-1">{field.help_text}</div>
-                              )}
-                            </div>
-                          );
-                        })}
-                        {fieldsData.filter(f => f.field_type !== 'json' && f.field_type !== 'canvas').length === 0 && (
-                          <div className="text-center py-8 text-gray-500">
-                            No fields available for preview
-                          </div>
-                        )}
-                      </div>
-                    )}
+                    </div>
                   </div>
+
+                  {/* Print Styles */}
+                  <style>{`
+                    .preview-container {
+                      background-color: #ffffff !important;
+                      color: #000000 !important;
+                    }
+
+                    .preview-container * {
+                      color: inherit;
+                    }
+
+                    .preview-container .text-gray-700 {
+                      color: #374151 !important;
+                    }
+
+                    .preview-container .text-gray-600 {
+                      color: #4b5563 !important;
+                    }
+
+                    .preview-container .text-gray-400 {
+                      color: #9ca3af !important;
+                    }
+
+                    .preview-container .border-t,
+                    .preview-container .border-b {
+                      border-color: #e5e7eb !important;
+                    }
+
+                    .preview-container .border-dotted {
+                      border-color: #9ca3af !important;
+                    }
+
+                    .preview-container .border-gray-300 {
+                      border-color: #d1d5db !important;
+                    }
+
+                    .preview-container .border-gray-400 {
+                      border-color: #9ca3af !important;
+                    }
+
+                    @media print {
+                      @page {
+                        size: A4;
+                        margin: 0;
+                      }
+
+                      * {
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
+                        color-adjust: exact !important;
+                      }
+
+                      body * {
+                        visibility: hidden;
+                      }
+
+                      .preview-container,
+                      .preview-container * {
+                        visibility: visible;
+                      }
+
+                      .preview-container {
+                        position: absolute;
+                        left: 0;
+                        top: 0;
+                        width: 210mm !important;
+                        margin: 0 !important;
+                        box-shadow: none !important;
+                      }
+
+                      .print\\:hidden {
+                        display: none !important;
+                      }
+
+                      .print\\:shadow-none {
+                        box-shadow: none !important;
+                      }
+                    }
+                  `}</style>
                 </div>
-              </div>
+              ) : null}
             </div>
 
             {/* Canvas Tab Content - Open Canvas Button */}

@@ -1,5 +1,5 @@
 // src/components/consultation/ConsultationTab.tsx
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -32,6 +32,8 @@ import {
   Eye,
   Maximize2,
   Pencil,
+  Download,
+  Printer,
 } from 'lucide-react';
 import { OpdVisit } from '@/types/opdVisit.types';
 import { toast } from 'sonner';
@@ -65,6 +67,7 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
   const [activeResponse, setActiveResponse] = useState<TemplateResponse | null>(null);
   const [activeSubTab, setActiveSubTab] = useState<'fields' | 'preview' | 'canvas'>('fields');
   const [isSaving, setIsSaving] = useState(false);
+  const previewRef = useRef<HTMLDivElement>(null);
 
   const { data: responsesData, isLoading: isLoadingResponses, mutate: mutateResponses } = useTemplateResponses({
     visit: visit.id,
@@ -235,6 +238,162 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
       setIsSaving(false);
     }
   };
+
+  const handlePrint = useCallback(() => {
+    if (!previewRef.current) return;
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      toast.error('Please allow popups to print the preview');
+      return;
+    }
+
+    const patient = visit.patient_details;
+    const doctor = visit.doctor_details;
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Consultation - ${patient?.full_name || 'Patient'}</title>
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              padding: 20px;
+              margin: 0;
+            }
+            .header {
+              margin-bottom: 30px;
+              border-bottom: 2px solid #333;
+              padding-bottom: 15px;
+            }
+            .header h1 {
+              margin: 0 0 10px 0;
+              font-size: 24px;
+              color: #333;
+            }
+            .header p {
+              margin: 5px 0;
+              color: #666;
+              font-size: 14px;
+            }
+            .patient-info {
+              background: #f5f5f5;
+              padding: 15px;
+              margin-bottom: 20px;
+              border-radius: 5px;
+            }
+            .patient-info p {
+              margin: 5px 0;
+              font-size: 14px;
+            }
+            .field-group {
+              margin-bottom: 20px;
+              padding-bottom: 15px;
+              border-bottom: 1px solid #ddd;
+            }
+            .field-label {
+              font-weight: bold;
+              color: #444;
+              margin-bottom: 5px;
+            }
+            .field-value {
+              color: #333;
+              margin-left: 10px;
+            }
+            .help-text {
+              color: #888;
+              font-size: 12px;
+              margin-top: 3px;
+              font-style: italic;
+            }
+            @media print {
+              body { padding: 0; }
+              .no-print { display: none; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>${templateData?.name || 'Consultation Form'}</h1>
+            ${templateData?.description ? `<p>${templateData.description}</p>` : ''}
+          </div>
+
+          <div class="patient-info">
+            <p><strong>Patient:</strong> ${patient?.full_name || 'N/A'}</p>
+            <p><strong>Patient ID:</strong> ${patient?.patient_id || 'N/A'}</p>
+            <p><strong>Visit Number:</strong> ${visit.visit_number}</p>
+            <p><strong>Visit Date:</strong> ${visit.visit_date}</p>
+            <p><strong>Doctor:</strong> ${doctor?.full_name || 'N/A'}</p>
+            <p><strong>Response #:</strong> ${activeResponse?.response_sequence || ''} by Dr. ${activeResponse?.filled_by_name || ''}</p>
+          </div>
+
+          ${previewRef.current.innerHTML}
+
+          <script>
+            window.onload = function() {
+              window.print();
+              setTimeout(() => window.close(), 100);
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  }, [visit, templateData, activeResponse]);
+
+  const handleDownload = useCallback(async () => {
+    if (!previewRef.current) return;
+
+    try {
+      // Dynamic import for html2canvas and jsPDF
+      const html2canvas = (await import('html2canvas')).default;
+      const { jsPDF } = await import('jspdf');
+
+      const patient = visit.patient_details;
+      const canvas = await html2canvas(previewRef.current, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+      });
+
+      const imgWidth = 210; // A4 width in mm
+      const pageHeight = 297; // A4 height in mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      let heightLeft = imgHeight;
+
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      let position = 0;
+
+      // Add header to first page
+      pdf.setFontSize(16);
+      pdf.text(templateData?.name || 'Consultation Form', 15, 15);
+      pdf.setFontSize(10);
+      pdf.text(`Patient: ${patient?.full_name || 'N/A'} | Visit: ${visit.visit_number}`, 15, 22);
+      pdf.text(`Date: ${visit.visit_date} | Response #${activeResponse?.response_sequence || ''}`, 15, 27);
+
+      position = 35;
+
+      // Add image
+      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+
+      // Add new pages if content is longer than one page
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight + 35;
+        pdf.addPage();
+        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+
+      const fileName = `consultation_${patient?.patient_id || 'patient'}_${visit.visit_number}_${new Date().getTime()}.pdf`;
+      pdf.save(fileName);
+      toast.success('PDF downloaded successfully!');
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast.error('Failed to generate PDF. Please try again.');
+    }
+  }, [visit, templateData, activeResponse]);
 
   const getGridColumns = (optionCount: number): string => {
     if (optionCount <= 2) return 'grid-cols-1';
@@ -516,65 +675,80 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
             {/* Preview Tab Content */}
             <div className={activeSubTab === 'preview' ? 'block' : 'hidden'}>
               <div className="space-y-4">
+                {/* Action Buttons */}
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={handlePrint}>
+                    <Printer className="h-4 w-4 mr-2" />
+                    Print
+                  </Button>
+                  <Button variant="outline" onClick={handleDownload}>
+                    <Download className="h-4 w-4 mr-2" />
+                    Download PDF
+                  </Button>
+                </div>
+
+                {/* Preview Content */}
                 <div className="bg-white border rounded-lg p-6">
-                  <div className="mb-6">
-                    <h2 className="text-2xl font-bold text-gray-800 mb-2">{templateData?.name || 'Template Preview'}</h2>
-                    {templateData?.description && (
-                      <p className="text-sm text-gray-600">{templateData.description}</p>
-                    )}
-                  </div>
-
-                  {isLoadingTemplate ? (
-                    <div className="space-y-4">
-                      <Skeleton className="h-8 w-3/4" />
-                      <Skeleton className="h-20 w-full" />
-                      <Skeleton className="h-8 w-3/4" />
-                      <Skeleton className="h-20 w-full" />
-                    </div>
-                  ) : (
-                    <div className="space-y-6">
-                      {fieldsData.filter(f => f.field_type !== 'json' && f.field_type !== 'canvas').map((field) => {
-                        const fieldId = String(field.id);
-                        const value = formData[fieldId];
-
-                        return (
-                          <div key={field.id} className="border-b pb-4 last:border-b-0">
-                            <div className="font-semibold text-gray-700 mb-2">{field.field_label}</div>
-                            <div className="text-gray-900">
-                              {(() => {
-                                // Display the value based on field type
-                                if (field.field_type === 'boolean') {
-                                  return value ? 'Yes' : 'No';
-                                } else if (field.field_type === 'select' || field.field_type === 'radio') {
-                                  const selectedOption = field.options?.find(opt => opt.id === Number(value));
-                                  return selectedOption?.option_label || 'Not selected';
-                                } else if (field.field_type === 'multiselect' || (field.field_type === 'checkbox' && field.options?.length)) {
-                                  const selectedValues = Array.isArray(value) ? value : [];
-                                  const selectedLabels = field.options
-                                    ?.filter(opt => selectedValues.includes(opt.id))
-                                    .map(opt => opt.option_label)
-                                    .join(', ');
-                                  return selectedLabels || 'None selected';
-                                } else if (value !== null && value !== undefined && value !== '') {
-                                  return String(value);
-                                } else {
-                                  return <span className="text-gray-400 italic">Not filled</span>;
-                                }
-                              })()}
-                            </div>
-                            {field.help_text && (
-                              <div className="text-xs text-gray-500 mt-1">{field.help_text}</div>
-                            )}
-                          </div>
-                        );
-                      })}
-                      {fieldsData.filter(f => f.field_type !== 'json' && f.field_type !== 'canvas').length === 0 && (
-                        <div className="text-center py-8 text-gray-500">
-                          No fields available for preview
-                        </div>
+                  <div ref={previewRef}>
+                    <div className="mb-6">
+                      <h2 className="text-2xl font-bold text-gray-800 mb-2">{templateData?.name || 'Template Preview'}</h2>
+                      {templateData?.description && (
+                        <p className="text-sm text-gray-600">{templateData.description}</p>
                       )}
                     </div>
-                  )}
+
+                    {isLoadingTemplate ? (
+                      <div className="space-y-4">
+                        <Skeleton className="h-8 w-3/4" />
+                        <Skeleton className="h-20 w-full" />
+                        <Skeleton className="h-8 w-3/4" />
+                        <Skeleton className="h-20 w-full" />
+                      </div>
+                    ) : (
+                      <div className="space-y-6">
+                        {fieldsData.filter(f => f.field_type !== 'json' && f.field_type !== 'canvas').map((field) => {
+                          const fieldId = String(field.id);
+                          const value = formData[fieldId];
+
+                          return (
+                            <div key={field.id} className="border-b pb-4 last:border-b-0">
+                              <div className="font-semibold text-gray-700 mb-2">{field.field_label}</div>
+                              <div className="text-gray-900">
+                                {(() => {
+                                  // Display the value based on field type
+                                  if (field.field_type === 'boolean') {
+                                    return value ? 'Yes' : 'No';
+                                  } else if (field.field_type === 'select' || field.field_type === 'radio') {
+                                    const selectedOption = field.options?.find(opt => opt.id === Number(value));
+                                    return selectedOption?.option_label || 'Not selected';
+                                  } else if (field.field_type === 'multiselect' || (field.field_type === 'checkbox' && field.options?.length)) {
+                                    const selectedValues = Array.isArray(value) ? value : [];
+                                    const selectedLabels = field.options
+                                      ?.filter(opt => selectedValues.includes(opt.id))
+                                      .map(opt => opt.option_label)
+                                      .join(', ');
+                                    return selectedLabels || 'None selected';
+                                  } else if (value !== null && value !== undefined && value !== '') {
+                                    return String(value);
+                                  } else {
+                                    return <span className="text-gray-400 italic">Not filled</span>;
+                                  }
+                                })()}
+                              </div>
+                              {field.help_text && (
+                                <div className="text-xs text-gray-500 mt-1">{field.help_text}</div>
+                              )}
+                            </div>
+                          );
+                        })}
+                        {fieldsData.filter(f => f.field_type !== 'json' && f.field_type !== 'canvas').length === 0 && (
+                          <div className="text-center py-8 text-gray-500">
+                            No fields available for preview
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

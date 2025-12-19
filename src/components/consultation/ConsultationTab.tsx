@@ -66,6 +66,7 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [activeResponse, setActiveResponse] = useState<TemplateResponse | null>(null);
   const [activeSubTab, setActiveSubTab] = useState<'fields' | 'preview' | 'canvas'>('fields');
+  const [mode, setMode] = useState<'edit' | 'preview'>('edit');
   const [isSaving, setIsSaving] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
 
@@ -84,6 +85,15 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
   const { data: detailedActiveResponse } = useTemplateResponse(
     activeResponse?.id || null
   );
+
+  // Sync mode with active tab
+  useEffect(() => {
+    if (activeSubTab === 'preview') {
+      setMode('preview');
+    } else if (activeSubTab === 'fields') {
+      setMode('edit');
+    }
+  }, [activeSubTab]);
 
   useEffect(() => {
     if (!detailedActiveResponse || fieldsData.length === 0 || isLoadingTemplate) {

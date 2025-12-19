@@ -86,24 +86,36 @@ export const OPDConsultation: React.FC = () => {
     // Only apply default template once when all data is loaded
     if (
       !isDefaultTemplateApplied &&
+      !isLoadingTemplates &&
       visit &&
       templatesData?.results &&
-      templatesData.results.length > 0 &&
-      user?.preferences?.defaultOPDTemplate
+      templatesData.results.length > 0
     ) {
-      const defaultTemplateId = String(user.preferences.defaultOPDTemplate);
-      const templateExists = templatesData.results.some(t => String(t.id) === defaultTemplateId);
+      // Try to load user's default template first
+      if (user?.preferences?.defaultOPDTemplate) {
+        const defaultTemplateId = String(user.preferences.defaultOPDTemplate);
+        const templateExists = templatesData.results.some(t => String(t.id) === defaultTemplateId);
 
-      if (templateExists) {
-        setSelectedTemplate(defaultTemplateId);
+        if (templateExists) {
+          setSelectedTemplate(defaultTemplateId);
+          setIsDefaultTemplateApplied(true);
+          console.log('Default OPD template loaded:', defaultTemplateId);
+          return;
+        }
+      }
+
+      // Fallback: If no default template is set or it doesn't exist, auto-select the first template
+      const firstTemplate = templatesData.results[0];
+      if (firstTemplate && !selectedTemplate) {
+        setSelectedTemplate(String(firstTemplate.id));
         setIsDefaultTemplateApplied(true);
-        toast.info('Default OPD template loaded.');
+        toast.info(`Template "${firstTemplate.name}" loaded.`);
+        console.log('Auto-selected first template:', firstTemplate.id);
       } else {
-        // If default template doesn't exist, just mark as applied to avoid repeated checks
         setIsDefaultTemplateApplied(true);
       }
     }
-  }, [user?.preferences?.defaultOPDTemplate, templatesData, visit, isDefaultTemplateApplied]);
+  }, [user?.preferences?.defaultOPDTemplate, templatesData, visit, isDefaultTemplateApplied, isLoadingTemplates, selectedTemplate]);
 
   const handleViewResponse = useCallback((response: TemplateResponse) => {
     setActiveResponse(response);
@@ -138,14 +150,23 @@ export const OPDConsultation: React.FC = () => {
   }, [selectedTemplate, visit?.id, newResponseReason, templateResponses, createTemplateResponse, mutateResponses, handleViewResponse]);
 
   useEffect(() => {
-    if (!selectedTemplate || isLoadingResponses || !visit) return;
+    if (!selectedTemplate || isLoadingResponses || !visit) {
+      console.log('Waiting for data:', { selectedTemplate, isLoadingResponses, hasVisit: !!visit });
+      return;
+    }
+
+    console.log('Template responses:', templateResponses.length);
 
     if (templateResponses.length > 0) {
+      // If we have responses, set the most recent one as active
       if (!activeResponse || !templateResponses.find(r => r.id === activeResponse.id)) {
         const sortedResponses = [...templateResponses].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        console.log('Setting active response:', sortedResponses[0].id);
         handleViewResponse(sortedResponses[0]);
       }
     } else {
+      // No responses exist, auto-create the first one
+      console.log('No responses found, auto-creating first response');
       setActiveResponse(null);
       handleAddNewResponse(true);
     }
@@ -315,9 +336,13 @@ export const OPDConsultation: React.FC = () => {
             {/* Template Selection */}
             <div>
               <h3 className="text-sm font-semibold mb-2">Select Template</h3>
-              <Select onValueChange={setSelectedTemplate} value={selectedTemplate}>
+              <Select
+                onValueChange={setSelectedTemplate}
+                value={selectedTemplate || undefined}
+                disabled={isLoadingTemplates}
+              >
                 <SelectTrigger className="w-full md:w-96">
-                  <SelectValue placeholder="Select a template..." />
+                  <SelectValue placeholder={isLoadingTemplates ? "Loading templates..." : "Select a template..."} />
                 </SelectTrigger>
                 <SelectContent>
                   {isLoadingTemplates ? (

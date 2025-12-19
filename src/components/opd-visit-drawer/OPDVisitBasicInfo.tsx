@@ -441,8 +441,7 @@ const OPDVisitBasicInfo = forwardRef<OPDVisitBasicInfoHandle, OPDVisitBasicInfoP
                           variant="outline"
                           className="w-full justify-start"
                           size="sm"
-                          onClick={(e) => {
-                            e.preventDefault();
+                          onClick={() => {
                             setShowInlinePatientForm(!showInlinePatientForm);
                           }}
                         >

@@ -265,87 +265,166 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
     }
 
     const patient = visit.patient_details;
-    const doctor = visit.doctor_details;
+
+    // Get all stylesheets from the current document
+    const styles = Array.from(document.styleSheets)
+      .map(styleSheet => {
+        try {
+          return Array.from(styleSheet.cssRules)
+            .map(rule => rule.cssText)
+            .join('\n');
+        } catch (e) {
+          return '';
+        }
+      })
+      .join('\n');
 
     printWindow.document.write(`
       <!DOCTYPE html>
       <html>
         <head>
           <title>Consultation - ${patient?.full_name || 'Patient'}</title>
+          <meta charset="UTF-8">
           <style>
+            * {
+              margin: 0;
+              padding: 0;
+              box-sizing: border-box;
+            }
+
             body {
               font-family: Arial, sans-serif;
-              padding: 20px;
               margin: 0;
+              padding: 0;
+              background: white;
             }
-            .header {
-              margin-bottom: 30px;
-              border-bottom: 2px solid #333;
-              padding-bottom: 15px;
+
+            /* Include inline styles from preview */
+            .preview-container {
+              background-color: #ffffff !important;
+              color: #000000 !important;
+              width: 210mm;
+              min-height: 297mm;
+              margin: 0 auto;
+              display: flex;
+              flex-direction: column;
             }
-            .header h1 {
-              margin: 0 0 10px 0;
-              font-size: 24px;
-              color: #333;
+
+            .preview-container * {
+              color: inherit;
             }
-            .header p {
-              margin: 5px 0;
-              color: #666;
-              font-size: 14px;
+
+            .preview-container .text-gray-700 {
+              color: #374151 !important;
             }
-            .patient-info {
-              background: #f5f5f5;
-              padding: 15px;
-              margin-bottom: 20px;
-              border-radius: 5px;
+
+            .preview-container .text-gray-600 {
+              color: #4b5563 !important;
             }
-            .patient-info p {
-              margin: 5px 0;
-              font-size: 14px;
+
+            .preview-container .text-gray-400 {
+              color: #9ca3af !important;
             }
-            .field-group {
-              margin-bottom: 20px;
-              padding-bottom: 15px;
-              border-bottom: 1px solid #ddd;
+
+            .preview-container .border-t,
+            .preview-container .border-b {
+              border-color: #e5e7eb !important;
             }
-            .field-label {
-              font-weight: bold;
-              color: #444;
-              margin-bottom: 5px;
+
+            .preview-container .border-dotted {
+              border-color: #9ca3af !important;
             }
-            .field-value {
-              color: #333;
-              margin-left: 10px;
-            }
-            .help-text {
-              color: #888;
-              font-size: 12px;
-              margin-top: 3px;
-              font-style: italic;
-            }
+
+            .flex { display: flex; }
+            .flex-col { flex-direction: column; }
+            .flex-1 { flex: 1; }
+            .flex-shrink-0 { flex-shrink: 0; }
+            .items-start { align-items: flex-start; }
+            .items-center { align-items: center; }
+            .items-end { align-items: flex-end; }
+            .items-baseline { align-items: baseline; }
+            .justify-between { justify-content: space-between; }
+            .gap-1 { gap: 0.25rem; }
+            .gap-2 { gap: 0.5rem; }
+            .gap-4 { gap: 1rem; }
+            .gap-x-4 { column-gap: 1rem; }
+            .gap-x-8 { column-gap: 2rem; }
+            .gap-y-1 { row-gap: 0.25rem; }
+            .gap-y-2 { row-gap: 0.5rem; }
+            .space-y-2 > * + * { margin-top: 0.5rem; }
+            .grid { display: grid; }
+            .grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .grid-cols-12 { grid-template-columns: repeat(12, minmax(0, 1fr)); }
+            .col-span-3 { grid-column: span 3 / span 3; }
+            .col-span-4 { grid-column: span 4 / span 4; }
+            .col-span-6 { grid-column: span 6 / span 6; }
+            .col-span-12 { grid-column: span 12 / span 12; }
+            .px-8 { padding-left: 2rem; padding-right: 2rem; }
+            .py-1 { padding-top: 0.25rem; padding-bottom: 0.25rem; }
+            .py-4 { padding-top: 1rem; padding-bottom: 1rem; }
+            .py-6 { padding-top: 1.5rem; padding-bottom: 1.5rem; }
+            .py-8 { padding-top: 2rem; padding-bottom: 2rem; }
+            .pb-0\\.5 { padding-bottom: 0.125rem; }
+            .pb-1 { padding-bottom: 0.25rem; }
+            .ml-2 { margin-left: 0.5rem; }
+            .mb-2 { margin-bottom: 0.5rem; }
+            .mb-3 { margin-bottom: 0.75rem; }
+            .mt-1 { margin-top: 0.25rem; }
+            .max-w-md { max-width: 28rem; }
+            .min-w-0 { min-width: 0; }
+            .min-h-\\[32px\\] { min-height: 32px; }
+            .w-28 { width: 7rem; }
+            .h-16 { height: 4rem; }
+            .w-16 { width: 4rem; }
+            .text-xs { font-size: 0.75rem; line-height: 1rem; }
+            .text-sm { font-size: 0.875rem; line-height: 1.25rem; }
+            .text-base { font-size: 1rem; line-height: 1.5rem; }
+            .text-lg { font-size: 1.125rem; line-height: 1.75rem; }
+            .text-xl { font-size: 1.25rem; line-height: 1.75rem; }
+            .font-bold { font-weight: 700; }
+            .font-semibold { font-weight: 600; }
+            .text-center { text-align: center; }
+            .text-right { text-align: right; }
+            .leading-tight { line-height: 1.25; }
+            .whitespace-pre-wrap { white-space: pre-wrap; }
+            .break-words { word-wrap: break-word; }
+            .border-b { border-bottom-width: 1px; }
+            .border-t { border-top-width: 1px; }
+            .border-b-4 { border-bottom-width: 4px; }
+            .border-t-4 { border-top-width: 4px; }
+            .border-dotted { border-style: dotted; }
+            .border-gray-400 { border-color: #9ca3af; }
+            .opacity-90 { opacity: 0.9; }
+            .overflow-auto { overflow: auto; }
+            .object-contain { object-fit: contain; }
+
             @media print {
-              body { padding: 0; }
-              .no-print { display: none; }
+              @page {
+                size: A4;
+                margin: 0;
+              }
+
+              * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                color-adjust: exact !important;
+              }
+
+              body {
+                margin: 0 !important;
+                padding: 0 !important;
+              }
+
+              .preview-container {
+                width: 210mm !important;
+                margin: 0 !important;
+                box-shadow: none !important;
+              }
             }
           </style>
         </head>
         <body>
-          <div class="header">
-            <h1>${templateData?.name || 'Consultation Form'}</h1>
-            ${templateData?.description ? `<p>${templateData.description}</p>` : ''}
-          </div>
-
-          <div class="patient-info">
-            <p><strong>Patient:</strong> ${patient?.full_name || 'N/A'}</p>
-            <p><strong>Patient ID:</strong> ${patient?.patient_id || 'N/A'}</p>
-            <p><strong>Visit Number:</strong> ${visit.visit_number}</p>
-            <p><strong>Visit Date:</strong> ${visit.visit_date}</p>
-            <p><strong>Doctor:</strong> ${doctor?.full_name || 'N/A'}</p>
-            <p><strong>Response #:</strong> ${activeResponse?.response_sequence || ''} by Dr. ${activeResponse?.filled_by_name || ''}</p>
-          </div>
-
-          ${previewRef.current.innerHTML}
-
+          ${previewRef.current.outerHTML}
           <script>
             window.onload = function() {
               window.print();
@@ -356,60 +435,66 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
       </html>
     `);
     printWindow.document.close();
-  }, [visit, templateData, activeResponse]);
+  }, [visit]);
 
   const handleDownload = useCallback(async () => {
     if (!previewRef.current) return;
 
     try {
+      toast.info('Generating PDF... Please wait.');
+
       // Dynamic import for html2canvas and jsPDF
       const html2canvas = (await import('html2canvas')).default;
       const { jsPDF } = await import('jspdf');
 
       const patient = visit.patient_details;
+
+      // Capture the preview with high quality
       const canvas = await html2canvas(previewRef.current, {
-        scale: 2,
+        scale: 3, // Higher quality
         useCORS: true,
         logging: false,
+        backgroundColor: '#ffffff',
+        windowWidth: 794, // A4 width in pixels at 96 DPI (210mm)
+        windowHeight: 1123, // A4 height in pixels at 96 DPI (297mm)
       });
 
-      const imgWidth = 210; // A4 width in mm
-      const pageHeight = 297; // A4 height in mm
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      let heightLeft = imgHeight;
+      // A4 dimensions in mm
+      const pdfWidth = 210;
+      const pdfHeight = 297;
 
+      // Calculate image dimensions to fit A4
+      const imgWidth = pdfWidth;
+      const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+
+      // Create PDF
       const pdf = new jsPDF('p', 'mm', 'a4');
+
+      let heightLeft = imgHeight;
       let position = 0;
 
-      // Add header to first page
-      pdf.setFontSize(16);
-      pdf.text(templateData?.name || 'Consultation Form', 15, 15);
-      pdf.setFontSize(10);
-      pdf.text(`Patient: ${patient?.full_name || 'N/A'} | Visit: ${visit.visit_number}`, 15, 22);
-      pdf.text(`Date: ${visit.visit_date} | Response #${activeResponse?.response_sequence || ''}`, 15, 27);
-
-      position = 35;
-
-      // Add image
+      // Add first page
       pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
+      heightLeft -= pdfHeight;
 
-      // Add new pages if content is longer than one page
-      while (heightLeft >= 0) {
-        position = heightLeft - imgHeight + 35;
+      // Add additional pages if content is longer than one page
+      while (heightLeft > 0) {
+        position = heightLeft - imgHeight;
         pdf.addPage();
         pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
+        heightLeft -= pdfHeight;
       }
 
+      // Generate filename with timestamp
       const fileName = `consultation_${patient?.patient_id || 'patient'}_${visit.visit_number}_${new Date().getTime()}.pdf`;
       pdf.save(fileName);
+
       toast.success('PDF downloaded successfully!');
     } catch (error) {
       console.error('Error generating PDF:', error);
       toast.error('Failed to generate PDF. Please try again.');
     }
-  }, [visit, templateData, activeResponse]);
+  }, [visit]);
 
   const getGridColumns = (optionCount: number): string => {
     if (optionCount <= 2) return 'grid-cols-1';
@@ -692,13 +777,9 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
             <div className={activeSubTab === 'preview' ? 'block' : 'hidden'}>
               {mode === 'preview' ? (
                 <div className="space-y-6">
-                  {/* Mode Toggle - Hidden in Print */}
-                  <div className="flex justify-between items-center print:hidden">
+                  {/* Action Buttons - Hidden in Print */}
+                  <div className="flex justify-end items-center print:hidden">
                     <div className="flex gap-2">
-                      <Button variant="outline" onClick={() => setMode('edit')}>
-                        <FileText className="h-4 w-4 mr-2" />
-                        Edit Mode
-                      </Button>
                       <Button variant="outline" onClick={handlePrint}>
                         <Printer className="h-4 w-4 mr-2" />
                         Print

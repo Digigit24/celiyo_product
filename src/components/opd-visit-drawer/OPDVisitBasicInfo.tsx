@@ -112,6 +112,9 @@ const OPDVisitBasicInfo = forwardRef<OPDVisitBasicInfoHandle, OPDVisitBasicInfoP
     const [patientDrawerOpen, setPatientDrawerOpen] = useState(false);
     const [selectedPatientForEdit, setSelectedPatientForEdit] = useState<number | null>(null);
 
+    // State to control patient select dropdown
+    const [patientSelectOpen, setPatientSelectOpen] = useState(false);
+
     // Fetch doctors and patients for selects
     const { useDoctors } = useDoctor();
     const { usePatients, createPatient } = usePatient();
@@ -422,6 +425,8 @@ const OPDVisitBasicInfo = forwardRef<OPDVisitBasicInfoHandle, OPDVisitBasicInfoP
                 <div className="flex gap-2">
                   <Select
                     value={String(watch('patient_id') || '')}
+                    open={patientSelectOpen}
+                    onOpenChange={setPatientSelectOpen}
                     onValueChange={(value) => {
                       setValue('patient_id', Number(value));
                       // Hide inline form when patient is selected
@@ -443,6 +448,7 @@ const OPDVisitBasicInfo = forwardRef<OPDVisitBasicInfoHandle, OPDVisitBasicInfoP
                           size="sm"
                           onClick={() => {
                             setShowInlinePatientForm(!showInlinePatientForm);
+                            setPatientSelectOpen(false);
                           }}
                         >
                           <UserPlus className="h-4 w-4 mr-2" />

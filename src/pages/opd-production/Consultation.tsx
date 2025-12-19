@@ -83,15 +83,27 @@ export const OPDConsultation: React.FC = () => {
 
   // Effect to load default template from user preferences
   useEffect(() => {
-    if (user?.preferences?.defaultOPDTemplate && templatesData?.results && !selectedTemplate && !isDefaultTemplateApplied && visit) {
-        const defaultTemplateId = String(user.preferences.defaultOPDTemplate);
-        if (templatesData.results.some(t => String(t.id) === defaultTemplateId)) {
-            setSelectedTemplate(defaultTemplateId);
-            setIsDefaultTemplateApplied(true);
-            toast.info('Default OPD template loaded.');
-        }
+    // Only apply default template once when all data is loaded
+    if (
+      !isDefaultTemplateApplied &&
+      visit &&
+      templatesData?.results &&
+      templatesData.results.length > 0 &&
+      user?.preferences?.defaultOPDTemplate
+    ) {
+      const defaultTemplateId = String(user.preferences.defaultOPDTemplate);
+      const templateExists = templatesData.results.some(t => String(t.id) === defaultTemplateId);
+
+      if (templateExists) {
+        setSelectedTemplate(defaultTemplateId);
+        setIsDefaultTemplateApplied(true);
+        toast.info('Default OPD template loaded.');
+      } else {
+        // If default template doesn't exist, just mark as applied to avoid repeated checks
+        setIsDefaultTemplateApplied(true);
+      }
     }
-  }, [user, templatesData, selectedTemplate, isDefaultTemplateApplied, visit]);
+  }, [user?.preferences?.defaultOPDTemplate, templatesData, visit, isDefaultTemplateApplied]);
 
   const handleViewResponse = useCallback((response: TemplateResponse) => {
     setActiveResponse(response);
@@ -181,9 +193,9 @@ export const OPDConsultation: React.FC = () => {
   };
 
   return (
-    <div className="p-6 max-w-8xl mx-auto space-y-4">
+    <div className="p-4 max-w-8xl mx-auto space-y-3">
       {/* Back Button */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
         <Button
           variant="ghost"
           size="icon"
@@ -192,8 +204,8 @@ export const OPDConsultation: React.FC = () => {
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold">Patient Consultation</h1>
-          <p className="text-muted-foreground text-sm">
+          <h1 className="text-xl sm:text-2xl font-bold">Patient Consultation</h1>
+          <p className="text-muted-foreground text-xs">
             Visit: {visit.visit_number} • {formatVisitDate(visit.visit_date)}
           </p>
         </div>
@@ -204,70 +216,70 @@ export const OPDConsultation: React.FC = () => {
         <CardContent className="p-4">
           <div className="flex flex-col md:flex-row gap-4">
             {/* Avatar & Basic Info */}
-            <div className="flex items-start gap-4">
-              <Avatar className="h-20 w-20">
-                <AvatarFallback className="text-2xl font-semibold bg-primary/10">
+            <div className="flex items-start gap-3">
+              <Avatar className="h-16 w-16">
+                <AvatarFallback className="text-xl font-semibold bg-primary/10">
                   {patient?.full_name?.charAt(0) || 'P'}
                 </AvatarFallback>
               </Avatar>
-              <div className="space-y-1">
-                <h2 className="text-2xl font-bold">{patient?.full_name || 'N/A'}</h2>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <User className="h-4 w-4" />
+              <div className="space-y-0.5">
+                <h2 className="text-xl font-bold">{patient?.full_name || 'N/A'}</h2>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <User className="h-3 w-3" />
                   <span>ID: {patient?.patient_id || 'N/A'}</span>
                 </div>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Phone className="h-4 w-4" />
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Phone className="h-3 w-3" />
                   <span>{patient?.mobile_primary || 'N/A'}</span>
                 </div>
               </div>
             </div>
 
             {/* Patient Details Grid */}
-            <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-3">
               {/* Age & Gender */}
-              <div className="space-y-1">
+              <div className="space-y-0.5">
                 <p className="text-xs text-muted-foreground flex items-center gap-1">
                   <Calendar className="h-3 w-3" />
                   Age / Gender
                 </p>
-                <p className="font-semibold">
+                <p className="font-semibold text-sm">
                   {patient?.age || 'N/A'} yrs • {patient?.gender || 'N/A'}
                 </p>
               </div>
 
               {/* Blood Group */}
-              <div className="space-y-1">
+              <div className="space-y-0.5">
                 <p className="text-xs text-muted-foreground flex items-center gap-1">
                   <Droplet className="h-3 w-3" />
                   Blood Group
                 </p>
-                <p className="font-semibold">
+                <p className="font-semibold text-sm">
                   {patient?.blood_group || 'N/A'}
                 </p>
               </div>
 
               {/* BMI */}
-              <div className="space-y-1">
+              <div className="space-y-0.5">
                 <p className="text-xs text-muted-foreground flex items-center gap-1">
                   <Activity className="h-3 w-3" />
                   BMI
                 </p>
-                <p className="font-semibold">{calculateBMI()}</p>
+                <p className="font-semibold text-sm">{calculateBMI()}</p>
               </div>
 
               {/* Visit Status */}
-              <div className="space-y-1">
+              <div className="space-y-0.5">
                 <p className="text-xs text-muted-foreground">Status</p>
                 <Badge
                   variant={visit.status === 'completed' ? 'default' : 'secondary'}
-                  className={
+                  className={`text-xs ${
                     visit.status === 'completed'
                       ? 'bg-green-600'
                       : visit.status === 'in_progress'
                       ? 'bg-blue-600'
                       : 'bg-orange-600'
-                  }
+                  }`}
                 >
                   {visit.status?.replace('_', ' ').toUpperCase() || 'UNKNOWN'}
                 </Badge>
@@ -276,17 +288,14 @@ export const OPDConsultation: React.FC = () => {
           </div>
 
           {/* Doctor & Visit Info */}
-          <div className="mt-3 pt-3 border-t grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="mt-2 pt-2 border-t grid grid-cols-1 md:grid-cols-3 gap-3">
             <div>
               <p className="text-xs text-muted-foreground">Consulting Doctor</p>
-              <p className="font-medium">{doctor?.full_name || 'N/A'}</p>
-              <p className="text-xs text-muted-foreground">
-                {doctor?.specialties?.map(s => s.name).join(', ')}
-              </p>
+              <p className="font-medium text-sm">{doctor?.full_name || 'N/A'}</p>
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Visit Type</p>
-              <Badge variant="secondary" className="mt-1">
+              <Badge variant="secondary" className="mt-0.5 text-xs">
                 {visit.visit_type?.replace('_', ' ').toUpperCase() || 'N/A'}
               </Badge>
             </div>
@@ -294,72 +303,112 @@ export const OPDConsultation: React.FC = () => {
               <p className="text-xs text-muted-foreground">Priority</p>
               <Badge
                 variant={visit.priority === 'urgent' || visit.priority === 'high' ? 'destructive' : 'outline'}
-                className={`mt-1 ${visit.priority === 'high' ? 'bg-orange-600 text-white' : ''}`}
+                className={`mt-0.5 text-xs ${visit.priority === 'high' ? 'bg-orange-600 text-white' : ''}`}
               >
                 {visit.priority?.toUpperCase() || 'NORMAL'}
               </Badge>
             </div>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Template Selection */}
-      <Card>
-        <CardHeader className="pb-3"><CardTitle>Select Template</CardTitle></CardHeader>
-        <CardContent className="pt-0">
-          <Select onValueChange={setSelectedTemplate} value={selectedTemplate}>
-            <SelectTrigger><SelectValue placeholder="Select a template..." /></SelectTrigger>
-            <SelectContent>
-              {isLoadingTemplates ? <SelectItem value="loading" disabled>Loading...</SelectItem> :
-               (templatesData?.results || []).map(t => <SelectItem key={t.id} value={String(t.id)}>{t.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </CardContent>
-      </Card>
+          {/* Template Selection & Consultation Responses */}
+          <div className="mt-3 pt-3 border-t space-y-3">
+            {/* Template Selection */}
+            <div>
+              <h3 className="text-sm font-semibold mb-2">Select Template</h3>
+              <Select onValueChange={setSelectedTemplate} value={selectedTemplate}>
+                <SelectTrigger className="w-full md:w-96">
+                  <SelectValue placeholder="Select a template..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {isLoadingTemplates ? (
+                    <SelectItem value="loading" disabled>Loading...</SelectItem>
+                  ) : (
+                    (templatesData?.results || []).map(t => (
+                      <SelectItem key={t.id} value={String(t.id)}>{t.name}</SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
 
-      {/* Consultation Responses */}
-      {selectedTemplate && (
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-3">
-            <CardTitle>Consultation Responses</CardTitle>
-            {templateResponses.length > 0 &&
-                <Dialog open={showNewResponseDialog} onOpenChange={setShowNewResponseDialog}>
-                <DialogTrigger asChild><Button variant="outline" size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add New</Button></DialogTrigger>
-                <DialogContent>
-                    <DialogHeader><DialogTitle>Add New Response</DialogTitle><DialogDescription>Create a new response form for a handover or new consultation.</DialogDescription></DialogHeader>
-                    <div className="space-y-2"><Label htmlFor="reason">Reason (optional)</Label><Input id="reason" value={newResponseReason} onChange={(e) => setNewResponseReason(e.target.value)} /></div>
-                    <DialogFooter>
-                      <Button variant="ghost" onClick={() => setShowNewResponseDialog(false)}>Cancel</Button>
-                      <Button onClick={() => handleAddNewResponse(false)} disabled={isSaving}>{isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Create</Button>
-                    </DialogFooter>
-                </DialogContent>
-                </Dialog>
-            }
-          </CardHeader>
-          <CardContent className="pt-0">
-            {isLoadingResponses ? (
-                <div className="space-y-2"><Skeleton className="h-12 w-full" /><Skeleton className="h-12 w-full" /></div>
-            ) : (
-              <div className="space-y-2">
-                {templateResponses.map(res => (
-                  <div key={res.id} className={`flex items-center justify-between p-2 rounded-md border ${activeResponse?.id === res.id ? 'bg-muted border-primary' : 'border-transparent'}`}>
-                    <div>
-                      <p className="font-semibold">Response #{res.response_sequence} - Dr. {res.filled_by_name}</p>
-                      <p className="text-sm text-muted-foreground">Status: {res.status}</p>
+            {/* Consultation Responses */}
+            {selectedTemplate && (
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-sm font-semibold">Consultation Responses</h3>
+                  {templateResponses.length > 0 && (
+                    <Dialog open={showNewResponseDialog} onOpenChange={setShowNewResponseDialog}>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" size="sm">
+                          <PlusCircle className="mr-2 h-4 w-4" /> Add New
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Add New Response</DialogTitle>
+                          <DialogDescription>
+                            Create a new response form for a handover or new consultation.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-2">
+                          <Label htmlFor="reason">Reason (optional)</Label>
+                          <Input
+                            id="reason"
+                            value={newResponseReason}
+                            onChange={(e) => setNewResponseReason(e.target.value)}
+                          />
+                        </div>
+                        <DialogFooter>
+                          <Button variant="ghost" onClick={() => setShowNewResponseDialog(false)}>
+                            Cancel
+                          </Button>
+                          <Button onClick={() => handleAddNewResponse(false)} disabled={isSaving}>
+                            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Create
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                  )}
+                </div>
+                <div className="w-full md:w-auto">
+                  {isLoadingResponses ? (
+                    <div className="space-y-2">
+                      <Skeleton className="h-12 w-full md:w-96" />
+                      <Skeleton className="h-12 w-full md:w-96" />
                     </div>
-                    <Button variant="ghost" size="sm" onClick={() => handleViewResponse(res)}><Eye className="mr-2 h-4 w-4" /> View</Button>
-                  </div>
-                ))}
-                {templateResponses.length === 0 && !isLoadingResponses && (
-                    <div className="text-center py-4 text-muted-foreground">
-                        <p>No responses yet. The first response form has been created automatically.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {templateResponses.map(res => (
+                        <div
+                          key={res.id}
+                          className={`flex items-center justify-between p-2 rounded-md border w-full md:w-auto ${
+                            activeResponse?.id === res.id ? 'bg-muted border-primary' : 'border-border'
+                          }`}
+                        >
+                          <div>
+                            <p className="font-semibold text-sm">
+                              Response #{res.response_sequence} - Dr. {res.filled_by_name}
+                            </p>
+                            <p className="text-xs text-muted-foreground">Status: {res.status}</p>
+                          </div>
+                          <Button variant="ghost" size="sm" onClick={() => handleViewResponse(res)}>
+                            <Eye className="mr-2 h-4 w-4" /> View
+                          </Button>
+                        </div>
+                      ))}
+                      {templateResponses.length === 0 && !isLoadingResponses && (
+                        <div className="text-center py-3 text-sm text-muted-foreground">
+                          <p>No responses yet. The first response form has been created automatically.</p>
+                        </div>
+                      )}
                     </div>
-                )}
+                  )}
+                </div>
               </div>
             )}
-          </CardContent>
-        </Card>
-      )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Tabs for Consultation, Billing, History, Profile */}
       <Card>

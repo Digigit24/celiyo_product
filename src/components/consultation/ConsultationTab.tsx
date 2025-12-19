@@ -21,6 +21,7 @@ import {
   Loader2,
   Maximize2,
   Pencil,
+  Eye,
 } from 'lucide-react';
 import { OpdVisit } from '@/types/opdVisit.types';
 import { toast } from 'sonner';
@@ -52,7 +53,7 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({
   } = useOPDTemplate();
 
   const [formData, setFormData] = useState<Record<string, any>>({});
-  const [activeSubTab, setActiveSubTab] = useState<'fields' | 'canvas'>('fields');
+  const [activeSubTab, setActiveSubTab] = useState<'fields' | 'preview' | 'canvas'>('fields');
   const [isSaving, setIsSaving] = useState(false);
 
   const { data: templateData, isLoading: isLoadingTemplate } = useTemplate(
@@ -347,6 +348,16 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({
               Form Fields
             </button>
             <button
+              onClick={() => setActiveSubTab('preview')}
+              className={`px-4 py-2 font-medium transition-colors ${
+                activeSubTab === 'preview'
+                  ? 'border-b-2 border-primary text-primary'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Preview Mode
+            </button>
+            <button
               onClick={() => setActiveSubTab('canvas')}
               className={`px-4 py-2 font-medium transition-colors ${
                 activeSubTab === 'canvas'
@@ -375,6 +386,81 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">{fieldsData.map(renderField)}</div>
+            )}
+          </div>
+        </div>
+
+        {/* Preview Mode Tab Content */}
+        <div className={activeSubTab === 'preview' ? 'block' : 'hidden'}>
+          <div className="space-y-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Eye className="h-5 w-5 text-blue-500" />
+                <h3 className="text-lg font-semibold">Template Preview</h3>
+              </div>
+            </div>
+
+            {isLoadingTemplate ? (
+              <div className="space-y-4">
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+              </div>
+            ) : (
+              <div className="bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-blue-950 rounded-lg p-6 border-2 border-slate-200 dark:border-slate-700">
+                <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm p-6 space-y-6">
+                  {fieldsData.filter(f => f.field_type !== 'json' && f.field_type !== 'canvas').map((field) => {
+                    const fieldId = String(field.id);
+                    const value = formData[fieldId];
+
+                    // Get display value
+                    let displayValue: string = '';
+
+                    if (field.field_type === 'select' || field.field_type === 'radio') {
+                      const selectedOption = field.options?.find(opt => opt.id === value);
+                      displayValue = selectedOption?.option_label || '-';
+                    } else if (field.field_type === 'multiselect' || field.field_type === 'checkbox') {
+                      if (Array.isArray(value) && value.length > 0) {
+                        const selectedLabels = field.options
+                          ?.filter(opt => value.includes(opt.id))
+                          .map(opt => opt.option_label) || [];
+                        displayValue = selectedLabels.join(', ') || '-';
+                      } else {
+                        displayValue = '-';
+                      }
+                    } else if (field.field_type === 'boolean') {
+                      displayValue = value ? 'Yes' : 'No';
+                    } else {
+                      displayValue = value || '-';
+                    }
+
+                    return (
+                      <div key={field.id} className="border-b pb-4 last:border-b-0 last:pb-0">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1">
+                            <Label className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1 block">
+                              {field.field_label}
+                              {field.is_required && <span className="text-red-500 ml-1">*</span>}
+                            </Label>
+                            <div className="text-base text-slate-900 dark:text-slate-100 mt-2">
+                              {displayValue}
+                            </div>
+                            {field.help_text && (
+                              <p className="text-xs text-muted-foreground mt-1">{field.help_text}</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {fieldsData.filter(f => f.field_type !== 'json' && f.field_type !== 'canvas').length === 0 && (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <p>No fields to preview</p>
+                    </div>
+                  )}
+                </div>
+              </div>
             )}
           </div>
         </div>

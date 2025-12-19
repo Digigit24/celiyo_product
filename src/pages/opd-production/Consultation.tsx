@@ -75,7 +75,7 @@ export const OPDConsultation: React.FC = () => {
   };
 
   return (
-    <div className="p-6 max-w-8xl mx-auto space-y-6">
+    <div className="p-6 max-w-8xl mx-auto space-y-4">
       {/* Back Button */}
       <div className="flex items-center gap-4">
         <Button
@@ -95,8 +95,8 @@ export const OPDConsultation: React.FC = () => {
 
       {/* Patient Header Card */}
       <Card>
-        <CardContent className="p-6">
-          <div className="flex flex-col md:flex-row gap-6">
+        <CardContent className="p-4">
+          <div className="flex flex-col md:flex-row gap-4">
             {/* Avatar & Basic Info */}
             <div className="flex items-start gap-4">
               <Avatar className="h-20 w-20">
@@ -170,7 +170,7 @@ export const OPDConsultation: React.FC = () => {
           </div>
 
           {/* Doctor & Visit Info */}
-          <div className="mt-4 pt-4 border-t grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="mt-3 pt-3 border-t grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <p className="text-xs text-muted-foreground">Consulting Doctor</p>
               <p className="font-medium">{doctor?.full_name || 'N/A'}</p>
@@ -200,7 +200,7 @@ export const OPDConsultation: React.FC = () => {
       {/* Tabs for Consultation, Billing, History, Profile */}
       <Card>
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <div className="border-b px-6 pt-6">
+          <div className="border-b px-4 pt-4">
             <TabsList className="w-full justify-start h-auto p-0 bg-transparent">
               <TabsTrigger
                 value="consultation"
@@ -229,7 +229,7 @@ export const OPDConsultation: React.FC = () => {
             </TabsList>
           </div>
 
-          <div className="p-6">
+          <div className="p-4">
             <TabsContent value="consultation" className="mt-0">
               <ConsultationTab visit={visit} />
             </TabsContent>

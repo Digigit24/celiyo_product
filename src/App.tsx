@@ -116,7 +116,7 @@ const AppLayout = () => {
               <Route path="/opd/procedures" element={<ProcedureMasters />} />
               <Route path="/opd/packages" element={<ProcedurePackages />} />
               <Route path="/opd/procedure-bills" element={<ProcedureBills />} />
-              <Route path="/opd/settings" element={<Navigate to="/opd/settings/general" replace />} />
+              <Route path="/opd/settings" element={<Navigate to="/opd/settings/templates" replace />} />
               <Route path="/opd/settings/:tab" element={<OPDSettings />} />
 
               {/* Payment Routes */}

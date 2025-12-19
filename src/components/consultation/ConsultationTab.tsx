@@ -393,10 +393,10 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <Card>
-        <CardHeader><CardTitle>Select Template</CardTitle></CardHeader>
-        <CardContent>
+        <CardHeader className="pb-3"><CardTitle>Select Template</CardTitle></CardHeader>
+        <CardContent className="pt-0">
           <Select onValueChange={setSelectedTemplate} value={selectedTemplate}>
             <SelectTrigger><SelectValue placeholder="Select a template..." /></SelectTrigger>
             <SelectContent>
@@ -409,7 +409,7 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
 
       {selectedTemplate && (
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
+          <CardHeader className="flex flex-row items-center justify-between pb-3">
             <CardTitle>Consultation Responses</CardTitle>
             {templateResponses.length > 0 &&
                 <Dialog open={showNewResponseDialog} onOpenChange={setShowNewResponseDialog}>
@@ -425,7 +425,7 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
                 </Dialog>
             }
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-0">
             {isLoadingResponses ? (
                 <div className="space-y-2"><Skeleton className="h-12 w-full" /><Skeleton className="h-12 w-full" /></div>
             ) : (
@@ -452,11 +452,11 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
 
       {activeResponse && (
         <Card>
-          <CardHeader>
+          <CardHeader className="pb-3">
             <CardTitle>Response #{activeResponse.response_sequence}</CardTitle>
             <CardDescription>Fill out the form fields and draw on the canvas</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-0">
             {/* Custom Tab Navigation */}
             <div className="border-b mb-4">
               <div className="flex gap-2">

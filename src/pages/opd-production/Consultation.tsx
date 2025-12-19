@@ -1,25 +1,64 @@
 // src/pages/opd/Consultation.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useOpdVisit } from '@/hooks/useOpdVisit';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Loader2, User, Phone, Calendar, Activity, Droplet, Ruler, Weight } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import { Skeleton } from '@/components/ui/skeleton';
+import { ArrowLeft, Loader2, User, Phone, Calendar, Activity, Droplet, PlusCircle, Eye } from 'lucide-react';
 import { format } from 'date-fns';
 import { ConsultationTab } from '@/components/consultation/ConsultationTab';
 import { BillingTab } from '@/components/consultation/BillingTab';
 import { HistoryTab } from '@/components/consultation/HistoryTab';
 import { ProfileTab } from '@/components/consultation/ProfileTab';
+import { useOPDTemplate } from '@/hooks/useOPDTemplate';
+import { useAuth } from '@/hooks/useAuth';
+import { toast } from 'sonner';
+import {
+  TemplateResponse,
+  CreateTemplateResponsePayload,
+} from '@/types/opdTemplate.types';
 
 export const OPDConsultation: React.FC = () => {
   const { visitId } = useParams<{ visitId: string }>();
   const navigate = useNavigate();
   const location = useLocation();
   const { useOpdVisitById } = useOpdVisit();
+  const { user } = useAuth();
+  const {
+    useTemplates,
+    useTemplateResponses,
+    createTemplateResponse,
+  } = useOPDTemplate();
+
   const [activeTab, setActiveTab] = useState('consultation');
+  const [selectedTemplate, setSelectedTemplate] = useState<string>('');
+  const [activeResponse, setActiveResponse] = useState<TemplateResponse | null>(null);
+  const [showNewResponseDialog, setShowNewResponseDialog] = useState(false);
+  const [newResponseReason, setNewResponseReason] = useState('');
+  const [isDefaultTemplateApplied, setIsDefaultTemplateApplied] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Handle back navigation - go to the previous page if state is provided, otherwise go to visits
   const handleBack = () => {
@@ -32,6 +71,73 @@ export const OPDConsultation: React.FC = () => {
   };
 
   const { data: visit, isLoading, error } = useOpdVisitById(visitId ? parseInt(visitId) : null);
+
+  const { data: templatesData, isLoading: isLoadingTemplates } = useTemplates({ is_active: true });
+
+  const { data: responsesData, isLoading: isLoadingResponses, mutate: mutateResponses } = useTemplateResponses({
+    visit: visit?.id,
+    template: selectedTemplate ? parseInt(selectedTemplate) : undefined,
+  });
+
+  const templateResponses = useMemo(() => responsesData?.results || [], [responsesData]);
+
+  // Effect to load default template from user preferences
+  useEffect(() => {
+    if (user?.preferences?.defaultOPDTemplate && templatesData?.results && !selectedTemplate && !isDefaultTemplateApplied && visit) {
+        const defaultTemplateId = String(user.preferences.defaultOPDTemplate);
+        if (templatesData.results.some(t => String(t.id) === defaultTemplateId)) {
+            setSelectedTemplate(defaultTemplateId);
+            setIsDefaultTemplateApplied(true);
+            toast.info('Default OPD template loaded.');
+        }
+    }
+  }, [user, templatesData, selectedTemplate, isDefaultTemplateApplied, visit]);
+
+  const handleViewResponse = useCallback((response: TemplateResponse) => {
+    setActiveResponse(response);
+  }, []);
+
+  const handleAddNewResponse = useCallback(async (isAutoCreation = false) => {
+    if (!selectedTemplate || !visit?.id) return;
+
+    if (!isAutoCreation && templateResponses.length > 0) {
+        setShowNewResponseDialog(true);
+        return;
+    }
+
+    setIsSaving(true);
+    try {
+      const payload: CreateTemplateResponsePayload = {
+        visit: visit.id,
+        template: parseInt(selectedTemplate),
+        doctor_switched_reason: !isAutoCreation && newResponseReason ? newResponseReason : undefined,
+      };
+      const newResponse = await createTemplateResponse(payload);
+      await mutateResponses();
+      handleViewResponse(newResponse);
+      toast.success('New consultation form ready.');
+      setShowNewResponseDialog(false);
+      setNewResponseReason('');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to create new response.');
+    } finally {
+      setIsSaving(false);
+    }
+  }, [selectedTemplate, visit?.id, newResponseReason, templateResponses, createTemplateResponse, mutateResponses, handleViewResponse]);
+
+  useEffect(() => {
+    if (!selectedTemplate || isLoadingResponses || !visit) return;
+
+    if (templateResponses.length > 0) {
+      if (!activeResponse || !templateResponses.find(r => r.id === activeResponse.id)) {
+        const sortedResponses = [...templateResponses].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        handleViewResponse(sortedResponses[0]);
+      }
+    } else {
+      setActiveResponse(null);
+      handleAddNewResponse(true);
+    }
+  }, [selectedTemplate, templateResponses, isLoadingResponses, activeResponse, handleAddNewResponse, handleViewResponse, visit]);
 
   if (isLoading) {
     return (
@@ -197,6 +303,64 @@ export const OPDConsultation: React.FC = () => {
         </CardContent>
       </Card>
 
+      {/* Template Selection */}
+      <Card>
+        <CardHeader className="pb-3"><CardTitle>Select Template</CardTitle></CardHeader>
+        <CardContent className="pt-0">
+          <Select onValueChange={setSelectedTemplate} value={selectedTemplate}>
+            <SelectTrigger><SelectValue placeholder="Select a template..." /></SelectTrigger>
+            <SelectContent>
+              {isLoadingTemplates ? <SelectItem value="loading" disabled>Loading...</SelectItem> :
+               (templatesData?.results || []).map(t => <SelectItem key={t.id} value={String(t.id)}>{t.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </CardContent>
+      </Card>
+
+      {/* Consultation Responses */}
+      {selectedTemplate && (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-3">
+            <CardTitle>Consultation Responses</CardTitle>
+            {templateResponses.length > 0 &&
+                <Dialog open={showNewResponseDialog} onOpenChange={setShowNewResponseDialog}>
+                <DialogTrigger asChild><Button variant="outline" size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add New</Button></DialogTrigger>
+                <DialogContent>
+                    <DialogHeader><DialogTitle>Add New Response</DialogTitle><DialogDescription>Create a new response form for a handover or new consultation.</DialogDescription></DialogHeader>
+                    <div className="space-y-2"><Label htmlFor="reason">Reason (optional)</Label><Input id="reason" value={newResponseReason} onChange={(e) => setNewResponseReason(e.target.value)} /></div>
+                    <DialogFooter>
+                      <Button variant="ghost" onClick={() => setShowNewResponseDialog(false)}>Cancel</Button>
+                      <Button onClick={() => handleAddNewResponse(false)} disabled={isSaving}>{isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Create</Button>
+                    </DialogFooter>
+                </DialogContent>
+                </Dialog>
+            }
+          </CardHeader>
+          <CardContent className="pt-0">
+            {isLoadingResponses ? (
+                <div className="space-y-2"><Skeleton className="h-12 w-full" /><Skeleton className="h-12 w-full" /></div>
+            ) : (
+              <div className="space-y-2">
+                {templateResponses.map(res => (
+                  <div key={res.id} className={`flex items-center justify-between p-2 rounded-md border ${activeResponse?.id === res.id ? 'bg-muted border-primary' : 'border-transparent'}`}>
+                    <div>
+                      <p className="font-semibold">Response #{res.response_sequence} - Dr. {res.filled_by_name}</p>
+                      <p className="text-sm text-muted-foreground">Status: {res.status}</p>
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={() => handleViewResponse(res)}><Eye className="mr-2 h-4 w-4" /> View</Button>
+                  </div>
+                ))}
+                {templateResponses.length === 0 && !isLoadingResponses && (
+                    <div className="text-center py-4 text-muted-foreground">
+                        <p>No responses yet. The first response form has been created automatically.</p>
+                    </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Tabs for Consultation, Billing, History, Profile */}
       <Card>
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -231,7 +395,12 @@ export const OPDConsultation: React.FC = () => {
 
           <div className="p-4">
             <TabsContent value="consultation" className="mt-0">
-              <ConsultationTab visit={visit} />
+              <ConsultationTab
+                visit={visit}
+                selectedTemplate={selectedTemplate}
+                activeResponse={activeResponse}
+                onResponseUpdate={mutateResponses}
+              />
             </TabsContent>
 
             <TabsContent value="billing" className="mt-0">

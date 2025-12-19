@@ -15,63 +15,45 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogFooter,
-  DialogDescription,
-} from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Save,
   Loader2,
-  PlusCircle,
-  Eye,
   Maximize2,
   Pencil,
 } from 'lucide-react';
 import { OpdVisit } from '@/types/opdVisit.types';
 import { toast } from 'sonner';
 import { useOPDTemplate } from '@/hooks/useOPDTemplate';
-import { useAuth } from '@/hooks/useAuth';
 import {
   TemplateField,
   TemplateResponse,
   FieldResponsePayload,
-  CreateTemplateResponsePayload,
 } from '@/types/opdTemplate.types';
 
 interface ConsultationTabProps {
   visit: OpdVisit;
+  selectedTemplate: string | null;
+  activeResponse: TemplateResponse | null;
+  onResponseUpdate: () => void;
 }
 
-export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
+export const ConsultationTab: React.FC<ConsultationTabProps> = ({
+  visit,
+  selectedTemplate,
+  activeResponse,
+  onResponseUpdate
+}) => {
   const navigate = useNavigate();
   const {
-    useTemplates,
     useTemplate,
-    useTemplateResponses,
     useTemplateResponse,
-    createTemplateResponse,
     updateTemplateResponse,
   } = useOPDTemplate();
 
-  const { user } = useAuth();
-  const [selectedTemplate, setSelectedTemplate] = useState<string>('');
   const [formData, setFormData] = useState<Record<string, any>>({});
-  const [activeResponse, setActiveResponse] = useState<TemplateResponse | null>(null);
   const [activeSubTab, setActiveSubTab] = useState<'fields' | 'canvas'>('fields');
   const [isSaving, setIsSaving] = useState(false);
-
-  const { data: responsesData, isLoading: isLoadingResponses, mutate: mutateResponses } = useTemplateResponses({
-    visit: visit.id,
-    template: selectedTemplate ? parseInt(selectedTemplate) : undefined,
-  });
-
-  const templateResponses = useMemo(() => responsesData?.results || [], [responsesData]);
 
   const { data: templateData, isLoading: isLoadingTemplate } = useTemplate(
     selectedTemplate ? parseInt(selectedTemplate) : null
@@ -114,71 +96,6 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
 
     toast.info(`Loaded response #${detailedActiveResponse.response_sequence} by Dr. ${detailedActiveResponse.filled_by_name}`);
   }, [detailedActiveResponse, fieldsData, isLoadingTemplate]);
-
-  const [showNewResponseDialog, setShowNewResponseDialog] = useState(false);
-  const [newResponseReason, setNewResponseReason] = useState('');
-  const [isDefaultTemplateApplied, setIsDefaultTemplateApplied] = useState(false);
-
-  const { data: templatesData, isLoading: isLoadingTemplates } = useTemplates({ is_active: true });
-
-  // Effect to load default template from user preferences
-  useEffect(() => {
-    if (user?.preferences?.defaultOPDTemplate && templatesData?.results && !selectedTemplate && !isDefaultTemplateApplied) {
-        const defaultTemplateId = String(user.preferences.defaultOPDTemplate);
-        if (templatesData.results.some(t => String(t.id) === defaultTemplateId)) {
-            setSelectedTemplate(defaultTemplateId);
-            setIsDefaultTemplateApplied(true);
-            toast.info('Default OPD template loaded.');
-        }
-    }
-  }, [user, templatesData, selectedTemplate, isDefaultTemplateApplied]);
-
-  const handleViewResponse = useCallback((response: TemplateResponse) => {
-    setActiveResponse(response);
-  }, []);
-
-  const handleAddNewResponse = useCallback(async (isAutoCreation = false) => {
-    if (!selectedTemplate || !visit?.id) return;
-
-    if (!isAutoCreation && templateResponses.length > 0) {
-        setShowNewResponseDialog(true);
-        return;
-    }
-
-    setIsSaving(true);
-    try {
-      const payload: CreateTemplateResponsePayload = {
-        visit: visit.id,
-        template: parseInt(selectedTemplate),
-        doctor_switched_reason: !isAutoCreation && newResponseReason ? newResponseReason : undefined,
-      };
-      const newResponse = await createTemplateResponse(payload);
-      await mutateResponses();
-      handleViewResponse(newResponse);
-      toast.success('New consultation form ready.');
-      setShowNewResponseDialog(false);
-      setNewResponseReason('');
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to create new response.');
-    } finally {
-      setIsSaving(false);
-    }
-  }, [selectedTemplate, visit?.id, newResponseReason, templateResponses, createTemplateResponse, mutateResponses, handleViewResponse]);
-
-  useEffect(() => {
-    if (!selectedTemplate || isLoadingResponses) return;
-
-    if (templateResponses.length > 0) {
-      if (!activeResponse || !templateResponses.find(r => r.id === activeResponse.id)) {
-        const sortedResponses = [...templateResponses].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-        handleViewResponse(sortedResponses[0]);
-      }
-    } else {
-      setActiveResponse(null);
-      setFormData({});
-      handleAddNewResponse(true);
-    }
-  }, [selectedTemplate, templateResponses, isLoadingResponses, activeResponse, handleAddNewResponse, handleViewResponse]);
 
   const handleFieldChange = useCallback((fieldId: number, value: any) => {
     setFormData(prev => ({ ...prev, [fieldId]: value }));
@@ -227,7 +144,7 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
       await updateTemplateResponse(activeResponse.id, payload);
       toast.success('Form fields saved successfully!');
 
-      await mutateResponses();
+      onResponseUpdate();
 
     } catch (error: any) {
       toast.error(error.message || 'Failed to save fields.');
@@ -392,148 +309,105 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
     }
   };
 
+  if (!selectedTemplate) {
+    return (
+      <div className="text-center py-8 text-muted-foreground">
+        <p>Please select a template to begin consultation</p>
+      </div>
+    );
+  }
+
+  if (!activeResponse) {
+    return (
+      <div className="text-center py-8 text-muted-foreground">
+        <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
+        <p>Loading consultation form...</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-3">
-      <Card>
-        <CardHeader className="pb-3"><CardTitle>Select Template</CardTitle></CardHeader>
-        <CardContent className="pt-0">
-          <Select onValueChange={setSelectedTemplate} value={selectedTemplate}>
-            <SelectTrigger><SelectValue placeholder="Select a template..." /></SelectTrigger>
-            <SelectContent>
-              {isLoadingTemplates ? <SelectItem value="loading" disabled>Loading...</SelectItem> :
-               (templatesData?.results || []).map(t => <SelectItem key={t.id} value={String(t.id)}>{t.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </CardContent>
-      </Card>
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle>Response #{activeResponse.response_sequence}</CardTitle>
+        <CardDescription>Fill out the form fields and draw on the canvas</CardDescription>
+      </CardHeader>
+      <CardContent className="pt-0">
+        {/* Custom Tab Navigation */}
+        <div className="border-b mb-4">
+          <div className="flex gap-2">
+            <button
+              onClick={() => setActiveSubTab('fields')}
+              className={`px-4 py-2 font-medium transition-colors ${
+                activeSubTab === 'fields'
+                  ? 'border-b-2 border-primary text-primary'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Form Fields
+            </button>
+            <button
+              onClick={() => setActiveSubTab('canvas')}
+              className={`px-4 py-2 font-medium transition-colors ${
+                activeSubTab === 'canvas'
+                  ? 'border-b-2 border-primary text-primary'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Canvas Drawing
+            </button>
+          </div>
+        </div>
 
-      {selectedTemplate && (
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-3">
-            <CardTitle>Consultation Responses</CardTitle>
-            {templateResponses.length > 0 &&
-                <Dialog open={showNewResponseDialog} onOpenChange={setShowNewResponseDialog}>
-                <DialogTrigger asChild><Button variant="outline" size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add New</Button></DialogTrigger>
-                <DialogContent>
-                    <DialogHeader><DialogTitle>Add New Response</DialogTitle><DialogDescription>Create a new response form for a handover or new consultation.</DialogDescription></DialogHeader>
-                    <div className="space-y-2"><Label htmlFor="reason">Reason (optional)</Label><Input id="reason" value={newResponseReason} onChange={(e) => setNewResponseReason(e.target.value)} /></div>
-                    <DialogFooter>
-                      <Button variant="ghost" onClick={() => setShowNewResponseDialog(false)}>Cancel</Button>
-                      <Button onClick={() => handleAddNewResponse(false)} disabled={isSaving}>{isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Create</Button>
-                    </DialogFooter>
-                </DialogContent>
-                </Dialog>
-            }
-          </CardHeader>
-          <CardContent className="pt-0">
-            {isLoadingResponses ? (
-                <div className="space-y-2"><Skeleton className="h-12 w-full" /><Skeleton className="h-12 w-full" /></div>
+        {/* Fields Tab Content */}
+        <div className={activeSubTab === 'fields' ? 'block' : 'hidden'}>
+          <div className="space-y-4">
+            <div className="flex justify-end">
+              <Button onClick={handleSave} disabled={isSaving}>
+                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                Save Fields
+              </Button>
+            </div>
+            {isLoadingTemplate ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2"><Skeleton className="h-4 w-1/4" /><Skeleton className="h-10 w-full" /></div>
+                <div className="space-y-2"><Skeleton className="h-4 w-1/4" /><Skeleton className="h-10 w-full" /></div>
+              </div>
             ) : (
-              <div className="space-y-2">
-                {templateResponses.map(res => (
-                  <div key={res.id} className={`flex items-center justify-between p-2 rounded-md border ${activeResponse?.id === res.id ? 'bg-muted border-primary' : 'border-transparent'}`}>
-                    <div>
-                      <p className="font-semibold">Response #{res.response_sequence} - Dr. {res.filled_by_name}</p>
-                      <p className="text-sm text-muted-foreground">Status: {res.status}</p>
-                    </div>
-                    <Button variant="ghost" size="sm" onClick={() => handleViewResponse(res)}><Eye className="mr-2 h-4 w-4" /> View</Button>
-                  </div>
-                ))}
-                {templateResponses.length === 0 && !isLoadingResponses && (
-                    <div className="text-center py-4 text-muted-foreground">
-                        <p>No responses yet. The first response form has been created automatically.</p>
-                    </div>
-                )}
-              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">{fieldsData.map(renderField)}</div>
             )}
-          </CardContent>
-        </Card>
-      )}
+          </div>
+        </div>
 
-      {activeResponse && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle>Response #{activeResponse.response_sequence}</CardTitle>
-            <CardDescription>Fill out the form fields and draw on the canvas</CardDescription>
-          </CardHeader>
-          <CardContent className="pt-0">
-            {/* Custom Tab Navigation */}
-            <div className="border-b mb-4">
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setActiveSubTab('fields')}
-                  className={`px-4 py-2 font-medium transition-colors ${
-                    activeSubTab === 'fields'
-                      ? 'border-b-2 border-primary text-primary'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  Form Fields
-                </button>
-                <button
-                  onClick={() => setActiveSubTab('canvas')}
-                  className={`px-4 py-2 font-medium transition-colors ${
-                    activeSubTab === 'canvas'
-                      ? 'border-b-2 border-primary text-primary'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  Canvas Drawing
-                </button>
-              </div>
-            </div>
-
-            {/* Fields Tab Content */}
-            <div className={activeSubTab === 'fields' ? 'block' : 'hidden'}>
-              <div className="space-y-4">
-                <div className="flex justify-end">
-                  <Button onClick={handleSave} disabled={isSaving}>
-                    {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                    Save Fields
-                  </Button>
-                </div>
-                {isLoadingTemplate ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2"><Skeleton className="h-4 w-1/4" /><Skeleton className="h-10 w-full" /></div>
-                    <div className="space-y-2"><Skeleton className="h-4 w-1/4" /><Skeleton className="h-10 w-full" /></div>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">{fieldsData.map(renderField)}</div>
-                )}
-              </div>
-            </div>
-
-            {/* Canvas Tab Content - Open Canvas Button */}
-            <div className={activeSubTab === 'canvas' ? 'block' : 'hidden'}>
-              <div className="space-y-4">
-                <div className="w-full h-96 md:h-[500px] border rounded-md flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-50">
-                  <div className="text-center space-y-4 p-8">
-                    <div className="flex justify-center">
-                      <div className="p-4 bg-white rounded-full shadow-md">
-                        <Pencil className="w-12 h-12 text-blue-500" />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <h3 className="text-xl font-semibold text-gray-800">Digital Canvas</h3>
-                      <p className="text-sm text-gray-600 max-w-md">
-                        Open the full-screen canvas to draw, annotate, and create handwritten notes for this consultation.
-                      </p>
-                    </div>
-                    <Button
-                      onClick={() => navigate(`/opd/consultation/${visit.id}/canvas/${activeResponse.id}`)}
-                      className="mt-4 bg-blue-500 hover:bg-blue-600 text-white"
-                      size="lg"
-                    >
-                      <Maximize2 className="mr-2 h-5 w-5" />
-                      Open Canvas
-                    </Button>
+        {/* Canvas Tab Content - Open Canvas Button */}
+        <div className={activeSubTab === 'canvas' ? 'block' : 'hidden'}>
+          <div className="space-y-4">
+            <div className="w-full h-96 md:h-[500px] border rounded-md flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-50">
+              <div className="text-center space-y-4 p-8">
+                <div className="flex justify-center">
+                  <div className="p-4 bg-white rounded-full shadow-md">
+                    <Pencil className="w-12 h-12 text-blue-500" />
                   </div>
                 </div>
+                <div className="space-y-2">
+                  <h3 className="text-xl font-semibold text-gray-800">Digital Canvas</h3>
+                  <p className="text-sm text-gray-600 max-w-md">
+                    Open the full-screen canvas to draw, annotate, and create handwritten notes for this consultation.
+                  </p>
+                </div>
+                <Button
+                  onClick={() => navigate(`/opd/consultation/${visit.id}/canvas/${activeResponse.id}`)}
+                  className="mt-4 bg-blue-500 hover:bg-blue-600 text-white"
+                  size="lg"
+                >
+                  <Maximize2 className="mr-2 h-5 w-5" />
+                  Open Canvas
+                </Button>
               </div>
             </div>
-          </CardContent>
-        </Card>
-      )}
-    </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 };

@@ -11,7 +11,7 @@ export const API_CONFIG = {
   // VITE_AUTH_BASE_URL, VITE_CRM_BASE_URL, VITE_WHATSAPP_BASE_URL, VITE_WHATSAPP_WS_URL
   AUTH_BASE_URL: import.meta.env.VITE_AUTH_BASE_URL || 'https://admin.celiyo.com/api',
   CRM_BASE_URL: import.meta.env.VITE_CRM_BASE_URL || 'https://crm.celiyo.com/api',
-  HMS_BASE_URL: import.meta.env.VITE_HMS_BASE_URL || 'https://hms.celiyo.com/api',
+  HMS_BASE_URL: import.meta.env.VITE_HMS_BASE_URL || 'http://127.0.0.1:8000/api',
   WHATSAPP_BASE_URL: import.meta.env.VITE_WHATSAPP_BASE_URL || 'https://whatsapp.celiyo.com/api',
 
 
@@ -299,6 +299,61 @@ export const API_CONFIG = {
       PRODUCTS_LOW_STOCK: '/pharmacy/products/low_stock/',
       PRODUCTS_NEAR_EXPIRY: '/pharmacy/products/near_expiry/',
       PRODUCTS_STATISTICS: '/pharmacy/products/statistics/',
+    },
+    IPD: {
+      // Wards
+      WARDS: {
+        LIST: '/ipd/wards/',
+        DETAIL: '/ipd/wards/:id/',
+        CREATE: '/ipd/wards/',
+        UPDATE: '/ipd/wards/:id/',
+        DELETE: '/ipd/wards/:id/',
+      },
+      // Beds
+      BEDS: {
+        LIST: '/ipd/beds/',
+        DETAIL: '/ipd/beds/:id/',
+        CREATE: '/ipd/beds/',
+        UPDATE: '/ipd/beds/:id/',
+        DELETE: '/ipd/beds/:id/',
+        AVAILABLE: '/ipd/beds/available/',
+      },
+      // Admissions
+      ADMISSIONS: {
+        LIST: '/ipd/admissions/',
+        DETAIL: '/ipd/admissions/:id/',
+        CREATE: '/ipd/admissions/',
+        UPDATE: '/ipd/admissions/:id/',
+        DELETE: '/ipd/admissions/:id/',
+        DISCHARGE: '/ipd/admissions/:id/discharge/',
+        ACTIVE: '/ipd/admissions/active/',
+      },
+      // Bed Transfers
+      BED_TRANSFERS: {
+        LIST: '/ipd/bed-transfers/',
+        DETAIL: '/ipd/bed-transfers/:id/',
+        CREATE: '/ipd/bed-transfers/',
+        UPDATE: '/ipd/bed-transfers/:id/',
+        DELETE: '/ipd/bed-transfers/:id/',
+      },
+      // Billing
+      BILLINGS: {
+        LIST: '/ipd/billings/',
+        DETAIL: '/ipd/billings/:id/',
+        CREATE: '/ipd/billings/',
+        UPDATE: '/ipd/billings/:id/',
+        DELETE: '/ipd/billings/:id/',
+        ADD_BED_CHARGES: '/ipd/billings/:id/add_bed_charges/',
+        ADD_PAYMENT: '/ipd/billings/:id/add_payment/',
+      },
+      // Bill Items
+      BILL_ITEMS: {
+        LIST: '/ipd/bill-items/',
+        DETAIL: '/ipd/bill-items/:id/',
+        CREATE: '/ipd/bill-items/',
+        UPDATE: '/ipd/bill-items/:id/',
+        DELETE: '/ipd/bill-items/:id/',
+      },
     }
   },
 

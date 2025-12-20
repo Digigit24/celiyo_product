@@ -718,6 +718,9 @@ const Dashboard = () => {
           </div>
         </div>
 
+        {/* Recent Activities Section */}
+        <RecentActivitiesTable isDark={isDark} />
+
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
           <StatCard
@@ -923,6 +926,220 @@ const Dashboard = () => {
             )}
           </Card>
         </div>
+
+        {/* Recent Activities Section */}
+        <RecentActivitiesTable isDark={isDark} />
+      </div>
+    </div>
+  );
+};
+
+// ==================== RECENT ACTIVITIES COMPONENT ====================
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { DataTable, DataTableColumn } from '@/components/DataTable';
+import { format } from 'date-fns';
+import { useIPD } from '@/hooks/useIPD';
+import { OpdVisit } from '@/types/opdVisit.types';
+import { Admission } from '@/types/ipd.types';
+
+const RecentActivitiesTable = ({ isDark }: { isDark: boolean }) => {
+  const navigate = useNavigate();
+  const { useOpdVisits } = useOpdVisit();
+  const { useAdmissions } = useIPD();
+
+  // Fetch recent data (limit 5)
+  const { data: opdData, isLoading: opdLoading } = useOpdVisits({ page_size: 5, ordering: '-visit_date' });
+  const { data: ipdData, isLoading: ipdLoading } = useAdmissions({ page_size: 5, ordering: '-admission_date' });
+
+  const opdVisits = opdData?.results || [];
+  const ipdAdmissions = ipdData?.results || [];
+
+  // OPD Columns
+  const opdColumns: DataTableColumn<OpdVisit>[] = [
+    {
+      header: 'Visit ID',
+      key: 'visit_number',
+      accessor: (row) => row.visit_number,
+      cell: (row) => <span className="font-mono text-xs">{row.visit_number}</span>,
+    },
+    {
+      header: 'Patient',
+      key: 'patient_name',
+      accessor: (row) => row.patient_name || row.patient_details?.full_name || 'N/A',
+      cell: (row) => <span className="font-medium">{row.patient_name || row.patient_details?.full_name}</span>,
+    },
+    {
+      header: 'Doctor',
+      key: 'doctor_name',
+      accessor: (row) => row.doctor_name || row.doctor_details?.full_name || 'N/A',
+      cell: (row) => <span className="text-sm text-muted-foreground">{row.doctor_name || row.doctor_details?.full_name}</span>,
+    },
+    {
+      header: 'Status',
+      key: 'status',
+      accessor: (row) => row.status,
+      cell: (row) => (
+        <span className={`px-2 py-0.5 rounded text-xs capitalize ${
+          row.status === 'completed' ? 'bg-green-100 text-green-700' :
+          row.status === 'in_progress' ? 'bg-blue-100 text-blue-700' :
+          'bg-gray-100 text-gray-700'
+        }`}>
+          {row.status?.replace('_', ' ')}
+        </span>
+      ),
+    },
+    {
+      header: 'Date',
+      key: 'visit_date',
+      accessor: (row) => row.visit_date,
+      cell: (row) => <span className="text-xs text-muted-foreground">{format(new Date(row.visit_date), 'MMM dd, HH:mm')}</span>,
+    },
+  ];
+
+  // IPD Columns
+  const ipdColumns: DataTableColumn<Admission>[] = [
+    {
+      header: 'Admission ID',
+      key: 'admission_id',
+      accessor: (row) => row.admission_id,
+      cell: (row) => <span className="font-mono text-xs">{row.admission_id}</span>,
+    },
+    {
+      header: 'Patient',
+      key: 'patient_name',
+      accessor: (row) => row.patient_name || '',
+      cell: (row) => <span className="font-medium">{row.patient_name}</span>,
+    },
+    {
+      header: 'Ward/Bed',
+      key: 'ward_name',
+      accessor: (row) => row.ward_name,
+      cell: (row) => (
+        <div className="flex flex-col text-xs">
+          <span>{row.ward_name}</span>
+          <span className="text-muted-foreground">Bed: {row.bed_number || 'N/A'}</span>
+        </div>
+      ),
+    },
+    {
+      header: 'Status',
+      key: 'status',
+      accessor: (row) => row.status,
+      cell: (row) => (
+        <span className={`px-2 py-0.5 rounded text-xs capitalize ${
+          row.status === 'admitted' ? 'bg-blue-100 text-blue-700' :
+          row.status === 'discharged' ? 'bg-green-100 text-green-700' :
+          'bg-gray-100 text-gray-700'
+        }`}>
+          {row.status}
+        </span>
+      ),
+    },
+    {
+      header: 'Date',
+      key: 'admission_date',
+      accessor: (row) => row.admission_date,
+      cell: (row) => <span className="text-xs text-muted-foreground">{format(new Date(row.admission_date), 'MMM dd, HH:mm')}</span>,
+    },
+  ];
+
+  return (
+    <div className="mt-8">
+      <h2 className={`text-lg font-semibold mb-4 ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>
+        Recent Activity
+      </h2>
+      
+      {/* Desktop View: Side-by-Side */}
+      <div className="hidden xl:grid grid-cols-2 gap-6">
+        {/* OPD Visits Table */}
+        <Card className={`p-0 overflow-hidden ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+          <div className="p-4 border-b flex justify-between items-center bg-muted/20">
+            <h3 className="font-medium flex items-center gap-2">
+              <ClipboardList className="w-4 h-4 text-emerald-500" />
+              Recent OPD Visits
+            </h3>
+            <span className="text-xs text-muted-foreground cursor-pointer hover:text-primary" onClick={() => navigate('/opd/visits')}>View All</span>
+          </div>
+          <div className="p-0">
+            <DataTable
+              rows={opdVisits}
+              columns={opdColumns}
+              isLoading={opdLoading}
+              onRowClick={(row) => navigate(`/opd/consultation/${row.id}`)}
+              getRowId={(row) => row.id}
+              hidePagination
+              emptyTitle="No recent visits"
+              density="compact"
+            />
+          </div>
+        </Card>
+
+        {/* IPD Admissions Table */}
+        <Card className={`p-0 overflow-hidden ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+          <div className="p-4 border-b flex justify-between items-center bg-muted/20">
+            <h3 className="font-medium flex items-center gap-2">
+              <Activity className="w-4 h-4 text-indigo-500" />
+              Recent Admissions
+            </h3>
+            <span className="text-xs text-muted-foreground cursor-pointer hover:text-primary" onClick={() => navigate('/ipd/admissions')}>View All</span>
+          </div>
+          <div className="p-0">
+            <DataTable
+              rows={ipdAdmissions}
+              columns={ipdColumns}
+              isLoading={ipdLoading}
+              onRowClick={(row) => navigate(`/ipd/admissions/${row.id}`)}
+              getRowId={(row) => row.id}
+              hidePagination
+              emptyTitle="No recent admissions"
+              density="compact"
+            />
+          </div>
+        </Card>
+      </div>
+
+      {/* Mobile/Tablet View: Tabs */}
+      <div className="xl:hidden">
+        <Tabs defaultValue="opd" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 mb-4">
+            <TabsTrigger value="opd">OPD Visits</TabsTrigger>
+            <TabsTrigger value="ipd">IPD Admissions</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="opd">
+            <Card className={`p-0 overflow-hidden ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+              <div className="p-0">
+                <DataTable
+                  rows={opdVisits}
+                  columns={opdColumns}
+                  isLoading={opdLoading}
+                  onRowClick={(row) => navigate(`/opd/consultation/${row.id}`)}
+                  getRowId={(row) => row.id}
+                  hidePagination
+                  emptyTitle="No recent visits"
+                  density="compact"
+                />
+              </div>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="ipd">
+            <Card className={`p-0 overflow-hidden ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+              <div className="p-0">
+                <DataTable
+                  rows={ipdAdmissions}
+                  columns={ipdColumns}
+                  isLoading={ipdLoading}
+                  onRowClick={(row) => navigate(`/ipd/admissions/${row.id}`)}
+                  getRowId={(row) => row.id}
+                  hidePagination
+                  emptyTitle="No recent admissions"
+                  density="compact"
+                />
+              </div>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

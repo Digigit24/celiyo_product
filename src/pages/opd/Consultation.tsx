@@ -1,7 +1,8 @@
+// src/pages/opd/Consultation.tsx
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useOpdVisit } from '@/hooks/useOpdVisit';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -377,69 +378,22 @@ export const OPDConsultation: React.FC = () => {
             </CardContent>
           </Card>
 
-          {/* Template Selection & Consultation Responses */}
-          <Card>
-            <CardHeader className="py-4">
-              <CardTitle className="text-base">Consultation Workspace</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0 pb-4">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="flex-1 max-w-sm">
-                  <Select
-                    onValueChange={setSelectedTemplate}
-                    value={selectedTemplate || undefined}
-                    disabled={isLoadingTemplates}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder={isLoadingTemplates ? "Loading templates..." : "Select clinical template..."} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {isLoadingTemplates ? (
-                        <SelectItem value="loading" disabled>Loading...</SelectItem>
-                      ) : (
-                        (templatesData?.results || []).map(t => (
-                          <SelectItem key={t.id} value={String(t.id)}>{t.name}</SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                {selectedTemplate && (
-                  <Button variant="outline" size="sm" onClick={() => setShowNewResponseDialog(true)}>
-                    <PlusCircle className="mr-2 h-4 w-4" /> Add Note
-                  </Button>
-                )}
-              </div>
-
-              {/* Active Responses Chips */}
-              <div className="flex flex-wrap gap-2">
-                {templateResponses.map(res => (
-                  <Button
-                    key={res.id}
-                    variant={activeResponse?.id === res.id ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => handleViewResponse(res)}
-                    className="h-8 text-xs"
-                  >
-                    <Eye className="mr-2 h-3 w-3" />
-                    Note #{res.response_sequence} ({res.status})
-                  </Button>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
           {/* Tabs for Consultation, Billing, History, Profile */}
           <Card className="flex-1 overflow-hidden flex flex-col">
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full flex-1 flex flex-col">
-              <div className="border-b px-4 bg-muted/30">
-                <TabsList className="w-full justify-start h-12 p-0 bg-transparent gap-6">
+            <Tabs value={activeTab} onValueChange={(value) => {
+              if (value === 'billing') {
+                navigate(`/opd/billing/${visit.id}`);
+              } else {
+                setActiveTab(value);
+              }
+            }} className="w-full flex-1 flex flex-col">
+              <div className="border-b px-4 bg-muted/30 pt-4">
+                <TabsList className="grid w-full grid-cols-4 h-auto p-1">
                   {['consultation', 'billing', 'history', 'profile'].map(tab => (
                     <TabsTrigger
                       key={tab}
                       value={tab}
-                      className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none h-full px-2 capitalize font-medium"
+                      className="capitalize font-medium data-[state=active]:bg-background data-[state=active]:shadow-sm py-2"
                     >
                       {tab}
                     </TabsTrigger>
@@ -451,13 +405,11 @@ export const OPDConsultation: React.FC = () => {
                 <TabsContent value="consultation" className="mt-0 h-full p-6">
                   <ConsultationTab
                     visit={visit}
-                    // selectedTemplate={selectedTemplate} // Prop removed in interface update?
-                    // activeResponse={activeResponse}     // Prop removed in interface update?
-                    // onResponseUpdate={mutateResponses}  // Prop removed in interface update?
                   />
                 </TabsContent>
 
                 <TabsContent value="billing" className="mt-0 h-full p-6">
+                  {/* Billing content is handled by the route /opd/billing/:id, but we keep this placeholder or redirect logic */}
                   <BillingTab visit={visit} />
                 </TabsContent>
 

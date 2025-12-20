@@ -245,16 +245,31 @@ export type TemplateResponseStatus = 'draft' | 'completed' | 'reviewed';
 
 export interface TemplateResponse {
   id: number;
-  tenant_id: string;
-  visit: number;
+  tenant_id?: string;
+  
+  // Generic Encounter Fields
+  content_type?: number; // Optional, backend handles it
+  object_id: number;
+  encounter_type: 'visit' | 'admission'; // 'visit' or 'admission'
+  encounter_display?: string; // Human readable string e.g. "OPD Visit: ..."
+
+  // Deprecated but might still be present in older responses
+  visit?: number;
+  visit_number?: string;
+  patient_name?: string;
+
   template: number;
   template_name?: string;
   status: TemplateResponseStatus;
-  filled_by: string; // UUID
+  filled_by_id: string; // UUID
   filled_by_name?: string;
-  completed_at: string | null;
-  created_at: string;
-  updated_at: string;
+  reviewed_by_id: string | null; // UUID
+  reviewed_at: string | null;
+  completed_at?: string | null;
+  response_date: string;
+  created_at?: string;
+  updated_at?: string;
+  field_response_count?: number;
   field_responses?: TemplateFieldResponse[];
 
   // New fields for multiple doctor support and review workflow
@@ -277,7 +292,8 @@ export interface FieldResponsePayload {
 }
 
 export interface CreateTemplateResponsePayload {
-  visit: number;
+  encounter_type: 'visit' | 'admission';
+  object_id: number;
   template: number;
   status?: TemplateResponseStatus;
   doctor_switched_reason?: string;
@@ -293,7 +309,8 @@ export interface UpdateTemplateResponsePayload {
 }
 
 export interface TemplateResponsesQueryParams {
-  visit?: number;
+  encounter_type?: 'visit' | 'admission';
+  object_id?: number;
   template?: number;
   status?: TemplateResponseStatus;
   filled_by?: string;

@@ -30,6 +30,7 @@ export interface DoctorAvailability {
 export interface Doctor {
   id: number;
   user: User;
+  user_id: string;
   full_name: string;
   medical_license_number: string;
   license_issuing_authority?: string;

@@ -42,6 +42,9 @@ import {
   ShoppingCart, // Added ShoppingCart icon for Cart
   BarChart3, // Added for Statistics
   Loader2, // Added for loading state
+  Bed, // Added for IPD module
+  Building, // Added for Wards
+  UserRoundCheck, // Added for Admissions
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -267,6 +270,31 @@ const menuItems: MenuItem[] = [
         label: "Settings",
         icon: Settings2,
         path: "/opd/settings",
+      },
+    ],
+  },
+  {
+    id: "ipd",
+    label: "IPD",
+    icon: Bed,
+    children: [
+      {
+        id: "ipd-admissions",
+        label: "Admissions",
+        icon: UserRoundCheck,
+        path: "/ipd/admissions",
+      },
+      {
+        id: "ipd-wards",
+        label: "Wards",
+        icon: Building,
+        path: "/ipd/wards",
+      },
+      {
+        id: "ipd-beds",
+        label: "Beds",
+        icon: Bed,
+        path: "/ipd/beds",
       },
     ],
   },

@@ -35,9 +35,12 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { GripVertical, Plus, Settings, Trash2, Save, RefreshCw, Check } from 'lucide-react';
+import { GripVertical, Plus, Settings, Trash2, Save, RefreshCw, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
-import type { TemplateField, CreateTemplateFieldPayload, FieldType } from '@/types/opdTemplate.types';
+import type { TemplateField, CreateTemplateFieldPayload, FieldType, TemplateFieldOption } from '@/types/opdTemplate.types';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Textarea } from '@/components/ui/textarea';
 
 // Field Type Options for the dropdown
 const FIELD_TYPE_OPTIONS: { value: FieldType; label: string; icon: string }[] = [
@@ -55,6 +58,222 @@ const FIELD_TYPE_OPTIONS: { value: FieldType; label: string; icon: string }[] = 
   { value: 'canvas', label: 'Canvas Drawing', icon: '🎨' },
   { value: 'json', label: 'JSON Data', icon: '📊' },
 ];
+
+// Draft Field Editor Component
+function DraftFieldEditor({
+  field,
+  onSave,
+  onCancel,
+  onUpdate,
+}: {
+  field: TemplateField;
+  onSave: () => void;
+  onCancel: () => void;
+  onUpdate: (updates: Partial<TemplateField>) => void;
+}) {
+  const [newOption, setNewOption] = useState('');
+  const needsOptions = ['select', 'multiselect', 'radio', 'checkbox'].includes(field.field_type);
+  const needsPlaceholder = !['select', 'multiselect', 'radio', 'checkbox', 'boolean', 'canvas', 'json'].includes(field.field_type);
+  const typeInfo = FIELD_TYPE_OPTIONS.find(opt => opt.value === field.field_type);
+
+  const handleAddOption = () => {
+    if (!newOption.trim()) return;
+    const options = field.options || [];
+    const newOptionObj = {
+      id: -Date.now(), // Temporary ID for draft option
+      option_label: newOption.trim(),
+      option_value: newOption.trim().toLowerCase().replace(/\s+/g, '_'),
+      display_order: options.length,
+      is_active: true,
+    };
+    onUpdate({ options: [...options, newOptionObj] });
+    setNewOption('');
+  };
+
+  const handleRemoveOption = (index: number) => {
+    const options = field.options || [];
+    onUpdate({ options: options.filter((_, i) => i !== index) });
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleAddOption();
+    }
+  };
+
+  return (
+    <div className="border-2 border-primary rounded-xl bg-gradient-to-br from-primary/5 to-primary/10 p-6 space-y-4 shadow-lg">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <span className="text-2xl">{typeInfo?.icon}</span>
+          <div>
+            <h3 className="text-lg font-semibold">Configure {typeInfo?.label}</h3>
+            <p className="text-sm text-muted-foreground">Fill in the details below and click Save</p>
+          </div>
+        </div>
+        <Button variant="ghost" size="sm" onClick={onCancel}>
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+
+      {/* Field Label */}
+      <div className="space-y-2">
+        <Label htmlFor="field-label" className="text-sm font-medium">
+          Field Label <span className="text-destructive">*</span>
+        </Label>
+        <Input
+          id="field-label"
+          value={field.field_label}
+          onChange={(e) => onUpdate({ field_label: e.target.value })}
+          placeholder="Enter field label"
+          className="font-medium"
+        />
+      </div>
+
+      {/* Field Key */}
+      <div className="space-y-2">
+        <Label htmlFor="field-key" className="text-sm font-medium">
+          Field Key <span className="text-muted-foreground text-xs">(used in code)</span>
+        </Label>
+        <Input
+          id="field-key"
+          value={field.field_key}
+          onChange={(e) => onUpdate({ field_key: e.target.value, field_name: e.target.value })}
+          placeholder="e.g., patient_name"
+          className="font-mono text-sm"
+        />
+      </div>
+
+      {/* Placeholder */}
+      {needsPlaceholder && (
+        <div className="space-y-2">
+          <Label htmlFor="placeholder" className="text-sm font-medium">
+            Placeholder Text
+          </Label>
+          <Input
+            id="placeholder"
+            value={field.placeholder || ''}
+            onChange={(e) => onUpdate({ placeholder: e.target.value })}
+            placeholder="Enter placeholder text"
+          />
+        </div>
+      )}
+
+      {/* Options Editor for Select Types */}
+      {needsOptions && (
+        <div className="space-y-2">
+          <Label className="text-sm font-medium">
+            Options <span className="text-destructive">*</span>
+          </Label>
+          <div className="space-y-2">
+            {/* Existing Options */}
+            {field.options && field.options.length > 0 && (
+              <div className="space-y-1">
+                {field.options.map((option, index) => (
+                  <div key={option.id || index} className="flex items-center gap-2 bg-background p-2 rounded border">
+                    <div className="flex-1">
+                      <span className="text-sm font-medium">{option.option_label}</span>
+                      <span className="text-xs text-muted-foreground ml-2">({option.option_value})</span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleRemoveOption(index)}
+                      className="h-7 w-7 p-0 hover:text-destructive"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+            {/* Add New Option */}
+            <div className="flex gap-2">
+              <Input
+                value={newOption}
+                onChange={(e) => setNewOption(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Type option and press Enter"
+                className="flex-1"
+              />
+              <Button onClick={handleAddOption} size="sm" disabled={!newOption.trim()}>
+                <Plus className="h-4 w-4 mr-1" />
+                Add
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Help Text */}
+      <div className="space-y-2">
+        <Label htmlFor="help-text" className="text-sm font-medium">
+          Help Text <span className="text-muted-foreground text-xs">(optional)</span>
+        </Label>
+        <Textarea
+          id="help-text"
+          value={field.help_text || ''}
+          onChange={(e) => onUpdate({ help_text: e.target.value })}
+          placeholder="Add helpful instructions for this field"
+          rows={2}
+        />
+      </div>
+
+      {/* Default Value */}
+      {!needsOptions && field.field_type !== 'canvas' && (
+        <div className="space-y-2">
+          <Label htmlFor="default-value" className="text-sm font-medium">
+            Default Value <span className="text-muted-foreground text-xs">(optional)</span>
+          </Label>
+          <Input
+            id="default-value"
+            value={field.default_value || ''}
+            onChange={(e) => onUpdate({ default_value: e.target.value })}
+            placeholder="Enter default value"
+            type={field.field_type === 'number' ? 'number' : field.field_type === 'date' ? 'date' : 'text'}
+          />
+        </div>
+      )}
+
+      {/* Checkboxes */}
+      <div className="flex items-center gap-6 pt-2">
+        <div className="flex items-center space-x-2">
+          <Checkbox
+            id="is-required"
+            checked={field.is_required}
+            onCheckedChange={(checked) => onUpdate({ is_required: !!checked })}
+          />
+          <Label htmlFor="is-required" className="text-sm font-medium cursor-pointer">
+            Required Field
+          </Label>
+        </div>
+        <div className="flex items-center space-x-2">
+          <Checkbox
+            id="is-active"
+            checked={field.is_active}
+            onCheckedChange={(checked) => onUpdate({ is_active: !!checked })}
+          />
+          <Label htmlFor="is-active" className="text-sm font-medium cursor-pointer">
+            Active
+          </Label>
+        </div>
+      </div>
+
+      {/* Action Buttons */}
+      <div className="flex gap-2 pt-2">
+        <Button onClick={onSave} className="flex-1">
+          <Save className="h-4 w-4 mr-2" />
+          Save Field
+        </Button>
+        <Button variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 // Sortable Field Row Component with Inline Editing
 function SortableFieldRow({
@@ -320,6 +539,10 @@ export function TemplateFieldsTab() {
   // Add Field Type Popover state
   const [addFieldPopoverOpen, setAddFieldPopoverOpen] = useState(false);
 
+  // Draft field state (for optimistic creation)
+  const [draftFieldId, setDraftFieldId] = useState<number | null>(null);
+  const [isDraftExpanded, setIsDraftExpanded] = useState(true);
+
   // Fetch all templates for dropdown
   const { data: templatesData } = useTemplates({
     is_active: true,
@@ -420,48 +643,126 @@ export function TemplateFieldsTab() {
     [updateTemplateField, mutate]
   );
 
-  // Handle create field from field type selection
+  // Handle create field from field type selection (optimistic)
   const handleCreateFieldFromType = useCallback(
-    async (fieldType: FieldType) => {
+    (fieldType: FieldType) => {
       if (!selectedTemplateId) {
         toast.error('Please select a template first');
         return;
       }
 
+      // Remove any existing draft field first
+      if (draftFieldId) {
+        setLocalFields(prev => prev.filter(f => f.id !== draftFieldId));
+      }
+
       const typeLabel = FIELD_TYPE_OPTIONS.find(opt => opt.value === fieldType)?.label || fieldType;
-      const defaultLabel = `New ${typeLabel}`;
       const fieldKey = `field_${Date.now()}`; // Temporary unique key
+      const draftId = -Date.now(); // Use negative ID for draft fields
+
+      // Create optimistic draft field
+      const draftField: TemplateField = {
+        id: draftId,
+        template: selectedTemplateId,
+        field_type: fieldType,
+        field_label: 'Untitled',
+        field_name: fieldKey,
+        field_key: fieldKey,
+        placeholder: '',
+        is_required: false,
+        display_order: localFields.length,
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        // Initialize options for select-type fields
+        ...(fieldType === 'select' || fieldType === 'multiselect' || fieldType === 'radio' || fieldType === 'checkbox'
+          ? { options: [] }
+          : {}),
+      };
+
+      // Add draft field to local fields
+      setLocalFields(prev => [...prev, draftField]);
+      setDraftFieldId(draftId);
+      setIsDraftExpanded(true);
+      setAddFieldPopoverOpen(false);
+
+      toast.success(`${typeLabel} field added. Configure and save when ready.`);
+    },
+    [selectedTemplateId, localFields.length, draftFieldId]
+  );
+
+  // Handle save draft field
+  const handleSaveDraftField = useCallback(
+    async (fieldId: number) => {
+      const draftField = localFields.find(f => f.id === fieldId);
+      if (!draftField || !selectedTemplateId) return;
+
+      // Validate field
+      if (!draftField.field_label || draftField.field_label.trim() === '' || draftField.field_label === 'Untitled') {
+        toast.error('Please provide a field label');
+        return;
+      }
+
+      // Validate options for select-type fields
+      const needsOptions = ['select', 'multiselect', 'radio', 'checkbox'].includes(draftField.field_type);
+      if (needsOptions && (!draftField.options || draftField.options.length === 0)) {
+        toast.error('Please add at least one option');
+        return;
+      }
 
       try {
         const payload: CreateTemplateFieldPayload = {
           template: selectedTemplateId,
-          field_type: fieldType,
-          field_label: defaultLabel,
-          field_name: fieldKey,
-          field_key: fieldKey,
-          placeholder: fieldType === 'text' ? 'Enter text...' :
-                       fieldType === 'textarea' ? 'Enter description...' :
-                       fieldType === 'number' ? 'Enter number...' :
-                       fieldType === 'email' ? 'Enter email address...' :
-                       fieldType === 'phone' ? 'Enter phone number...' :
-                       fieldType === 'date' ? '' :
-                       fieldType === 'datetime' ? '' :
-                       fieldType === 'canvas' ? '' :
-                       fieldType === 'json' ? '' : '',
-          is_required: false,
-          display_order: localFields.length,
-          is_active: true,
+          field_type: draftField.field_type,
+          field_label: draftField.field_label.trim(),
+          field_name: draftField.field_name,
+          field_key: draftField.field_key,
+          placeholder: draftField.placeholder || '',
+          is_required: draftField.is_required,
+          display_order: draftField.display_order,
+          is_active: draftField.is_active,
+          ...(draftField.default_value !== undefined ? { default_value: draftField.default_value } : {}),
+          ...(draftField.help_text ? { help_text: draftField.help_text } : {}),
         };
 
+        // Add formatted options for select-type fields
+        if (needsOptions && draftField.options) {
+          payload.options = draftField.options.map((opt, idx) => ({
+            option_label: opt.option_label,
+            option_value: opt.option_value,
+            display_order: idx,
+            is_active: true,
+          }));
+        }
+
         await createTemplateField(payload);
-        toast.success(`${typeLabel} field created! Click to edit.`);
-        setAddFieldPopoverOpen(false);
+        toast.success('Field saved successfully');
+        setDraftFieldId(null);
         mutate(); // Refresh the list
       } catch (error: any) {
-        toast.error(error.message || 'Failed to create field');
+        toast.error(error.message || 'Failed to save field');
       }
     },
-    [selectedTemplateId, localFields.length, createTemplateField, mutate]
+    [localFields, selectedTemplateId, createTemplateField, mutate]
+  );
+
+  // Handle cancel draft field
+  const handleCancelDraftField = useCallback(
+    (fieldId: number) => {
+      setLocalFields(prev => prev.filter(f => f.id !== fieldId));
+      setDraftFieldId(null);
+    },
+    []
+  );
+
+  // Handle update draft field
+  const handleUpdateDraftField = useCallback(
+    (fieldId: number, updates: Partial<TemplateField>) => {
+      setLocalFields(prev =>
+        prev.map(f => (f.id === fieldId ? { ...f, ...updates } : f))
+      );
+    },
+    []
   );
 
   // Handle create field (opens drawer)
@@ -563,35 +864,37 @@ export function TemplateFieldsTab() {
                       <RefreshCw className="h-4 w-4 mr-2" />
                       Refresh
                     </Button>
-                    <Popover open={addFieldPopoverOpen} onOpenChange={setAddFieldPopoverOpen}>
-                      <PopoverTrigger asChild>
-                        <Button size="sm">
-                          <Plus className="h-4 w-4 mr-2" />
-                          Add Field
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-80 p-2" align="end">
-                        <div className="space-y-2">
-                          <div className="px-2 py-1.5">
+                    {localFields.length > 0 && (
+                      <Popover open={addFieldPopoverOpen} onOpenChange={setAddFieldPopoverOpen}>
+                        <PopoverTrigger asChild>
+                          <Button size="sm">
+                            <Plus className="h-4 w-4 mr-2" />
+                            Add Field
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-80 p-0" align="end" sideOffset={5}>
+                          <div className="px-3 py-2 border-b">
                             <p className="text-sm font-semibold">Choose Field Type</p>
                             <p className="text-xs text-muted-foreground">Select the type of field to add</p>
                           </div>
-                          <div className="grid gap-1">
-                            {FIELD_TYPE_OPTIONS.map((option) => (
-                              <Button
-                                key={option.value}
-                                variant="ghost"
-                                className="w-full justify-start h-auto py-2.5 px-3"
-                                onClick={() => handleCreateFieldFromType(option.value)}
-                              >
-                                <span className="text-xl mr-3">{option.icon}</span>
-                                <span className="text-sm font-medium">{option.label}</span>
-                              </Button>
-                            ))}
+                          <div className="max-h-[400px] overflow-y-auto p-2">
+                            <div className="grid gap-1">
+                              {FIELD_TYPE_OPTIONS.map((option) => (
+                                <Button
+                                  key={option.value}
+                                  variant="ghost"
+                                  className="w-full justify-start h-auto py-2.5 px-3"
+                                  onClick={() => handleCreateFieldFromType(option.value)}
+                                >
+                                  <span className="text-xl mr-3">{option.icon}</span>
+                                  <span className="text-sm font-medium">{option.label}</span>
+                                </Button>
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      </PopoverContent>
-                    </Popover>
+                        </PopoverContent>
+                      </Popover>
+                    )}
                   </>
                 )}
               </div>
@@ -633,12 +936,12 @@ export function TemplateFieldsTab() {
                         Add First Field
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-80 p-2">
-                      <div className="space-y-2">
-                        <div className="px-2 py-1.5">
-                          <p className="text-sm font-semibold">Choose Field Type</p>
-                          <p className="text-xs text-muted-foreground">Select the type of field to add</p>
-                        </div>
+                    <PopoverContent className="w-80 p-0" sideOffset={5}>
+                      <div className="px-3 py-2 border-b">
+                        <p className="text-sm font-semibold">Choose Field Type</p>
+                        <p className="text-xs text-muted-foreground">Select the type of field to add</p>
+                      </div>
+                      <div className="max-h-[400px] overflow-y-auto p-2">
                         <div className="grid gap-1">
                           {FIELD_TYPE_OPTIONS.map((option) => (
                             <Button
@@ -690,16 +993,33 @@ export function TemplateFieldsTab() {
                       strategy={verticalListSortingStrategy}
                     >
                       <div className="space-y-3">
-                        {localFields.map((field) => (
-                          <SortableFieldRow
-                            key={field.id}
-                            field={field}
-                            onEdit={() => handleEditField(field.id)}
-                            onDelete={() => handleDeleteField(field.id)}
-                            onUpdate={(updates) => handleInlineFieldUpdate(field.id, updates)}
-                            onOpenConfig={() => handleOpenConfig(field.id)}
-                          />
-                        ))}
+                        {localFields.map((field) => {
+                          // Check if this is a draft field (negative ID)
+                          const isDraft = field.id < 0;
+
+                          if (isDraft) {
+                            return (
+                              <DraftFieldEditor
+                                key={field.id}
+                                field={field}
+                                onSave={() => handleSaveDraftField(field.id)}
+                                onCancel={() => handleCancelDraftField(field.id)}
+                                onUpdate={(updates) => handleUpdateDraftField(field.id, updates)}
+                              />
+                            );
+                          }
+
+                          return (
+                            <SortableFieldRow
+                              key={field.id}
+                              field={field}
+                              onEdit={() => handleEditField(field.id)}
+                              onDelete={() => handleDeleteField(field.id)}
+                              onUpdate={(updates) => handleInlineFieldUpdate(field.id, updates)}
+                              onOpenConfig={() => handleOpenConfig(field.id)}
+                            />
+                          );
+                        })}
                       </div>
                     </SortableContext>
                   </DndContext>
@@ -715,12 +1035,12 @@ export function TemplateFieldsTab() {
                         Add Another Field
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-80 p-2">
-                      <div className="space-y-2">
-                        <div className="px-2 py-1.5">
-                          <p className="text-sm font-semibold">Choose Field Type</p>
-                          <p className="text-xs text-muted-foreground">Select the type of field to add</p>
-                        </div>
+                    <PopoverContent className="w-80 p-0" sideOffset={5}>
+                      <div className="px-3 py-2 border-b">
+                        <p className="text-sm font-semibold">Choose Field Type</p>
+                        <p className="text-xs text-muted-foreground">Select the type of field to add</p>
+                      </div>
+                      <div className="max-h-[400px] overflow-y-auto p-2">
                         <div className="grid gap-1">
                           {FIELD_TYPE_OPTIONS.map((option) => (
                             <Button

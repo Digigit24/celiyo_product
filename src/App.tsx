@@ -41,6 +41,7 @@ import WhatsAppOnboarding from "./pages/WhatsAppOnboarding";
 
 import { ThemeSync } from "@/components/ThemeSync";
 import OPDVisits from "./pages/OPDVisits";  // ✅ Updated to new production page
+import { OPDConsultation } from "./pages/opd/Consultation"; // ✅ Updated import for Consultation (Modern UI)
 import OPDVisitDetails from "./pages/opd-production/OPDVisitDetails"; // ✅ Unified page for consultation and billing
 import ConsultationCanvas from "./pages/opd-production/ConsultationCanvas";
 import OPDBills from "./pages/opd-production/OPDBills";
@@ -60,6 +61,10 @@ import { AccountingPeriods } from "./pages/AccountingPeriods";
 import { PharmacyPage } from "./pages/Pharmacy"; // Import PharmacyPage
 import { PharmacyStatisticsPage } from "./pages/PharmacyStatistics"; // Import PharmacyStatisticsPage
 import { CartListPage } from "./pages/CartList";   // Import CartListPage
+import Wards from "./pages/ipd/Wards"; // Import IPD Wards
+import Beds from "./pages/ipd/Beds"; // Import IPD Beds
+import Admissions from "./pages/ipd/Admissions"; // Import IPD Admissions
+import AdmissionDetails from "./pages/ipd/AdmissionDetails"; // Import IPD Admission Details
 
 import { WebSocketProvider } from "./context/WebSocketProvider";
 
@@ -108,7 +113,7 @@ const AppLayout = () => {
               {/* OPD Routes */}
               <Route path="/opd/visits" element={<OPDVisits />} />
               <Route path="/opd/billing/:visitId" element={<OPDVisitDetails />} />
-              <Route path="/opd/consultation/:visitId" element={<OPDVisitDetails />} />
+              <Route path="/opd/consultation/:visitId" element={<OPDConsultation />} />
               <Route path="/opd/consultation/:visitId/canvas/:responseId" element={<ConsultationCanvas />} />
               <Route path="/opd/bills" element={<OPDBills />} />
               <Route path="/opd/clinical-notes" element={<ClinicalNotes />} />
@@ -118,6 +123,12 @@ const AppLayout = () => {
               <Route path="/opd/procedure-bills" element={<ProcedureBills />} />
               <Route path="/opd/settings" element={<Navigate to="/opd/settings/templates" replace />} />
               <Route path="/opd/settings/:tab" element={<OPDSettings />} />
+
+              {/* IPD Routes */}
+              <Route path="/ipd/wards" element={<Wards />} />
+              <Route path="/ipd/beds" element={<Beds />} />
+              <Route path="/ipd/admissions" element={<Admissions />} />
+              <Route path="/ipd/admissions/:id" element={<AdmissionDetails />} />
 
               {/* Payment Routes */}
               <Route path="/payments/transactions" element={<Transactions />} />

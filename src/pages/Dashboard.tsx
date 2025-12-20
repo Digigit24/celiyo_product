@@ -718,9 +718,6 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Recent Activities Section */}
-        <RecentActivitiesTable isDark={isDark} />
-
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
           <StatCard
@@ -776,6 +773,9 @@ const Dashboard = () => {
             isDark={isDark}
           />
         </div>
+
+        {/* Recent Activities Section */}
+        <RecentActivitiesTable isDark={isDark} />
 
         {/* Charts Row 1 */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
@@ -1044,7 +1044,7 @@ const RecentActivitiesTable = ({ isDark }: { isDark: boolean }) => {
   ];
 
   return (
-    <div className="mt-8">
+    <div className="mt-4 mb-8">
       <h2 className={`text-lg font-semibold mb-4 ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>
         Recent Activity
       </h2>

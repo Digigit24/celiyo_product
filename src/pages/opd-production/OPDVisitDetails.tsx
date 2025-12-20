@@ -1,14 +1,42 @@
 // src/pages/opd-production/OPDVisitDetails.tsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useOpdVisit } from '@/hooks/useOpdVisit';
+
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Loader2, User, Phone, Calendar, Activity, Droplet } from 'lucide-react';
+
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+
+import {
+  ArrowLeft,
+  Loader2,
+  User,
+  Phone,
+  Calendar,
+  Activity,
+  Droplet,
+  ChevronLeft,
+  ChevronRight,
+  Play,
+  CheckCircle,
+} from 'lucide-react';
+
 import { format } from 'date-fns';
+import { toast } from 'sonner';
+
 import { ConsultationTab } from '@/components/consultation/ConsultationTab';
 import { HistoryTab } from '@/components/consultation/HistoryTab';
 import { ProfileTab } from '@/components/consultation/ProfileTab';
@@ -18,17 +46,31 @@ export const OPDVisitDetails: React.FC = () => {
   const { visitId } = useParams<{ visitId: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const { useOpdVisitById } = useOpdVisit();
+
+  const {
+    useOpdVisitById,
+    useTodayVisits,
+    patchOpdVisit,
+    completeOpdVisit,
+  } = useOpdVisit();
+
+  const numericVisitId = useMemo(
+    () => (visitId ? parseInt(visitId, 10) : null),
+    [visitId]
+  );
 
   // Determine active tab from the current route
   const getActiveTabFromPath = () => {
-    if (location.pathname.includes('/billing/')) {
-      return 'billing';
-    }
+    if (location.pathname.includes('/billing/')) return 'billing';
     return 'consultation';
   };
 
   const [activeTab, setActiveTab] = useState(getActiveTabFromPath());
+
+  // Header states (needed for the sticky header actions)
+  const [isSaving, setIsSaving] = useState(false);
+  const [showCompleteDialog, setShowCompleteDialog] = useState(false);
+  const [completeNote, setCompleteNote] = useState('');
 
   // Update active tab when route changes
   useEffect(() => {
@@ -38,11 +80,8 @@ export const OPDVisitDetails: React.FC = () => {
   // Handle back navigation - go to the previous page if state is provided, otherwise go to visits
   const handleBack = () => {
     const from = (location.state as any)?.from;
-    if (from) {
-      navigate(from);
-    } else {
-      navigate('/opd/visits');
-    }
+    if (from) navigate(from);
+    else navigate('/opd/visits');
   };
 
   // Handle tab change - navigate to the appropriate route
@@ -52,10 +91,93 @@ export const OPDVisitDetails: React.FC = () => {
       navigate(`/opd/billing/${visitId}`, { state: location.state });
     } else if (tab === 'consultation') {
       navigate(`/opd/consultation/${visitId}`, { state: location.state });
+    } else {
+      // history/profile are local tabs only (no route change needed)
+      // but we keep state in sync
     }
   };
 
-  const { data: visit, isLoading, error } = useOpdVisitById(visitId ? parseInt(visitId) : null);
+  // Fetch visit
+  const {
+    data: visit,
+    isLoading,
+    error,
+    // some implementations return mutate; keeping it optional so code stays safe
+    mutate: mutateVisit,
+  } = (useOpdVisitById as any)(numericVisitId);
+
+  // Fetch Today's visits for prev/next navigation (same behavior as consultation page)
+  const { data: todayVisitsData } = useTodayVisits({ page_size: 100 });
+  const todayVisits = todayVisitsData?.results || [];
+
+  const currentIndex = todayVisits.findIndex((v: any) => v.id === numericVisitId);
+  const prevVisitId = currentIndex > 0 ? todayVisits[currentIndex - 1]?.id : null;
+  const nextVisitId =
+    currentIndex !== -1 && currentIndex < todayVisits.length - 1
+      ? todayVisits[currentIndex + 1]?.id
+      : null;
+
+  const getVisitRouteForTab = (tab: string, id: number) => {
+    if (tab === 'billing') return `/opd/billing/${id}`;
+    return `/opd/consultation/${id}`;
+  };
+
+  const handlePrevVisit = () => {
+    if (!prevVisitId) return;
+    navigate(getVisitRouteForTab(activeTab, prevVisitId), { state: location.state });
+  };
+
+  const handleNextVisit = () => {
+    if (!nextVisitId) return;
+    navigate(getVisitRouteForTab(activeTab, nextVisitId), { state: location.state });
+  };
+
+  const handleStartConsultation = async () => {
+    if (!visit) return;
+    setIsSaving(true);
+    try {
+      await patchOpdVisit(visit.id, {
+        status: 'in_consultation',
+        started_at: new Date().toISOString(),
+      });
+      toast.success('Consultation started');
+      if (typeof mutateVisit === 'function') mutateVisit();
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to start consultation');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleCompleteConsultation = async () => {
+    if (!visit) return;
+    setIsSaving(true);
+    try {
+      await completeOpdVisit(visit.id, {
+        diagnosis: completeNote || 'Completed',
+        notes: completeNote,
+      });
+      toast.success('Consultation completed');
+      setShowCompleteDialog(false);
+      if (typeof mutateVisit === 'function') mutateVisit();
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to complete consultation');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Calculate BMI if height and weight are available
+  const calculateBMI = () => 'N/A';
+
+  // Format visit date
+  const formatVisitDate = (date: string) => {
+    try {
+      return format(new Date(date), 'MMM dd, yyyy');
+    } catch {
+      return date;
+    }
+  };
 
   if (isLoading) {
     return (
@@ -84,85 +206,116 @@ export const OPDVisitDetails: React.FC = () => {
   const patient = visit.patient_details;
   const doctor = visit.doctor_details;
 
-  // Calculate BMI if height and weight are available
-  const calculateBMI = () => {
-    // Placeholder - would need height and weight from patient data
-    return 'N/A';
-  };
-
-  // Format visit date
-  const formatVisitDate = (date: string) => {
-    try {
-      return format(new Date(date), 'MMM dd, yyyy');
-    } catch {
-      return date;
-    }
-  };
-
   return (
     <div className="p-6 max-w-8xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-        <div className="flex items-start gap-4">
-          <Button
-            onClick={handleBack}
-            variant="outline"
-            size="icon"
-            className="mt-1"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div>
+      {/* Sticky Header (same style as consultation page) */}
+      <div className="sticky top-0 z-20 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="flex items-center justify-between px-6 py-3">
+          <div className="flex items-center gap-6">
+            <Button variant="ghost" size="icon" onClick={handleBack} className="-ml-2">
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl sm:text-3xl font-bold">{patient?.full_name || 'N/A'}</h1>
-              <Badge
-                variant={visit.status === 'completed' ? 'default' : 'secondary'}
-                className={
-                  visit.status === 'completed'
-                    ? 'bg-green-600'
-                    : visit.status === 'in_progress'
-                    ? 'bg-blue-600'
-                    : 'bg-orange-600'
-                }
-              >
-                {visit.status?.replace('_', ' ').toUpperCase() || 'UNKNOWN'}
-              </Badge>
-            </div>
-            <div className="flex flex-wrap items-center gap-2 mt-1 text-sm text-muted-foreground">
-              <span className="font-mono">{patient?.patient_id || 'N/A'}</span>
-              {patient?.mobile_primary && (
-                <>
-                  <span>•</span>
-                  <span className="flex items-center gap-1">
-                    <Phone className="h-3 w-3" />
-                    {patient.mobile_primary}
+              <Avatar className="h-10 w-10 border">
+                <AvatarFallback className="bg-primary/10 text-primary">
+                  {patient?.full_name?.charAt(0) || 'P'}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <h1
+                  className="text-lg font-bold leading-none cursor-pointer hover:underline decoration-primary/50 underline-offset-4"
+                  onClick={() => navigate(`/patients/${visit.patient}`)}
+                >
+                  {patient?.full_name || 'Unknown Patient'}
+                </h1>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                  <span className="font-mono bg-muted px-1 rounded">
+                    PID: {patient?.patient_id || 'N/A'}
                   </span>
-                </>
-              )}
-              {patient?.age && (
-                <>
                   <span>•</span>
-                  <span>{patient.age} years</span>
-                </>
-              )}
-              {patient?.gender && (
-                <>
+                  <span>
+                    {patient?.age || '-'} yrs / {patient?.gender || '-'}
+                  </span>
                   <span>•</span>
-                  <span className="capitalize">{patient.gender}</span>
-                </>
-              )}
+                  <Phone className="h-3 w-3" /> {patient?.mobile_primary || 'N/A'}
+                </div>
+              </div>
+            </div>
+
+            {/* Navigation Controls */}
+            <div className="flex items-center bg-muted/50 rounded-lg border p-0.5 ml-4">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={handlePrevVisit}
+                disabled={!prevVisitId}
+                title="Previous Patient"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <div className="px-3 text-xs font-medium border-x border-muted-foreground/20">
+                {todayVisits.length ? currentIndex + 1 : 0} / {todayVisits.length}
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={handleNextVisit}
+                disabled={!nextVisitId}
+                title="Next Patient"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
             </div>
           </div>
-        </div>
 
-        {/* Visit Info Badge */}
-        <div className="flex flex-wrap gap-2">
-          <Badge variant="outline" className="text-sm">
-            Visit: {visit.visit_number}
-          </Badge>
-          <Badge variant="outline" className="text-sm">
-            {formatVisitDate(visit.visit_date)}
-          </Badge>
+          <div className="flex items-center gap-3">
+            <Badge
+              variant={visit.status === 'completed' ? 'default' : 'secondary'}
+              className={`px-3 py-1 text-xs uppercase tracking-wide ${
+                visit.status === 'completed'
+                  ? 'bg-green-100 text-green-700 hover:bg-green-100'
+                  : visit.status === 'in_consultation' || visit.status === 'in_progress'
+                  ? 'bg-blue-100 text-blue-700 hover:bg-blue-100'
+                  : 'bg-orange-100 text-orange-700 hover:bg-orange-100'
+              }`}
+            >
+              {visit.status?.replace('_', ' ')}
+            </Badge>
+
+            {/* Action Buttons based on Status */}
+            {visit.status === 'waiting' && (
+              <Button
+                onClick={handleStartConsultation}
+                disabled={isSaving}
+                className="gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                {isSaving ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Play className="h-4 w-4" />
+                )}
+                Start Consultation
+              </Button>
+            )}
+
+            {(visit.status === 'in_consultation' || visit.status === 'in_progress') && (
+              <Button
+                onClick={() => setShowCompleteDialog(true)}
+                disabled={isSaving}
+                className="gap-2 bg-green-600 hover:bg-green-700 text-white"
+              >
+                {isSaving ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <CheckCircle className="h-4 w-4" />
+                )}
+                Complete Visit
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -198,7 +351,9 @@ export const OPDVisitDetails: React.FC = () => {
               <Activity className="h-4 w-4 text-purple-600" />
               <div>
                 <p className="text-xs text-muted-foreground">Visit Type</p>
-                <p className="text-sm font-semibold">{visit.visit_type?.replace('_', ' ').toUpperCase() || 'N/A'}</p>
+                <p className="text-sm font-semibold">
+                  {visit.visit_type?.replace('_', ' ').toUpperCase() || 'N/A'}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -263,6 +418,42 @@ export const OPDVisitDetails: React.FC = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Complete Visit Dialog */}
+      <Dialog open={showCompleteDialog} onOpenChange={setShowCompleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Complete Consultation</DialogTitle>
+            <DialogDescription>
+              Finalize this visit. This will move the patient to the completed list.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-2 py-4">
+            <Label htmlFor="complete-note">Final Diagnosis / Notes</Label>
+            <Input
+              id="complete-note"
+              placeholder="Enter diagnosis or completion summary..."
+              value={completeNote}
+              onChange={(e) => setCompleteNote(e.target.value)}
+            />
+          </div>
+
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setShowCompleteDialog(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCompleteConsultation}
+              disabled={isSaving}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Complete Visit
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

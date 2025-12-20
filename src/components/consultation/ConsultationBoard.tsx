@@ -1,13 +1,24 @@
 // src/components/consultation/ConsultationBoard.tsx
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Plus, LayoutGrid, FileText } from 'lucide-react';
+
 import { OpdVisit } from '@/types/opdVisit.types';
 import { TemplateResponse, Template, ResponseTemplate } from '@/types/opdTemplate.types';
+
 import { ResponseCard } from './ResponseCard';
 import { TemplateSelectionDrawer } from './TemplateSelectionDrawer';
 import { useOPDTemplate } from '@/hooks/useOPDTemplate';
@@ -37,9 +48,12 @@ export const ConsultationBoard: React.FC<ConsultationBoardProps> = ({
   onViewResponse,
   onRefresh,
 }) => {
+  const navigate = useNavigate();
+
   const [templateDrawerOpen, setTemplateDrawerOpen] = useState(false);
   const [saveAsTemplateDialog, setSaveAsTemplateDialog] = useState(false);
   const [copyFromTemplateDialog, setCopyFromTemplateDialog] = useState(false);
+
   const [selectedResponseForAction, setSelectedResponseForAction] = useState<TemplateResponse | null>(null);
   const [templateName, setTemplateName] = useState('');
   const [isPublic, setIsPublic] = useState(false);
@@ -49,13 +63,23 @@ export const ConsultationBoard: React.FC<ConsultationBoardProps> = ({
     deleteTemplateResponse,
     convertToResponseTemplate,
     applyResponseTemplate,
-    useResponseTemplates
+    useResponseTemplates,
   } = useOPDTemplate();
 
   // Fetch response templates for the current template type
   const { data: responseTemplatesData } = useResponseTemplates({
-    template: selectedResponseForAction?.template
+    template: selectedResponseForAction?.template,
   });
+
+  // NEW: navigate to canvas route
+  const onOpenCanvasResponse = useCallback(
+    (response: TemplateResponse) => {
+      // Canvas route expects visitId and responseId
+      // For OPD board, visit.id is always available
+      navigate(`/opd/consultation/${visit.id}/canvas/${response.id}`);
+    },
+    [navigate, visit.id]
+  );
 
   const handleSelectTemplate = useCallback(
     async (templateId: number) => {
@@ -83,9 +107,7 @@ export const ConsultationBoard: React.FC<ConsultationBoardProps> = ({
 
   const handleDeleteResponse = useCallback(
     async (responseId: number) => {
-      const confirmed = window.confirm(
-        'Are you sure you want to delete this response? This action cannot be undone.'
-      );
+      const confirmed = window.confirm('Are you sure you want to delete this response? This action cannot be undone.');
       if (!confirmed) return;
 
       try {
@@ -128,34 +150,37 @@ export const ConsultationBoard: React.FC<ConsultationBoardProps> = ({
     setCopyFromTemplateDialog(true);
   }, []);
 
-  const handleConfirmCopyFromTemplate = useCallback(async (responseTemplateId: number) => {
-    if (!selectedResponseForAction) return;
+  const handleConfirmCopyFromTemplate = useCallback(
+    async (responseTemplateId: number) => {
+      if (!selectedResponseForAction) return;
 
-    try {
-      await applyResponseTemplate(selectedResponseForAction.id, responseTemplateId);
-      toast.success('Template applied successfully!');
-      setCopyFromTemplateDialog(false);
-      setSelectedResponseForAction(null);
-      onRefresh();
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to apply template');
-    }
-  }, [selectedResponseForAction, applyResponseTemplate, onRefresh]);
+      try {
+        await applyResponseTemplate(selectedResponseForAction.id, responseTemplateId);
+        toast.success('Template applied successfully!');
+        setCopyFromTemplateDialog(false);
+        setSelectedResponseForAction(null);
+        onRefresh();
+      } catch (error: any) {
+        toast.error(error.message || 'Failed to apply template');
+      }
+    },
+    [selectedResponseForAction, applyResponseTemplate, onRefresh]
+  );
 
   // Group responses by template
-  const responsesByTemplate = responses.reduce((acc, response) => {
-    const templateId = response.template;
-    if (!acc[templateId]) {
-      acc[templateId] = [];
-    }
-    acc[templateId].push(response);
-    return acc;
-  }, {} as Record<number, TemplateResponse[]>);
+  const responsesByTemplate = useMemo(() => {
+    return responses.reduce((acc, response) => {
+      const templateId = response.template;
+      if (!acc[templateId]) acc[templateId] = [];
+      acc[templateId].push(response);
+      return acc;
+    }, {} as Record<number, TemplateResponse[]>);
+  }, [responses]);
 
   return (
     <div className="h-full flex flex-col">
       {/* Header with Action Button */}
-      <div className="flex items-center justify-between mb-6 px-6 pt-6">
+      <div className="flex items-center justify-between pt-6">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-primary/10 rounded-lg">
             <LayoutGrid className="h-5 w-5 text-primary" />
@@ -164,10 +189,12 @@ export const ConsultationBoard: React.FC<ConsultationBoardProps> = ({
             <h2 className="text-xl font-bold">Clinical Notes Board</h2>
             <p className="text-sm text-muted-foreground">
               {responses.length} {responses.length === 1 ? 'note' : 'notes'} •{' '}
-              {Object.keys(responsesByTemplate).length} {Object.keys(responsesByTemplate).length === 1 ? 'template' : 'templates'}
+              {Object.keys(responsesByTemplate).length}{' '}
+              {Object.keys(responsesByTemplate).length === 1 ? 'template' : 'templates'}
             </p>
           </div>
         </div>
+
         <Button
           onClick={() => setTemplateDrawerOpen(true)}
           className="bg-primary hover:bg-primary/90"
@@ -179,7 +206,7 @@ export const ConsultationBoard: React.FC<ConsultationBoardProps> = ({
       </div>
 
       {/* Board Content */}
-      <div className="flex-1 overflow-auto px-6 pb-6">
+      <div className="flex-1 overflow-auto px-4">
         {isLoadingResponses ? (
           // Loading State
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -207,7 +234,7 @@ export const ConsultationBoard: React.FC<ConsultationBoardProps> = ({
               <div className="space-y-2">
                 <h3 className="text-2xl font-bold">No Clinical Notes Yet</h3>
                 <p className="text-muted-foreground">
-                  {objectId 
+                  {objectId
                     ? 'Start documenting this consultation by adding your first clinical note. Choose from templates like OPD Notes, IPD Notes, or Discharge Summaries.'
                     : 'No active admission found for this patient. You cannot add IPD notes.'}
                 </p>
@@ -239,12 +266,8 @@ export const ConsultationBoard: React.FC<ConsultationBoardProps> = ({
                     <div className="h-px flex-1 bg-border"></div>
                     <div className="flex items-center gap-2 px-4 py-2 bg-muted/50 rounded-full">
                       <FileText className="h-4 w-4 text-primary" />
-                      <span className="font-semibold text-sm">
-                        {template?.name || `Template ${templateId}`}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        ({sortedResponses.length})
-                      </span>
+                      <span className="font-semibold text-sm">{template?.name || `Template ${templateId}`}</span>
+                      <span className="text-xs text-muted-foreground">({sortedResponses.length})</span>
                     </div>
                     <div className="h-px flex-1 bg-border"></div>
                   </div>
@@ -257,6 +280,8 @@ export const ConsultationBoard: React.FC<ConsultationBoardProps> = ({
                         response={response}
                         templateName={template?.name}
                         onView={() => onViewResponse(response)}
+                        onOpenForm={() => onViewResponse(response)}
+                        onOpenCanvas={() => onOpenCanvasResponse(response)}
                         onSaveAsTemplate={() => handleSaveAsTemplate(response)}
                         onCopyFromTemplate={() => handleCopyFromTemplate(response)}
                         onDelete={() => handleDeleteResponse(response.id)}
@@ -288,6 +313,7 @@ export const ConsultationBoard: React.FC<ConsultationBoardProps> = ({
               Create a reusable template from this response that you can apply to other clinical notes.
             </DialogDescription>
           </DialogHeader>
+
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="template-name">Template Name *</Label>
@@ -298,6 +324,7 @@ export const ConsultationBoard: React.FC<ConsultationBoardProps> = ({
                 onChange={(e) => setTemplateName(e.target.value)}
               />
             </div>
+
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="is-public"
@@ -309,13 +336,12 @@ export const ConsultationBoard: React.FC<ConsultationBoardProps> = ({
               </Label>
             </div>
           </div>
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setSaveAsTemplateDialog(false)}>
               Cancel
             </Button>
-            <Button onClick={handleConfirmSaveAsTemplate}>
-              Save Template
-            </Button>
+            <Button onClick={handleConfirmSaveAsTemplate}>Save Template</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -326,9 +352,11 @@ export const ConsultationBoard: React.FC<ConsultationBoardProps> = ({
           <DialogHeader>
             <DialogTitle>Copy from Template</DialogTitle>
             <DialogDescription>
-              Select a saved template to apply to this response. This will populate the fields with the template's values.
+              Select a saved template to apply to this response. This will populate the fields with the template&apos;s
+              values.
             </DialogDescription>
           </DialogHeader>
+
           <div className="max-h-[400px] overflow-y-auto py-4">
             {responseTemplatesData && responseTemplatesData.results.length > 0 ? (
               <div className="space-y-2">
@@ -350,11 +378,10 @@ export const ConsultationBoard: React.FC<ConsultationBoardProps> = ({
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                No templates available for this type of clinical note.
-              </div>
+              <div className="text-center py-8 text-muted-foreground">No templates available for this type of clinical note.</div>
             )}
           </div>
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setCopyFromTemplateDialog(false)}>
               Cancel

@@ -21,6 +21,8 @@ import {
   Archive,
   FileText,
   User,
+  PenTool,
+  ClipboardList,
 } from 'lucide-react';
 import { TemplateResponse } from '@/types/opdTemplate.types';
 import { formatDistanceToNow } from 'date-fns';
@@ -41,11 +43,19 @@ const formatTimeAgo = (dateString: string | null | undefined): string => {
 interface ResponseCardProps {
   response: TemplateResponse;
   templateName?: string;
+
+  // existing
   onView: () => void;
+
+  // existing (optional)
   onCopyFromTemplate?: () => void;
   onSaveAsTemplate?: () => void;
   onDelete?: () => void;
   onMarkReviewed?: () => void;
+
+  // NEW: direct navigation actions
+  onOpenForm?: () => void;
+  onOpenCanvas?: () => void;
 }
 
 const statusConfig = {
@@ -75,6 +85,8 @@ export const ResponseCard: React.FC<ResponseCardProps> = ({
   response,
   templateName,
   onView,
+  onOpenForm,
+  onOpenCanvas,
   onCopyFromTemplate,
   onSaveAsTemplate,
   onDelete,
@@ -87,7 +99,6 @@ export const ResponseCard: React.FC<ResponseCardProps> = ({
   const config = statusConfig[response.status as keyof typeof statusConfig] || statusConfig.draft;
   const StatusIcon = config.icon;
 
-  // Construct full name from first_name and last_name
   const filledByName = filledByUser
     ? `${filledByUser.first_name} ${filledByUser.last_name}`.trim()
     : 'Unknown';
@@ -95,6 +106,21 @@ export const ResponseCard: React.FC<ResponseCardProps> = ({
   const reviewedByName = reviewedByUser
     ? `${reviewedByUser.first_name} ${reviewedByUser.last_name}`.trim()
     : 'Unknown';
+
+  // Fallback behavior:
+  // - Form button should open form; if not provided, use onView
+  // - Canvas button should call onOpenCanvas if provided; else do nothing
+  const handleOpenForm = () => {
+    if (onOpenForm) onOpenForm();
+    else onView();
+  };
+
+  const handleOpenCanvas = () => {
+    if (onOpenCanvas) onOpenCanvas();
+  };
+
+  const hasCanvas = !!response.canvas_data;
+  const canOpenCanvas = !!onOpenCanvas; // you can also change this to `hasCanvas && !!onOpenCanvas` if you want strict
 
   return (
     <Card className="group hover:shadow-lg transition-all duration-200 hover:scale-[1.02] cursor-pointer border-2 hover:border-primary/50">
@@ -117,52 +143,113 @@ export const ResponseCard: React.FC<ResponseCardProps> = ({
                 </Badge>
               </div>
             </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onView(); }}>
-                  <Eye className="mr-2 h-4 w-4" />
-                  View Details
-                </DropdownMenuItem>
-                {onCopyFromTemplate && (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onCopyFromTemplate(); }}>
-                      <Copy className="mr-2 h-4 w-4" />
-                      Copy from Template
-                    </DropdownMenuItem>
-                  </>
-                )}
-                {onSaveAsTemplate && (
-                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onSaveAsTemplate(); }}>
-                    <Save className="mr-2 h-4 w-4" />
-                    Save as Template
+
+            {/* Right actions: Canvas + Form + Menu */}
+            <div className="flex items-center gap-1">
+              {/* Open Canvas */}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0"
+                title={hasCanvas ? 'Open Canvas' : 'Canvas (no drawing yet)'}
+                disabled={!canOpenCanvas}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleOpenCanvas();
+                }}
+              >
+                <PenTool className="h-4 w-4" />
+              </Button>
+
+              {/* Open Form */}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0"
+                title="Open Form"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleOpenForm();
+                }}
+              >
+                <ClipboardList className="h-4 w-4" />
+              </Button>
+
+              {/* Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onView();
+                    }}
+                  >
+                    <Eye className="mr-2 h-4 w-4" />
+                    View Details
                   </DropdownMenuItem>
-                )}
-                {onMarkReviewed && response.status !== 'reviewed' && (
-                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onMarkReviewed(); }}>
-                    <CheckCircle className="mr-2 h-4 w-4" />
-                    Mark as Reviewed
-                  </DropdownMenuItem>
-                )}
-                {onDelete && (
-                  <>
-                    <DropdownMenuSeparator />
+
+                  {onCopyFromTemplate && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onCopyFromTemplate();
+                        }}
+                      >
+                        <Copy className="mr-2 h-4 w-4" />
+                        Copy from Template
+                      </DropdownMenuItem>
+                    </>
+                  )}
+
+                  {onSaveAsTemplate && (
                     <DropdownMenuItem
-                      className="text-destructive"
-                      onClick={(e) => { e.stopPropagation(); onDelete(); }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onSaveAsTemplate();
+                      }}
                     >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Delete
+                      <Save className="mr-2 h-4 w-4" />
+                      Save as Template
                     </DropdownMenuItem>
-                  </>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
+                  )}
+
+                  {onMarkReviewed && response.status !== 'reviewed' && (
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onMarkReviewed();
+                      }}
+                    >
+                      <CheckCircle className="mr-2 h-4 w-4" />
+                      Mark as Reviewed
+                    </DropdownMenuItem>
+                  )}
+
+                  {onDelete && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        className="text-destructive"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDelete();
+                        }}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
         </div>
 
@@ -187,9 +274,7 @@ export const ResponseCard: React.FC<ResponseCardProps> = ({
           {response.is_reviewed && response.reviewed_by_id && (
             <div className="flex items-center gap-2 text-xs bg-blue-50 border border-blue-200 rounded p-2">
               <CheckCircle className="h-3 w-3 text-blue-600" />
-              <span className="text-blue-700">
-                Reviewed by {reviewedByName}
-              </span>
+              <span className="text-blue-700">Reviewed by {reviewedByName}</span>
             </div>
           )}
 
@@ -197,18 +282,21 @@ export const ResponseCard: React.FC<ResponseCardProps> = ({
           <div className="pt-2 border-t text-xs text-muted-foreground space-y-1">
             <div className="flex justify-between">
               <span>Created:</span>
-              <span className="font-medium">{formatTimeAgo(response.response_date || response.created_at)}</span>
+              <span className="font-medium">
+                {formatTimeAgo(response.response_date || response.created_at)}
+              </span>
             </div>
-            {response.updated_at && response.updated_at !== (response.response_date || response.created_at) && (
-              <div className="flex justify-between">
-                <span>Updated:</span>
-                <span className="font-medium">{formatTimeAgo(response.updated_at)}</span>
-              </div>
-            )}
+            {response.updated_at &&
+              response.updated_at !== (response.response_date || response.created_at) && (
+                <div className="flex justify-between">
+                  <span>Updated:</span>
+                  <span className="font-medium">{formatTimeAgo(response.updated_at)}</span>
+                </div>
+              )}
           </div>
 
           {/* Canvas Indicator */}
-          {response.canvas_data && (
+          {hasCanvas && (
             <div className="flex items-center gap-2 text-xs text-primary">
               <FileText className="h-3 w-3" />
               <span>Contains canvas drawing</span>
@@ -221,17 +309,36 @@ export const ResponseCard: React.FC<ResponseCardProps> = ({
           </div>
         </div>
 
-        {/* View Button at Bottom */}
+        {/* Bottom Actions */}
         <div className="border-t p-3 bg-muted/30">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-colors"
-            onClick={onView}
-          >
-            <Eye className="mr-2 h-4 w-4" />
-            View & Edit
-          </Button>
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-colors"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleOpenForm();
+              }}
+            >
+              <ClipboardList className="mr-2 h-4 w-4" />
+              Open Form
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-colors"
+              disabled={!canOpenCanvas}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleOpenCanvas();
+              }}
+            >
+              <PenTool className="mr-2 h-4 w-4" />
+              Open Canvas
+            </Button>
+          </div>
         </div>
       </CardContent>
     </Card>

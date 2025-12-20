@@ -355,7 +355,7 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
   return (
     <div className="h-full flex flex-col">
       {/* Encounter Type Toggle */}
-      <div className="px-6 pt-4 pb-2 flex items-center gap-4">
+      <div className="flex items-center gap-4">
         <Tabs value={encounterType} onValueChange={(v) => setEncounterType(v as 'visit' | 'admission')} className="w-[400px]">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="visit" className="flex items-center gap-2">

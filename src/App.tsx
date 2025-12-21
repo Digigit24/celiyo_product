@@ -67,6 +67,9 @@ import Admissions from "./pages/ipd/Admissions"; // Import IPD Admissions
 import AdmissionDetails from "./pages/ipd/AdmissionDetails"; // Import IPD Admission Details
 import IPDBillingPage from "./pages/ipd/Billing"; // IPD Billing
 import Diagnostics from "./pages/Diagnostics"; // Import Diagnostics page
+import { Requisitions } from "./pages/diagnostics/Requisitions"; // Import Requisitions page
+import { Investigations } from "./pages/diagnostics/Investigations"; // Import Investigations page
+import { LabReports } from "./pages/diagnostics/LabReports"; // Import Lab Reports page
 
 import { WebSocketProvider } from "./context/WebSocketProvider";
 
@@ -135,6 +138,9 @@ const AppLayout = () => {
 
               {/* Diagnostics Routes */}
               <Route path="/diagnostics" element={<Diagnostics />} />
+              <Route path="/diagnostics/requisitions" element={<Requisitions />} />
+              <Route path="/diagnostics/investigations" element={<Investigations />} />
+              <Route path="/diagnostics/lab-reports" element={<LabReports />} />
 
               {/* Payment Routes */}
               <Route path="/payments/transactions" element={<Transactions />} />

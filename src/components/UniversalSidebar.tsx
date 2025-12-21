@@ -309,7 +309,26 @@ const menuItems: MenuItem[] = [
     id: "diagnostics",
     label: "Diagnostics",
     icon: FlaskConical,
-    path: "/diagnostics",
+    children: [
+      {
+        id: "diagnostics-requisitions",
+        label: "Requisitions",
+        icon: ClipboardList,
+        path: "/diagnostics/requisitions",
+      },
+      {
+        id: "diagnostics-investigations",
+        label: "Investigations",
+        icon: Microscope,
+        path: "/diagnostics/investigations",
+      },
+      {
+        id: "diagnostics-lab-reports",
+        label: "Lab Reports",
+        icon: FileText,
+        path: "/diagnostics/lab-reports",
+      },
+    ],
   },
   {
     id: "payments",

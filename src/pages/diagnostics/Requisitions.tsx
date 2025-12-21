@@ -19,10 +19,10 @@ import {
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { Plus, Search, ClipboardList, Clock, AlertCircle, CheckCircle2, XCircle, Activity } from 'lucide-react';
+import { Plus, Search, ClipboardList, Clock, AlertCircle, CheckCircle2, XCircle, Activity, Microscope, Pill, Stethoscope, Package } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import type { Requisition, RequisitionStatus, RequisitionPriority, CreateRequisitionPayload } from '@/types/diagnostics.types';
+import type { Requisition, RequisitionStatus, RequisitionPriority, RequisitionType, CreateRequisitionPayload } from '@/types/diagnostics.types';
 
 const STATUS_OPTIONS: { value: RequisitionStatus; label: string; icon: React.ReactNode }[] = [
   { value: 'ordered', label: 'Ordered', icon: <Clock className="h-3 w-3" /> },
@@ -37,11 +37,26 @@ const PRIORITY_OPTIONS: { value: RequisitionPriority; label: string }[] = [
   { value: 'stat', label: 'STAT (Immediate)' },
 ];
 
+const TYPE_OPTIONS: { value: RequisitionType | 'all'; label: string; icon: React.ReactNode }[] = [
+  { value: 'all', label: 'All Types', icon: <ClipboardList className="h-3 w-3" /> },
+  { value: 'investigation', label: 'Investigations', icon: <Microscope className="h-3 w-3" /> },
+  { value: 'medicine', label: 'Medicines', icon: <Pill className="h-3 w-3" /> },
+  { value: 'procedure', label: 'Procedures', icon: <Stethoscope className="h-3 w-3" /> },
+  { value: 'package', label: 'Packages', icon: <Package className="h-3 w-3" /> },
+];
+
 const STATUS_COLORS: Record<RequisitionStatus, string> = {
   ordered: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',
   sample_collected: 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300',
   completed: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
   cancelled: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300',
+};
+
+const TYPE_COLORS: Record<RequisitionType, string> = {
+  investigation: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',
+  medicine: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
+  procedure: 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300',
+  package: 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300',
 };
 
 export const Requisitions: React.FC = () => {
@@ -60,6 +75,7 @@ export const Requisitions: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<RequisitionStatus | 'all'>('all');
+  const [typeFilter, setTypeFilter] = useState<RequisitionType | 'all'>('all');
   const [activeTab, setActiveTab] = useState('details');
 
   // Form state
@@ -85,9 +101,10 @@ export const Requisitions: React.FC = () => {
         req.requisition_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
         req.patient_name.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesStatus = statusFilter === 'all' || req.status === statusFilter;
-      return matchesSearch && matchesStatus;
+      const matchesType = typeFilter === 'all' || req.requisition_type === typeFilter;
+      return matchesSearch && matchesStatus && matchesType;
     });
-  }, [requisitions, searchTerm, statusFilter]);
+  }, [requisitions, searchTerm, statusFilter, typeFilter]);
 
   // DataTable columns
   const columns: DataTableColumn<Requisition>[] = [
@@ -145,10 +162,52 @@ export const Requisitions: React.FC = () => {
       filterable: true,
     },
     {
-      header: 'Tests',
-      key: 'investigation_orders',
-      accessor: (row) => row.investigation_orders?.length || 0,
-      cell: (row) => <span className="text-sm">{row.investigation_orders?.length || 0} tests</span>,
+      header: 'Type',
+      key: 'requisition_type',
+      accessor: (row) => row.requisition_type,
+      cell: (row) => {
+        const typeOption = TYPE_OPTIONS.find((t) => t.value === row.requisition_type);
+        return (
+          <Badge className={TYPE_COLORS[row.requisition_type]}>
+            <span className="flex items-center gap-1">
+              {typeOption?.icon}
+              {typeOption?.label}
+            </span>
+          </Badge>
+        );
+      },
+      sortable: true,
+      filterable: true,
+    },
+    {
+      header: 'Items',
+      key: 'items',
+      accessor: (row) => {
+        const counts = {
+          investigation: row.investigation_orders?.length || 0,
+          medicine: row.medicine_orders?.length || 0,
+          procedure: row.procedure_orders?.length || 0,
+          package: row.package_orders?.length || 0,
+        };
+        return counts[row.requisition_type] || 0;
+      },
+      cell: (row) => {
+        const counts = {
+          investigation: row.investigation_orders?.length || 0,
+          medicine: row.medicine_orders?.length || 0,
+          procedure: row.procedure_orders?.length || 0,
+          package: row.package_orders?.length || 0,
+        };
+        const count = counts[row.requisition_type] || 0;
+        const labels = {
+          investigation: 'tests',
+          medicine: 'medicines',
+          procedure: 'procedures',
+          package: 'packages',
+        };
+        const label = labels[row.requisition_type] || 'items';
+        return <span className="text-sm">{count} {label}</span>;
+      },
       sortable: true,
     },
   ];
@@ -333,6 +392,24 @@ export const Requisitions: React.FC = () => {
               ))}
             </SelectContent>
           </Select>
+          <Select
+            value={typeFilter}
+            onValueChange={(value) => setTypeFilter(value as RequisitionType | 'all')}
+          >
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Filter by type" />
+            </SelectTrigger>
+            <SelectContent>
+              {TYPE_OPTIONS.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  <span className="flex items-center gap-2">
+                    {option.icon}
+                    {option.label}
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
@@ -350,26 +427,51 @@ export const Requisitions: React.FC = () => {
           onDelete={handleDelete}
           emptyTitle="No requisitions found"
           emptySubtitle="Create your first requisition to get started"
-          renderMobileCard={(row, actions) => (
-            <div className="space-y-3">
-              <div className="flex items-start justify-between">
-                <div>
-                  <div className="font-mono font-semibold text-sm text-primary">{row.requisition_number}</div>
-                  <div className="font-medium mt-1">{row.patient_name}</div>
+          renderMobileCard={(row, actions) => {
+            const counts = {
+              investigation: row.investigation_orders?.length || 0,
+              medicine: row.medicine_orders?.length || 0,
+              procedure: row.procedure_orders?.length || 0,
+              package: row.package_orders?.length || 0,
+            };
+            const count = counts[row.requisition_type] || 0;
+            const labels = {
+              investigation: 'tests',
+              medicine: 'medicines',
+              procedure: 'procedures',
+              package: 'packages',
+            };
+            const label = labels[row.requisition_type] || 'items';
+
+            return (
+              <div className="space-y-3">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <div className="font-mono font-semibold text-sm text-primary">{row.requisition_number}</div>
+                    <div className="font-medium mt-1">{row.patient_name}</div>
+                  </div>
+                  <div className="flex gap-1 flex-col items-end">
+                    <Badge className={STATUS_COLORS[row.status]}>
+                      <span className="flex items-center gap-1">
+                        {STATUS_OPTIONS.find((s) => s.value === row.status)?.icon}
+                        {STATUS_OPTIONS.find((s) => s.value === row.status)?.label}
+                      </span>
+                    </Badge>
+                    <Badge className={TYPE_COLORS[row.requisition_type]}>
+                      <span className="flex items-center gap-1">
+                        {TYPE_OPTIONS.find((t) => t.value === row.requisition_type)?.icon}
+                        {TYPE_OPTIONS.find((t) => t.value === row.requisition_type)?.label}
+                      </span>
+                    </Badge>
+                  </div>
                 </div>
-                <Badge className={STATUS_COLORS[row.status]}>
-                  <span className="flex items-center gap-1">
-                    {STATUS_OPTIONS.find((s) => s.value === row.status)?.icon}
-                    {STATUS_OPTIONS.find((s) => s.value === row.status)?.label}
-                  </span>
-                </Badge>
+                <div className="flex items-center justify-between text-sm text-muted-foreground">
+                  <span>{format(new Date(row.order_date), 'MMM dd, yyyy')}</span>
+                  <span>{count} {label}</span>
+                </div>
               </div>
-              <div className="flex items-center justify-between text-sm text-muted-foreground">
-                <span>{format(new Date(row.order_date), 'MMM dd, yyyy')}</span>
-                <span>{row.investigation_orders?.length || 0} tests</span>
-              </div>
-            </div>
-          )}
+            );
+          }}
         />
       </div>
 
@@ -509,10 +611,10 @@ export const Requisitions: React.FC = () => {
             />
           </TabsContent>
 
-          {/* Tests Tab */}
+          {/* Items Tab */}
           <TabsContent value="tests" className="space-y-4 mt-6">
             <div className="text-sm text-muted-foreground mb-4">
-              {drawerMode === 'create' ? 'Select investigations for this requisition:' : 'Investigations in this requisition:'}
+              {drawerMode === 'create' ? 'Select items for this requisition:' : 'Items in this requisition:'}
             </div>
             {drawerMode === 'create' ? (
               <div className="space-y-2">
@@ -547,23 +649,110 @@ export const Requisitions: React.FC = () => {
                 ))}
               </div>
             ) : (
-              <div className="space-y-2">
-                {selectedRequisition?.investigation_orders?.map((order) => (
-                  <Card key={order.id}>
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <div className="font-medium">{order.investigation_name}</div>
-                          <div className="text-sm text-muted-foreground">Sample ID: {order.sample_id || 'N/A'}</div>
-                        </div>
-                        <div className="text-right">
-                          <div className="font-semibold">₹{parseFloat(order.price).toLocaleString()}</div>
-                          <Badge variant="outline" className="mt-1">{order.status}</Badge>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+              <div className="space-y-4">
+                {/* Investigation Orders */}
+                {selectedRequisition?.requisition_type === 'investigation' && selectedRequisition?.investigation_orders && selectedRequisition.investigation_orders.length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="font-semibold text-sm flex items-center gap-2">
+                      <Microscope className="h-4 w-4" />
+                      Investigations ({selectedRequisition.investigation_orders.length})
+                    </h4>
+                    {selectedRequisition.investigation_orders.map((order) => (
+                      <Card key={order.id}>
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <div className="font-medium">{order.investigation_name}</div>
+                              <div className="text-sm text-muted-foreground">Sample ID: {order.sample_id || 'N/A'}</div>
+                            </div>
+                            <div className="text-right">
+                              <div className="font-semibold">₹{parseFloat(order.price).toLocaleString()}</div>
+                              <Badge variant="outline" className="mt-1">{order.status}</Badge>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+
+                {/* Medicine Orders */}
+                {selectedRequisition?.requisition_type === 'medicine' && selectedRequisition?.medicine_orders && selectedRequisition.medicine_orders.length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="font-semibold text-sm flex items-center gap-2">
+                      <Pill className="h-4 w-4" />
+                      Medicines ({selectedRequisition.medicine_orders.length})
+                    </h4>
+                    {selectedRequisition.medicine_orders.map((order) => (
+                      <Card key={order.id}>
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <div className="font-medium">{order.product_name}</div>
+                              <div className="text-sm text-muted-foreground">Qty: {order.quantity}</div>
+                            </div>
+                            <div className="text-right">
+                              <div className="font-semibold">₹{parseFloat(order.price).toLocaleString()}</div>
+                              <Badge variant="outline" className="mt-1">{order.status}</Badge>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+
+                {/* Procedure Orders */}
+                {selectedRequisition?.requisition_type === 'procedure' && selectedRequisition?.procedure_orders && selectedRequisition.procedure_orders.length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="font-semibold text-sm flex items-center gap-2">
+                      <Stethoscope className="h-4 w-4" />
+                      Procedures ({selectedRequisition.procedure_orders.length})
+                    </h4>
+                    {selectedRequisition.procedure_orders.map((order) => (
+                      <Card key={order.id}>
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <div className="font-medium">{order.procedure_name}</div>
+                              <div className="text-sm text-muted-foreground">Qty: {order.quantity}</div>
+                            </div>
+                            <div className="text-right">
+                              <div className="font-semibold">₹{parseFloat(order.price).toLocaleString()}</div>
+                              <Badge variant="outline" className="mt-1">{order.status}</Badge>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+
+                {/* Package Orders */}
+                {selectedRequisition?.requisition_type === 'package' && selectedRequisition?.package_orders && selectedRequisition.package_orders.length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="font-semibold text-sm flex items-center gap-2">
+                      <Package className="h-4 w-4" />
+                      Packages ({selectedRequisition.package_orders.length})
+                    </h4>
+                    {selectedRequisition.package_orders.map((order) => (
+                      <Card key={order.id}>
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <div className="font-medium">{order.package_name}</div>
+                              <div className="text-sm text-muted-foreground">Qty: {order.quantity}</div>
+                            </div>
+                            <div className="text-right">
+                              <div className="font-semibold">₹{parseFloat(order.price).toLocaleString()}</div>
+                              <Badge variant="outline" className="mt-1">{order.status}</Badge>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </TabsContent>
@@ -571,7 +760,8 @@ export const Requisitions: React.FC = () => {
           {/* Orders Tab - Only in view mode */}
           {drawerMode === 'view' && (
             <TabsContent value="orders" className="space-y-4 mt-6">
-              {selectedRequisition?.investigation_orders && selectedRequisition.investigation_orders.length > 0 ? (
+              {/* Investigation Orders */}
+              {selectedRequisition?.requisition_type === 'investigation' && selectedRequisition?.investigation_orders && selectedRequisition.investigation_orders.length > 0 ? (
                 <div className="space-y-3">
                   {selectedRequisition.investigation_orders.map((order) => (
                     <Card key={order.id}>
@@ -590,6 +780,96 @@ export const Requisitions: React.FC = () => {
                             <div>
                               <span className="text-muted-foreground">Sample ID:</span>{' '}
                               <span className="font-mono">{order.sample_id || 'N/A'}</span>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-muted-foreground">Price:</span>{' '}
+                              <span className="font-semibold">₹{parseFloat(order.price).toLocaleString()}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : selectedRequisition?.requisition_type === 'medicine' && selectedRequisition?.medicine_orders && selectedRequisition.medicine_orders.length > 0 ? (
+                <div className="space-y-3">
+                  {selectedRequisition.medicine_orders.map((order) => (
+                    <Card key={order.id}>
+                      <CardContent className="p-4">
+                        <div className="space-y-2">
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <div className="font-medium">{order.product_name}</div>
+                              <div className="text-sm text-muted-foreground mt-1">
+                                Order ID: #{order.id}
+                              </div>
+                            </div>
+                            <Badge variant="outline">{order.status}</Badge>
+                          </div>
+                          <div className="grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                              <span className="text-muted-foreground">Quantity:</span>{' '}
+                              <span className="font-mono">{order.quantity}</span>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-muted-foreground">Price:</span>{' '}
+                              <span className="font-semibold">₹{parseFloat(order.price).toLocaleString()}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : selectedRequisition?.requisition_type === 'procedure' && selectedRequisition?.procedure_orders && selectedRequisition.procedure_orders.length > 0 ? (
+                <div className="space-y-3">
+                  {selectedRequisition.procedure_orders.map((order) => (
+                    <Card key={order.id}>
+                      <CardContent className="p-4">
+                        <div className="space-y-2">
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <div className="font-medium">{order.procedure_name}</div>
+                              <div className="text-sm text-muted-foreground mt-1">
+                                Order ID: #{order.id}
+                              </div>
+                            </div>
+                            <Badge variant="outline">{order.status}</Badge>
+                          </div>
+                          <div className="grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                              <span className="text-muted-foreground">Quantity:</span>{' '}
+                              <span className="font-mono">{order.quantity}</span>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-muted-foreground">Price:</span>{' '}
+                              <span className="font-semibold">₹{parseFloat(order.price).toLocaleString()}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : selectedRequisition?.requisition_type === 'package' && selectedRequisition?.package_orders && selectedRequisition.package_orders.length > 0 ? (
+                <div className="space-y-3">
+                  {selectedRequisition.package_orders.map((order) => (
+                    <Card key={order.id}>
+                      <CardContent className="p-4">
+                        <div className="space-y-2">
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <div className="font-medium">{order.package_name}</div>
+                              <div className="text-sm text-muted-foreground mt-1">
+                                Order ID: #{order.id}
+                              </div>
+                            </div>
+                            <Badge variant="outline">{order.status}</Badge>
+                          </div>
+                          <div className="grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                              <span className="text-muted-foreground">Quantity:</span>{' '}
+                              <span className="font-mono">{order.quantity}</span>
                             </div>
                             <div className="text-right">
                               <span className="text-muted-foreground">Price:</span>{' '}

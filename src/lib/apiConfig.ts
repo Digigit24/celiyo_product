@@ -369,6 +369,9 @@ export const API_CONFIG = {
         CREATE: '/diagnostics/requisitions/',
         UPDATE: '/diagnostics/requisitions/:id/',
         DELETE: '/diagnostics/requisitions/:id/',
+        ADD_MEDICINE: '/diagnostics/requisitions/:id/add_medicine/',
+        ADD_PROCEDURE: '/diagnostics/requisitions/:id/add_procedure/',
+        ADD_PACKAGE: '/diagnostics/requisitions/:id/add_package/',
       },
       ORDERS: {
         LIST: '/diagnostics/orders/',

@@ -88,19 +88,19 @@ export const diagnosticsService = {
   },
 
   async addMedicineToRequisition(requisitionId: number, data: AddMedicineToRequisitionPayload): Promise<MedicineOrder> {
-    const url = `/api/requisitions/${requisitionId}/add_medicine/`;
+    const url = API_CONFIG.HMS.DIAGNOSTICS.REQUISITIONS.ADD_MEDICINE.replace(':id', String(requisitionId));
     const response = await hmsClient.post(url, data);
     return response.data;
   },
 
   async addProcedureToRequisition(requisitionId: number, data: AddProcedureToRequisitionPayload): Promise<ProcedureOrder> {
-    const url = `/api/requisitions/${requisitionId}/add_procedure/`;
+    const url = API_CONFIG.HMS.DIAGNOSTICS.REQUISITIONS.ADD_PROCEDURE.replace(':id', String(requisitionId));
     const response = await hmsClient.post(url, data);
     return response.data;
   },
 
   async addPackageToRequisition(requisitionId: number, data: AddPackageToRequisitionPayload): Promise<PackageOrder> {
-    const url = `/api/requisitions/${requisitionId}/add_package/`;
+    const url = API_CONFIG.HMS.DIAGNOSTICS.REQUISITIONS.ADD_PACKAGE.replace(':id', String(requisitionId));
     const response = await hmsClient.post(url, data);
     return response.data;
   },

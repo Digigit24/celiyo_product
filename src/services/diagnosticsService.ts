@@ -22,6 +22,12 @@ import {
   PaginatedDiagnosticOrdersResponse,
   PaginatedLabReportsResponse,
   PaginatedInvestigationRangesResponse,
+  AddMedicineToRequisitionPayload,
+  AddProcedureToRequisitionPayload,
+  AddPackageToRequisitionPayload,
+  MedicineOrder,
+  ProcedureOrder,
+  PackageOrder,
 } from '@/types/diagnostics.types';
 
 export const diagnosticsService = {
@@ -79,6 +85,24 @@ export const diagnosticsService = {
   async deleteRequisition(id: number): Promise<void> {
     const url = API_CONFIG.HMS.DIAGNOSTICS.REQUISITIONS.DELETE.replace(':id', String(id));
     await hmsClient.delete(url);
+  },
+
+  async addMedicineToRequisition(requisitionId: number, data: AddMedicineToRequisitionPayload): Promise<MedicineOrder> {
+    const url = `/api/requisitions/${requisitionId}/add_medicine/`;
+    const response = await hmsClient.post(url, data);
+    return response.data;
+  },
+
+  async addProcedureToRequisition(requisitionId: number, data: AddProcedureToRequisitionPayload): Promise<ProcedureOrder> {
+    const url = `/api/requisitions/${requisitionId}/add_procedure/`;
+    const response = await hmsClient.post(url, data);
+    return response.data;
+  },
+
+  async addPackageToRequisition(requisitionId: number, data: AddPackageToRequisitionPayload): Promise<PackageOrder> {
+    const url = `/api/requisitions/${requisitionId}/add_package/`;
+    const response = await hmsClient.post(url, data);
+    return response.data;
   },
 
   // ==================== DIAGNOSTIC ORDERS ====================

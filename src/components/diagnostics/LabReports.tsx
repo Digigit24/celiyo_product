@@ -62,12 +62,12 @@ export const LabReports: React.FC = () => {
                 filterable: true,
             },
             {
-                key: 'orders',
+                key: 'investigation_orders',
                 header: 'Tests',
-                accessor: (row) => row.orders?.length || 0,
+                accessor: (row) => row.investigation_orders?.length || 0,
                 cell: (row) => (
                     <div className="flex flex-wrap gap-1">
-                        {row.orders.map((o) => (
+                        {row.investigation_orders.map((o) => (
                             <Badge key={o.id} variant="secondary">
                                 {o.investigation_name}
                             </Badge>
@@ -129,7 +129,7 @@ export const LabReports: React.FC = () => {
 
     const openDrawer = (requisition: Requisition) => {
         setSelectedRequisition(requisition);
-        const firstOrder = requisition.orders?.[0];
+        const firstOrder = requisition.investigation_orders?.[0];
         setSelectedOrderId(firstOrder ? firstOrder.id : null);
         setKvPairs([{ key: '', value: '' }]);
         setAttachment(null);
@@ -243,7 +243,7 @@ export const LabReports: React.FC = () => {
                                     </span>
                                 </div>
                                 <div className="flex flex-wrap gap-1">
-                                    {row.orders.map(o => <Badge key={o.id} variant="secondary">{o.investigation_name}</Badge>)}
+                                    {row.investigation_orders.map(o => <Badge key={o.id} variant="secondary">{o.investigation_name}</Badge>)}
                                 </div>
                                 <Button
                                     className="w-full mt-2"
@@ -290,7 +290,7 @@ export const LabReports: React.FC = () => {
                                 <SelectValue placeholder="Select test" />
                             </SelectTrigger>
                             <SelectContent>
-                                {selectedRequisition?.orders?.map((o) => (
+                                {selectedRequisition?.investigation_orders?.map((o) => (
                                     <SelectItem key={o.id} value={String(o.id)}>
                                         {o.investigation_name} (Order #{o.id})
                                     </SelectItem>

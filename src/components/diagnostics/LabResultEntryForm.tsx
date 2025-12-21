@@ -33,10 +33,10 @@ export const LabResultEntryForm: React.FC<LabResultEntryFormProps> = ({ requisit
   const [overallNotes, setOverallNotes] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
-  // This is a bit complex: we need to fetch details for EACH investigation in the requisition's orders
+  // This is a bit complex: we need to fetch details for EACH investigation in the requisition's investigation_orders
   // For simplicity, we'll do this one by one. In a real app, you might want a batch endpoint.
   const [currentOrderIndex, setCurrentOrderIndex] = useState(0);
-  const currentOrder = requisition.orders[currentOrderIndex];
+  const currentOrder = requisition.investigation_orders[currentOrderIndex];
   const { data: investigationDetails, isLoading } = useInvestigation(currentOrder?.investigation_id || null);
 
   useEffect(() => {
@@ -138,7 +138,7 @@ export const LabResultEntryForm: React.FC<LabResultEntryFormProps> = ({ requisit
     )
   }
   
-  const hasNextOrder = currentOrderIndex < requisition.orders.length - 1;
+  const hasNextOrder = currentOrderIndex < requisition.investigation_orders.length - 1;
   const hasPrevOrder = currentOrderIndex > 0;
 
   return (
@@ -148,7 +148,7 @@ export const LabResultEntryForm: React.FC<LabResultEntryFormProps> = ({ requisit
                 <Button variant="outline" onClick={() => setCurrentOrderIndex(i => i-1)} disabled={!hasPrevOrder}>Previous</Button>
                 <div className="text-center">
                     <p className="font-semibold">{currentOrder.investigation_name}</p>
-                    <p className="text-sm text-muted-foreground">Test {currentOrderIndex + 1} of {requisition.orders.length}</p>
+                    <p className="text-sm text-muted-foreground">Test {currentOrderIndex + 1} of {requisition.investigation_orders.length}</p>
                 </div>
                 <Button variant="outline" onClick={() => setCurrentOrderIndex(i => i+1)} disabled={!hasNextOrder}>Next</Button>
             </div>

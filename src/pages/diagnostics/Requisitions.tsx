@@ -146,9 +146,9 @@ export const Requisitions: React.FC = () => {
     },
     {
       header: 'Tests',
-      key: 'orders',
-      accessor: (row) => row.orders?.length || 0,
-      cell: (row) => <span className="text-sm">{row.orders?.length || 0} tests</span>,
+      key: 'investigation_orders',
+      accessor: (row) => row.investigation_orders?.length || 0,
+      cell: (row) => <span className="text-sm">{row.investigation_orders?.length || 0} tests</span>,
       sortable: true,
     },
   ];
@@ -366,7 +366,7 @@ export const Requisitions: React.FC = () => {
               </div>
               <div className="flex items-center justify-between text-sm text-muted-foreground">
                 <span>{format(new Date(row.order_date), 'MMM dd, yyyy')}</span>
-                <span>{row.orders?.length || 0} tests</span>
+                <span>{row.investigation_orders?.length || 0} tests</span>
               </div>
             </div>
           )}
@@ -548,7 +548,7 @@ export const Requisitions: React.FC = () => {
               </div>
             ) : (
               <div className="space-y-2">
-                {selectedRequisition?.orders?.map((order) => (
+                {selectedRequisition?.investigation_orders?.map((order) => (
                   <Card key={order.id}>
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between">
@@ -571,9 +571,9 @@ export const Requisitions: React.FC = () => {
           {/* Orders Tab - Only in view mode */}
           {drawerMode === 'view' && (
             <TabsContent value="orders" className="space-y-4 mt-6">
-              {selectedRequisition?.orders && selectedRequisition.orders.length > 0 ? (
+              {selectedRequisition?.investigation_orders && selectedRequisition.investigation_orders.length > 0 ? (
                 <div className="space-y-3">
-                  {selectedRequisition.orders.map((order) => (
+                  {selectedRequisition.investigation_orders.map((order) => (
                     <Card key={order.id}>
                       <CardContent className="p-4">
                         <div className="space-y-2">

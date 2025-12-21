@@ -17,6 +17,12 @@ import {
   UpdateLabReportPayload,
   CreateInvestigationRangePayload,
   UpdateInvestigationRangePayload,
+  AddMedicineToRequisitionPayload,
+  AddProcedureToRequisitionPayload,
+  AddPackageToRequisitionPayload,
+  MedicineOrder,
+  ProcedureOrder,
+  PackageOrder,
 } from '@/types/diagnostics.types';
 
 export const useDiagnostics = () => {
@@ -66,6 +72,18 @@ export const useDiagnostics = () => {
 
   const deleteRequisition = async (id: number): Promise<void> => {
     return await diagnosticsService.deleteRequisition(id);
+  };
+
+  const addMedicineToRequisition = async (requisitionId: number, data: AddMedicineToRequisitionPayload): Promise<MedicineOrder> => {
+    return await diagnosticsService.addMedicineToRequisition(requisitionId, data);
+  };
+
+  const addProcedureToRequisition = async (requisitionId: number, data: AddProcedureToRequisitionPayload): Promise<ProcedureOrder> => {
+    return await diagnosticsService.addProcedureToRequisition(requisitionId, data);
+  };
+
+  const addPackageToRequisition = async (requisitionId: number, data: AddPackageToRequisitionPayload): Promise<PackageOrder> => {
+    return await diagnosticsService.addPackageToRequisition(requisitionId, data);
   };
 
   // ==================== DIAGNOSTIC ORDERS ====================
@@ -154,6 +172,9 @@ export const useDiagnostics = () => {
     createRequisition,
     updateRequisition,
     deleteRequisition,
+    addMedicineToRequisition,
+    addProcedureToRequisition,
+    addPackageToRequisition,
 
     // Diagnostic Orders
     useDiagnosticOrders,

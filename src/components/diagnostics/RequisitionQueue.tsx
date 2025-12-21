@@ -220,10 +220,10 @@ export const RequisitionQueue: React.FC = () => {
         sortable: true,
       },
       {
-        key: 'orders',
+        key: 'investigation_orders',
         header: 'Tests',
-        accessor: (row) => row.orders?.length || 0,
-        cell: (row) => <span className="text-sm">{row.orders?.length || 0} tests</span>,
+        accessor: (row) => row.investigation_orders?.length || 0,
+        cell: (row) => <span className="text-sm">{row.investigation_orders?.length || 0} tests</span>,
         sortable: true,
       },
       {
@@ -390,7 +390,7 @@ export const RequisitionQueue: React.FC = () => {
                 clinical_notes: row.clinical_notes,
                 status: row.status,
               });
-              setSelectedInvestigations(row.orders.map((o) => o.investigation));
+              setSelectedInvestigations(row.investigation_orders.map((o) => o.investigation));
               setDrawerMode('view');
               setDrawerOpen(true);
             }}
@@ -431,7 +431,7 @@ export const RequisitionQueue: React.FC = () => {
                 </div>
                 <div className="flex items-center justify-between text-sm text-muted-foreground">
                   <Badge variant="outline">{PRIORITY_LABELS[row.priority]}</Badge>
-                  <span>{row.orders?.length || 0} tests</span>
+                  <span>{row.investigation_orders?.length || 0} tests</span>
                 </div>
               </div>
             )}

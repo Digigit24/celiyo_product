@@ -15,6 +15,8 @@ export type RequisitionStatus = 'ordered' | 'sample_collected' | 'completed' | '
 
 export type RequisitionPriority = 'routine' | 'urgent' | 'stat';
 
+export type RequisitionType = 'investigation' | 'medicine' | 'procedure' | 'package';
+
 export type DiagnosticOrderStatus = 'pending' | 'sample_collected' | 'processing' | 'completed' | 'cancelled';
 
 export type EncounterType = 'opd.visit' | 'ipd.admission';
@@ -62,6 +64,45 @@ export interface DiagnosticOrder {
   updated_at: string;
 }
 
+export interface MedicineOrder {
+  id: number;
+  tenant_id: string;
+  requisition: number;
+  product: number;
+  product_name: string;
+  quantity: number;
+  price: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProcedureOrder {
+  id: number;
+  tenant_id: string;
+  requisition: number;
+  procedure: number;
+  procedure_name: string;
+  quantity: number;
+  price: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PackageOrder {
+  id: number;
+  tenant_id: string;
+  requisition: number;
+  package: number;
+  package_name: string;
+  quantity: number;
+  price: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Requisition {
   id: number;
   tenant_id: string;
@@ -69,12 +110,17 @@ export interface Requisition {
   patient: number;
   patient_name: string;
   requesting_doctor_id: string;
+  requisition_type: RequisitionType;
   status: RequisitionStatus;
   priority: RequisitionPriority;
   order_date: string;
   clinical_notes: string;
   billing_target: string | null;
-  orders: DiagnosticOrder[];
+  // Type-specific order arrays
+  investigation_orders: DiagnosticOrder[];
+  medicine_orders: MedicineOrder[];
+  procedure_orders: ProcedureOrder[];
+  package_orders: PackageOrder[];
   // EncounterMixin fields
   content_type: number;
   object_id: number;
@@ -111,6 +157,7 @@ export interface UpdateInvestigationPayload extends Partial<CreateInvestigationP
 export interface CreateRequisitionPayload {
   patient: number;
   requesting_doctor_id: string;
+  requisition_type: RequisitionType;
   status?: RequisitionStatus;
   priority?: RequisitionPriority;
   clinical_notes?: string;
@@ -122,6 +169,24 @@ export interface CreateRequisitionPayload {
 }
 
 export interface UpdateRequisitionPayload extends Partial<CreateRequisitionPayload> {}
+
+export interface AddMedicineToRequisitionPayload {
+  product_id: number;
+  quantity: number;
+  price?: string;
+}
+
+export interface AddProcedureToRequisitionPayload {
+  procedure_id: number;
+  quantity: number;
+  price?: string;
+}
+
+export interface AddPackageToRequisitionPayload {
+  package_id: number;
+  quantity: number;
+  price?: string;
+}
 
 export interface CreateDiagnosticOrderPayload {
   requisition: number;

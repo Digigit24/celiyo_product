@@ -121,7 +121,7 @@ export function DiagnosticSummaryCard({ encounterType, objectId, onOrderTests }:
                         </Badge>
                     </div>
                     <div className="space-y-1">
-                        {req.orders.map(order => (
+                        {req.investigation_orders.map(order => (
                              <div key={order.id} className="text-sm flex items-center justify-between p-1 rounded-md bg-background">
                                 <span>{order.investigation_name}</span>
                                 {getStatusIcon(req.status)}

@@ -1,5 +1,5 @@
 // src/pages/ipd/Beds.tsx
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { DataTable, DataTableColumn } from '@/components/DataTable';
 import { useIPD } from '@/hooks/useIPD';
 import { Bed, BED_TYPE_LABELS, BED_STATUS_LABELS } from '@/types/ipd.types';
@@ -8,17 +8,39 @@ import { Input } from '@/components/ui/input';
 import { toast } from '@/hooks/use-toast';
 import { Plus, Bed as BedIcon, Wind, Activity } from 'lucide-react';
 import { BedFormDrawer } from '@/components/ipd/BedFormDrawer';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import {
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+  Legend,
+} from 'recharts';
 
 export default function Beds() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [drawerMode, setDrawerMode] = useState<'create' | 'edit'>('create');
   const [selectedBed, setSelectedBed] = useState<Bed | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [wardFilter, setWardFilter] = useState<number | undefined>(undefined);
 
-  const { useBeds, deleteBed } = useIPD();
-  const { data: bedsData, isLoading, error: fetchError, mutate } = useBeds({ search: searchQuery });
+  const { useBeds, useWards, deleteBed } = useIPD();
+  const { data: bedsData, isLoading, error: fetchError, mutate } = useBeds({
+    search: searchQuery,
+    ward: wardFilter,
+  });
+  const { data: wardsData } = useWards();
 
   const beds = bedsData?.results || [];
+  const wards = wardsData?.results || wardsData || [];
 
   // Show error state if data fetch fails
   if (fetchError && !isLoading && beds.length === 0) {
@@ -71,6 +93,38 @@ export default function Beds() {
     setDrawerMode('edit');
     setIsDrawerOpen(true);
   };
+
+  // Stats
+  const occupancyStats = useMemo(() => {
+    const total = beds.length;
+    const occupied = beds.filter((b) => b.status === 'occupied').length;
+    const available = beds.filter((b) => b.status === 'available').length;
+    const others = total - occupied - available;
+
+    const wardCounts = beds.reduce<Record<string, { total: number; occupied: number }>>(
+      (acc, bed) => {
+        const ward = bed.ward_name || 'Unknown';
+        if (!acc[ward]) acc[ward] = { total: 0, occupied: 0 };
+        acc[ward].total += 1;
+        if (bed.status === 'occupied') acc[ward].occupied += 1;
+        return acc;
+      },
+      {}
+    );
+
+    return {
+      total,
+      occupied,
+      available,
+      others,
+      wardCounts,
+      pieData: [
+        { name: 'Occupied', value: occupied, color: '#f97316' },
+        { name: 'Available', value: available, color: '#10b981' },
+        { name: 'Other', value: others, color: '#94a3b8' },
+      ],
+    };
+  }, [beds]);
 
   // DataTable columns
   const columns: DataTableColumn<Bed>[] = [
@@ -177,7 +231,7 @@ export default function Beds() {
   ];
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full overflow-auto">
       {/* Header */}
       <div className="p-6 border-b">
         <div className="flex items-center justify-between">
@@ -194,18 +248,118 @@ export default function Beds() {
         </div>
 
         {/* Search */}
-        <div className="mt-4">
+        <div className="mt-4 flex gap-3 flex-wrap">
           <Input
             placeholder="Search beds..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="max-w-sm"
           />
+          <Select
+            value={wardFilter ? String(wardFilter) : 'all'}
+            onValueChange={(val) =>
+              setWardFilter(val === 'all' ? undefined : Number(val))
+            }
+          >
+            <SelectTrigger className="w-[220px]">
+              <SelectValue placeholder="Filter by ward" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Wards</SelectItem>
+              {wards.map((w: any) => (
+                <SelectItem key={w.id} value={String(w.id)}>
+                  {w.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
+      {/* Stats */}
+      <div className="px-6 py-4 grid grid-cols-1 lg:grid-cols-3 gap-3">
+        <Card className="lg:col-span-1">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Occupancy</CardTitle>
+            <CardDescription className="text-xs">Overall status</CardDescription>
+          </CardHeader>
+          <CardContent className="pt-1">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <p className="text-xs text-muted-foreground">Total</p>
+                <p className="text-xl font-bold">{occupancyStats.total}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-muted-foreground">Occupied</p>
+                <p className="text-lg font-semibold text-orange-600">
+                  {occupancyStats.occupied}
+                </p>
+              </div>
+            </div>
+            <ResponsiveContainer width="100%" height={160}>
+              <PieChart>
+                <Pie
+                  data={occupancyStats.pieData}
+                  dataKey="value"
+                  nameKey="name"
+                  innerRadius={45}
+                  outerRadius={60}
+                  paddingAngle={3}
+                >
+                  {occupancyStats.pieData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip />
+                <Legend verticalAlign="bottom" height={24} />
+              </PieChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        <Card className="lg:col-span-2">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Ward-wise Occupancy</CardTitle>
+            <CardDescription className="text-xs">Occupied vs total per ward</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {Object.keys(occupancyStats.wardCounts).length === 0 && (
+              <p className="text-sm text-muted-foreground">No data</p>
+            )}
+            {Object.entries(occupancyStats.wardCounts).map(
+              ([ward, stats]) => {
+                const available = stats.total - stats.occupied;
+                const percent = stats.total
+                  ? Math.round((stats.occupied / stats.total) * 100)
+                  : 0;
+                return (
+                  <div key={ward} className="space-y-1">
+                    <div className="flex justify-between text-xs">
+                      <span className="font-medium">{ward}</span>
+                      <span className="text-muted-foreground">
+                        {stats.occupied}/{stats.total} ({percent}%)
+                      </span>
+                    </div>
+                    <div className="h-2 rounded bg-muted overflow-hidden">
+                      <div
+                        className="h-2 bg-orange-500"
+                        style={{ width: `${percent}%` }}
+                      />
+                    </div>
+                    <div className="flex gap-3 text-[11px] text-muted-foreground">
+                      <span>Available: {available}</span>
+                      <span>Occupied: {stats.occupied}</span>
+                    </div>
+                  </div>
+                );
+              }
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Data Table */}
-      <div className="flex-1 overflow-auto">
+      <div className="px-6 pb-6">
         <DataTable
           rows={beds}
           isLoading={isLoading}

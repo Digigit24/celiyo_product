@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Chart from 'react-apexcharts';
-import { ApexOptions } from 'apexcharts';
+import type { ApexOptions } from 'apexcharts';
 import { Card } from '@/components/ui/card';
 import { useTheme } from 'next-themes';
 import {
@@ -16,6 +15,7 @@ import {
   ClipboardList,
   Receipt,
   ArrowRight,
+  Microscope,
 } from 'lucide-react';
 import { usePatient } from '@/hooks/usePatient';
 import { useOpdVisit } from '@/hooks/useOpdVisit';
@@ -577,7 +577,7 @@ const Dashboard = () => {
           <h2 className={`text-lg font-semibold mb-4 ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>
             Quick Access
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Patients Card */}
             <Card
               onClick={() => navigate('/patients')}
@@ -587,32 +587,32 @@ const Dashboard = () => {
                   : 'border-gray-200 bg-gradient-to-br from-indigo-50/50 via-white to-indigo-50/30 hover:border-indigo-300'
               }`}
             >
-              <div className="p-6">
+              <div className="p-4">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className={`p-3 rounded-xl transition-all duration-300 ${
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-lg transition-all duration-300 ${
                       isDark
                         ? 'bg-indigo-900/50 group-hover:bg-indigo-800/70'
                         : 'bg-indigo-100 group-hover:bg-indigo-200'
                     }`}>
-                      <UserPlus className={`w-6 h-6 ${
+                      <UserPlus className={`w-5 h-5 ${
                         isDark ? 'text-indigo-400' : 'text-indigo-600'
                       }`} />
                     </div>
                     <div>
-                      <h3 className={`text-base font-semibold ${
+                      <h3 className={`text-sm font-semibold ${
                         isDark ? 'text-gray-100' : 'text-gray-900'
                       }`}>
                         Patients
                       </h3>
-                      <p className={`text-sm mt-0.5 ${
+                      <p className={`text-xs mt-0.5 ${
                         isDark ? 'text-gray-400' : 'text-gray-500'
                       }`}>
                         Manage patient records
                       </p>
                     </div>
                   </div>
-                  <ArrowRight className={`w-5 h-5 transition-transform duration-300 group-hover:translate-x-1 ${
+                  <ArrowRight className={`w-4 h-4 transition-transform duration-300 group-hover:translate-x-1 ${
                     isDark ? 'text-gray-500' : 'text-gray-400'
                   }`} />
                 </div>
@@ -633,32 +633,32 @@ const Dashboard = () => {
                   : 'border-gray-200 bg-gradient-to-br from-emerald-50/50 via-white to-emerald-50/30 hover:border-emerald-300'
               }`}
             >
-              <div className="p-6">
+              <div className="p-4">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className={`p-3 rounded-xl transition-all duration-300 ${
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-lg transition-all duration-300 ${
                       isDark
                         ? 'bg-emerald-900/50 group-hover:bg-emerald-800/70'
                         : 'bg-emerald-100 group-hover:bg-emerald-200'
                     }`}>
-                      <ClipboardList className={`w-6 h-6 ${
+                      <ClipboardList className={`w-5 h-5 ${
                         isDark ? 'text-emerald-400' : 'text-emerald-600'
                       }`} />
                     </div>
                     <div>
-                      <h3 className={`text-base font-semibold ${
+                      <h3 className={`text-sm font-semibold ${
                         isDark ? 'text-gray-100' : 'text-gray-900'
                       }`}>
                         OPD Visits
                       </h3>
-                      <p className={`text-sm mt-0.5 ${
+                      <p className={`text-xs mt-0.5 ${
                         isDark ? 'text-gray-400' : 'text-gray-500'
                       }`}>
                         Track outpatient visits
                       </p>
                     </div>
                   </div>
-                  <ArrowRight className={`w-5 h-5 transition-transform duration-300 group-hover:translate-x-1 ${
+                  <ArrowRight className={`w-4 h-4 transition-transform duration-300 group-hover:translate-x-1 ${
                     isDark ? 'text-gray-500' : 'text-gray-400'
                   }`} />
                 </div>
@@ -679,32 +679,32 @@ const Dashboard = () => {
                   : 'border-gray-200 bg-gradient-to-br from-amber-50/50 via-white to-amber-50/30 hover:border-amber-300'
               }`}
             >
-              <div className="p-6">
+              <div className="p-4">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className={`p-3 rounded-xl transition-all duration-300 ${
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-lg transition-all duration-300 ${
                       isDark
                         ? 'bg-amber-900/50 group-hover:bg-amber-800/70'
                         : 'bg-amber-100 group-hover:bg-amber-200'
                     }`}>
-                      <Receipt className={`w-6 h-6 ${
+                      <Receipt className={`w-5 h-5 ${
                         isDark ? 'text-amber-400' : 'text-amber-600'
                       }`} />
                     </div>
                     <div>
-                      <h3 className={`text-base font-semibold ${
+                      <h3 className={`text-sm font-semibold ${
                         isDark ? 'text-gray-100' : 'text-gray-900'
                       }`}>
                         OPD Bills
                       </h3>
-                      <p className={`text-sm mt-0.5 ${
+                      <p className={`text-xs mt-0.5 ${
                         isDark ? 'text-gray-400' : 'text-gray-500'
                       }`}>
                         View and manage bills
                       </p>
                     </div>
                   </div>
-                  <ArrowRight className={`w-5 h-5 transition-transform duration-300 group-hover:translate-x-1 ${
+                  <ArrowRight className={`w-4 h-4 transition-transform duration-300 group-hover:translate-x-1 ${
                     isDark ? 'text-gray-500' : 'text-gray-400'
                   }`} />
                 </div>
@@ -713,6 +713,52 @@ const Dashboard = () => {
                 isDark
                   ? 'bg-gradient-to-r from-amber-600/10 to-transparent'
                   : 'bg-gradient-to-r from-amber-100/50 to-transparent'
+              }`} />
+            </Card>
+
+            {/* Diagnostics Card */}
+            <Card
+              onClick={() => navigate('/diagnostics')}
+              className={`group cursor-pointer relative overflow-hidden transition-all duration-300 hover:scale-[1.02] hover:shadow-lg ${
+                isDark
+                  ? 'border-gray-700 bg-gradient-to-br from-purple-950/40 via-gray-800/40 to-purple-900/30 hover:border-purple-600'
+                  : 'border-gray-200 bg-gradient-to-br from-purple-50/50 via-white to-purple-50/30 hover:border-purple-300'
+              }`}
+            >
+              <div className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-lg transition-all duration-300 ${
+                      isDark
+                        ? 'bg-purple-900/50 group-hover:bg-purple-800/70'
+                        : 'bg-purple-100 group-hover:bg-purple-200'
+                    }`}>
+                      <Microscope className={`w-5 h-5 ${
+                        isDark ? 'text-purple-400' : 'text-purple-600'
+                      }`} />
+                    </div>
+                    <div>
+                      <h3 className={`text-sm font-semibold ${
+                        isDark ? 'text-gray-100' : 'text-gray-900'
+                      }`}>
+                        Diagnostics
+                      </h3>
+                      <p className={`text-xs mt-0.5 ${
+                        isDark ? 'text-gray-400' : 'text-gray-500'
+                      }`}>
+                        Lab tests & reports
+                      </p>
+                    </div>
+                  </div>
+                  <ArrowRight className={`w-4 h-4 transition-transform duration-300 group-hover:translate-x-1 ${
+                    isDark ? 'text-gray-500' : 'text-gray-400'
+                  }`} />
+                </div>
+              </div>
+              <div className={`absolute inset-0 pointer-events-none transition-opacity duration-300 opacity-0 group-hover:opacity-100 ${
+                isDark
+                  ? 'bg-gradient-to-r from-purple-600/10 to-transparent'
+                  : 'bg-gradient-to-r from-purple-100/50 to-transparent'
               }`} />
             </Card>
           </div>
@@ -777,158 +823,7 @@ const Dashboard = () => {
         {/* Recent Activities Section */}
         <RecentActivitiesTable isDark={isDark} />
 
-        {/* Charts Row 1 */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
-          {/* Revenue Chart */}
-          <Card className={`p-6 ${isDark ? 'border-gray-700' : 'border-gray-200'} shadow-sm hover:shadow-md transition-shadow duration-300 `}>
-            <h3 className={`text-base font-semibold mb-4 flex items-center gap-2 ${
-              isDark ? 'text-gray-200' : 'text-gray-700'
-            }`}>
-              <Activity className="w-5 h-5 text-indigo-500" />
-              Weekly Revenue
-            </h3>
-            {isLoading && !USE_DEMO_DATA ? (
-              <div className="h-[320px] flex items-center justify-center">
-                <Loader2 className={`w-8 h-8 animate-spin ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
-              </div>
-            ) : (
-              <Chart
-                options={revenueChartOptions}
-                series={[{ name: 'Revenue', data: weeklyRevenueData }]}
-                type="area"
-                height={320}
-              />
-            )}
-          </Card>
-
-          {/* Visit Types Chart */}
-          <Card className={`p-6 ${isDark ? 'border-gray-700' : 'border-gray-200'} shadow-sm hover:shadow-md transition-shadow duration-300 `}>
-            <h3 className={`text-base font-semibold mb-4 flex items-center gap-2 ${
-              isDark ? 'text-gray-200' : 'text-gray-700'
-            }`}>
-              <Activity className="w-5 h-5 text-indigo-500" />
-              Visits by Type
-            </h3>
-            {isLoading && !USE_DEMO_DATA ? (
-              <div className="h-[320px] flex items-center justify-center">
-                <Loader2 className={`w-8 h-8 animate-spin ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
-              </div>
-            ) : (
-              <Chart
-                options={visitTypesOptions}
-                series={[{ name: 'Visits', data: visitTypesData }]}
-                type="bar"
-                height={320}
-              />
-            )}
-          </Card>
-        </div>
-
-        {/* Charts Row 2 */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
-          {/* Payment Status Chart */}
-          <Card className={`p-6 ${isDark ? 'border-gray-700' : 'border-gray-200'} shadow-sm hover:shadow-md transition-shadow duration-300 `}>
-            <h3 className={`text-base font-semibold mb-4 flex items-center gap-2 ${
-              isDark ? 'text-gray-200' : 'text-gray-700'
-            }`}>
-              <IndianRupee className="w-5 h-5 text-emerald-500" />
-              Payment Status
-            </h3>
-            {isLoading && !USE_DEMO_DATA ? (
-              <div className="h-[320px] flex items-center justify-center">
-                <Loader2 className={`w-8 h-8 animate-spin ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
-              </div>
-            ) : (
-              <Chart
-                options={paymentStatusOptions}
-                series={paymentStatusData}
-                type="donut"
-                height={320}
-              />
-            )}
-          </Card>
-
-          {/* Patient Growth Chart */}
-          <Card className={`p-6 ${isDark ? 'border-gray-700' : 'border-gray-200'} shadow-sm hover:shadow-md transition-shadow duration-300 `}>
-            <h3 className={`text-base font-semibold mb-4 flex items-center gap-2 ${
-              isDark ? 'text-gray-200' : 'text-gray-700'
-            }`}>
-              <Users className="w-5 h-5 text-indigo-500" />
-              Patient Growth (6 Months)
-            </h3>
-            {isLoading && !USE_DEMO_DATA ? (
-              <div className="h-[320px] flex items-center justify-center">
-                <Loader2 className={`w-8 h-8 animate-spin ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
-              </div>
-            ) : (
-              <Chart
-                options={patientGrowthOptions}
-                series={[{ name: 'New Patients', data: patientGrowthData }]}
-                type="line"
-                height={320}
-              />
-            )}
-          </Card>
-        </div>
-
-        {/* Charts Row 3 */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          {/* Visit Status Chart */}
-          <Card className={`p-6 ${isDark ? 'border-gray-700' : 'border-gray-200'} shadow-sm hover:shadow-md transition-shadow duration-300 `}>
-            <h3 className={`text-base font-semibold mb-4 flex items-center gap-2 ${
-              isDark ? 'text-gray-200' : 'text-gray-700'
-            }`}>
-              <Activity className="w-5 h-5 text-emerald-500" />
-              Visit Status Overview
-            </h3>
-            {isLoading && !USE_DEMO_DATA ? (
-              <div className="h-[320px] flex items-center justify-center">
-                <Loader2 className={`w-8 h-8 animate-spin ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
-              </div>
-            ) : (
-              <Chart
-                options={visitStatusOptions}
-                series={visitStatusData}
-                type="radialBar"
-                height={320}
-              />
-            )}
-          </Card>
-
-          {/* Gender Distribution Chart */}
-          <Card className={`p-6 ${isDark ? 'border-gray-700' : 'border-gray-200'} shadow-sm hover:shadow-md transition-shadow duration-300 `}>
-            <h3 className={`text-base font-semibold mb-4 flex items-center gap-2 ${
-              isDark ? 'text-gray-200' : 'text-gray-700'
-            }`}>
-              <Users className="w-5 h-5 text-pink-500" />
-              Gender Distribution
-            </h3>
-            {isLoading && !USE_DEMO_DATA ? (
-              <div className="h-[320px] flex items-center justify-center">
-                <Loader2 className={`w-8 h-8 animate-spin ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
-              </div>
-            ) : (
-              <Chart
-                options={genderDistributionOptions}
-                series={[
-                  {
-                    name: 'Patients',
-                    data: [
-                      patientStats?.gender_distribution?.Male || 0,
-                      patientStats?.gender_distribution?.Female || 0,
-                      patientStats?.gender_distribution?.Other || 0,
-                    ],
-                  },
-                ]}
-                type="bar"
-                height={320}
-              />
-            )}
-          </Card>
-        </div>
-
-        {/* Recent Activities Section */}
-        <RecentActivitiesTable isDark={isDark} />
+        {/* Charts removed to avoid ApexCharts runtime issues for now */}
       </div>
     </div>
   );

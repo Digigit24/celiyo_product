@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Switch } from '@/components/ui/switch';
 import {
   Select,
   SelectContent,
@@ -17,7 +18,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
-import { Loader2, Save, Download, Printer, X, ArrowLeft, Maximize2, Pencil, Building2, Stethoscope } from 'lucide-react';
+import { Loader2, Save, Download, Printer, X, ArrowLeft, Maximize2, Pencil, Building2, Stethoscope, Microscope } from 'lucide-react';
 import { OpdVisit } from '@/types/opdVisit.types';
 import { toast } from 'sonner';
 import { useOPDTemplate } from '@/hooks/useOPDTemplate';
@@ -30,6 +31,8 @@ import {
   FieldResponsePayload,
 } from '@/types/opdTemplate.types';
 import { ConsultationBoard } from './ConsultationBoard';
+import { DiagnosticRequisitionSidebar } from './DiagnosticRequisitionSidebar';
+import { DiagnosticSummaryCard } from './DiagnosticSummaryCard';
 
 interface ConsultationTabProps {
   visit: OpdVisit;
@@ -58,6 +61,7 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
   const [isSaving, setIsSaving] = useState(false);
   const [responseDrawerOpen, setResponseDrawerOpen] = useState(false);
   const [encounterType, setEncounterType] = useState<'visit' | 'admission'>('visit');
+  const [requisitionSidebarOpen, setRequisitionSidebarOpen] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
 
   // Fetch active admission for the patient
@@ -354,28 +358,60 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Encounter Type Toggle */}
-      <div className="flex items-center gap-4">
-        <Tabs value={encounterType} onValueChange={(v) => setEncounterType(v as 'visit' | 'admission')} className="w-[400px]">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="visit" className="flex items-center gap-2">
+      {/* Encounter Type Toggle and Quick Actions */}
+      <div className="flex items-center justify-between gap-4 mb-6">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 bg-muted/30 px-4 py-2.5 rounded-lg border">
+            <div className={`flex items-center gap-2 font-medium ${encounterType === 'visit' ? 'text-primary' : 'text-muted-foreground'}`}>
               <Stethoscope className="h-4 w-4" />
-              OPD (Visit)
-            </TabsTrigger>
-            <TabsTrigger value="admission" className="flex items-center gap-2" disabled={!activeAdmission}>
+              <span>OPD</span>
+            </div>
+            <Switch
+              checked={encounterType === 'admission'}
+              onCheckedChange={(checked) => setEncounterType(checked ? 'admission' : 'visit')}
+              disabled={!activeAdmission}
+            />
+            <div className={`flex items-center gap-2 font-medium ${encounterType === 'admission' ? 'text-primary' : 'text-muted-foreground'}`}>
               <Building2 className="h-4 w-4" />
-              IPD (Admission)
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
-        
-        {encounterType === 'admission' && activeAdmission && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground px-3 py-1 bg-muted/50 rounded-full">
-            <Building2 className="h-3 w-3" />
-            <span>Active Admission: {activeAdmission.admission_id} ({activeAdmission.ward_name})</span>
+              <span>IPD</span>
+            </div>
           </div>
-        )}
+
+          {encounterType === 'admission' && activeAdmission && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground px-3 py-1 bg-muted/50 rounded-full">
+              <Building2 className="h-3 w-3" />
+              <span>Active Admission: {activeAdmission.admission_id} ({activeAdmission.ward_name})</span>
+            </div>
+          )}
+        </div>
+
+        {/* Order Tests Button */}
+        <Button
+          onClick={() => {
+            if (!currentObjectId) {
+              toast.error('No active encounter found for ordering tests.');
+              return;
+            }
+            setRequisitionSidebarOpen(true);
+          }}
+          disabled={!currentObjectId}
+          className="gap-2"
+        >
+          <Microscope className="h-4 w-4" />
+          Order Tests
+        </Button>
       </div>
+
+      {/* Diagnostic Summary Card */}
+      {currentObjectId && (
+        <div className="mb-6">
+          <DiagnosticSummaryCard
+            encounterType={encounterType}
+            objectId={currentObjectId}
+            onOrderTests={() => setRequisitionSidebarOpen(true)}
+          />
+        </div>
+      )}
 
       <div className="flex-1 overflow-hidden">
         {/* Kanban Board View */}
@@ -489,6 +525,17 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Diagnostic Requisition Sidebar */}
+      {currentObjectId && (
+        <DiagnosticRequisitionSidebar
+          open={requisitionSidebarOpen}
+          onOpenChange={setRequisitionSidebarOpen}
+          patientId={visit.patient}
+          encounterType={encounterType}
+          objectId={currentObjectId}
+        />
+      )}
     </div>
   );
 };

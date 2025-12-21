@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useIPD } from '@/hooks/useIPD';
-import { usePatient } from '@/hooks/usePatient';
-import { useDoctor } from '@/hooks/useDoctor';
 import { AdmissionFormData } from '@/types/ipd.types';
+import { PatientSelect } from '@/components/form/PatientSelect';
+import { DoctorSelect } from '@/components/form/DoctorSelect';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -33,18 +33,12 @@ export function AdmissionFormDrawer({ open, onOpenChange, onSuccess }: Admission
   });
 
   const { createAdmission, useWards, useAvailableBeds } = useIPD();
-  const { usePatients } = usePatient();
-  const { useDoctors } = useDoctor();
 
-  const { data: patientsData } = usePatients({ page_size: 100 });
   const { data: wardsData } = useWards({ is_active: true });
   const { data: availableBeds } = useAvailableBeds();
-  const { data: doctorsData } = useDoctors({ page_size: 100 });
 
-  const patients = patientsData?.results || [];
   const wards = wardsData?.results || [];
   const beds = availableBeds || [];
-  const doctors = doctorsData?.results || [];
 
   const resetForm = () => {
     setFormData({
@@ -133,50 +127,20 @@ export function AdmissionFormDrawer({ open, onOpenChange, onSuccess }: Admission
       ]}
     >
       <div className="grid gap-4 py-4">
-        <div className="grid gap-2">
-          <Label htmlFor="patient">Patient *</Label>
-          <Select
-            value={formData.patient ? formData.patient.toString() : ''}
-            onValueChange={(value) => setFormData({ ...formData, patient: parseInt(value) })}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select patient" />
-            </SelectTrigger>
-            <SelectContent>
-              {patients.map((patient) => (
-                <SelectItem key={patient.id} value={patient.id.toString()}>
-                  {patient.full_name} - {patient.phone}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <PatientSelect
+          value={formData.patient || null}
+          onChange={(patientId) => setFormData({ ...formData, patient: patientId })}
+          label="Patient"
+          required={true}
+        />
 
-        <div className="grid gap-2">
-          <Label htmlFor="doctor">Doctor *</Label>
-          <Select
-            value={formData.doctor_id}
-            onValueChange={(value) => setFormData({ ...formData, doctor_id: value })}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select doctor" />
-            </SelectTrigger>
-            <SelectContent>
-              {doctors.map((doctor) => {
-                const doctorName = doctor.full_name || (doctor.user ? `${doctor.user.first_name} ${doctor.user.last_name}` : 'Unknown Doctor');
-                const specialty = doctor.specialties && doctor.specialties.length > 0 
-                  ? doctor.specialties.map(s => s.name).join(', ') 
-                  : 'General';
-                  
-                return (
-                  <SelectItem key={doctor.id} value={doctor.user_id}>
-                    {doctorName} ({specialty})
-                  </SelectItem>
-                );
-              })}
-            </SelectContent>
-          </Select>
-        </div>
+        <DoctorSelect
+          value={formData.doctor_id || null}
+          onChange={(doctorUserId) => setFormData({ ...formData, doctor_id: doctorUserId as string })}
+          label="Doctor"
+          required={true}
+          returnUserId={true}
+        />
 
         <div className="grid gap-2">
           <Label htmlFor="ward">Ward *</Label>

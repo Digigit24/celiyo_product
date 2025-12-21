@@ -45,6 +45,7 @@ import {
   Bed, // Added for IPD module
   Building, // Added for Wards
   UserRoundCheck, // Added for Admissions
+  FlaskConical, // Added for Diagnostics module
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -296,7 +297,19 @@ const menuItems: MenuItem[] = [
         icon: Bed,
         path: "/ipd/beds",
       },
+      {
+        id: "ipd-billing",
+        label: "IPD Billing",
+        icon: Receipt,
+        path: "/ipd/billing",
+      },
     ],
+  },
+  {
+    id: "diagnostics",
+    label: "Diagnostics",
+    icon: FlaskConical,
+    path: "/diagnostics",
   },
   {
     id: "payments",

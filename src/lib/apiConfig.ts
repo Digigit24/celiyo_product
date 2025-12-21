@@ -11,7 +11,7 @@ export const API_CONFIG = {
   // VITE_AUTH_BASE_URL, VITE_CRM_BASE_URL, VITE_WHATSAPP_BASE_URL, VITE_WHATSAPP_WS_URL
   AUTH_BASE_URL: import.meta.env.VITE_AUTH_BASE_URL || 'https://admin.celiyo.com/api',
   CRM_BASE_URL: import.meta.env.VITE_CRM_BASE_URL || 'https://crm.celiyo.com/api',
-  HMS_BASE_URL: import.meta.env.VITE_HMS_BASE_URL || 'https://hms.celiyo.com/api',
+  HMS_BASE_URL: import.meta.env.VITE_HMS_BASE_URL || 'http://127.0.0.1:8000/api',
   WHATSAPP_BASE_URL: import.meta.env.VITE_WHATSAPP_BASE_URL || 'https://whatsapp.celiyo.com/api',
 
 
@@ -353,6 +353,43 @@ export const API_CONFIG = {
         CREATE: '/ipd/bill-items/',
         UPDATE: '/ipd/bill-items/:id/',
         DELETE: '/ipd/bill-items/:id/',
+      },
+    },
+    DIAGNOSTICS: {
+      INVESTIGATIONS: {
+        LIST: '/diagnostics/investigations/',
+        DETAIL: '/diagnostics/investigations/:id/',
+        CREATE: '/diagnostics/investigations/',
+        UPDATE: '/diagnostics/investigations/:id/',
+        DELETE: '/diagnostics/investigations/:id/',
+      },
+      REQUISITIONS: {
+        LIST: '/diagnostics/requisitions/',
+        DETAIL: '/diagnostics/requisitions/:id/',
+        CREATE: '/diagnostics/requisitions/',
+        UPDATE: '/diagnostics/requisitions/:id/',
+        DELETE: '/diagnostics/requisitions/:id/',
+      },
+      ORDERS: {
+        LIST: '/diagnostics/orders/',
+        DETAIL: '/diagnostics/orders/:id/',
+        CREATE: '/diagnostics/orders/',
+        UPDATE: '/diagnostics/orders/:id/',
+        DELETE: '/diagnostics/orders/:id/',
+      },
+      REPORTS: {
+        LIST: '/diagnostics/reports/',
+        DETAIL: '/diagnostics/reports/:id/',
+        CREATE: '/diagnostics/reports/',
+        UPDATE: '/diagnostics/reports/:id/',
+        DELETE: '/diagnostics/reports/:id/',
+      },
+      RANGES: {
+        LIST: '/diagnostics/ranges/',
+        DETAIL: '/diagnostics/ranges/:id/',
+        CREATE: '/diagnostics/ranges/',
+        UPDATE: '/diagnostics/ranges/:id/',
+        DELETE: '/diagnostics/ranges/:id/',
       },
     }
   },

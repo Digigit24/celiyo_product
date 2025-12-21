@@ -65,6 +65,8 @@ import Wards from "./pages/ipd/Wards"; // Import IPD Wards
 import Beds from "./pages/ipd/Beds"; // Import IPD Beds
 import Admissions from "./pages/ipd/Admissions"; // Import IPD Admissions
 import AdmissionDetails from "./pages/ipd/AdmissionDetails"; // Import IPD Admission Details
+import IPDBillingPage from "./pages/ipd/Billing"; // IPD Billing
+import Diagnostics from "./pages/Diagnostics"; // Import Diagnostics page
 
 import { WebSocketProvider } from "./context/WebSocketProvider";
 
@@ -129,6 +131,10 @@ const AppLayout = () => {
               <Route path="/ipd/beds" element={<Beds />} />
               <Route path="/ipd/admissions" element={<Admissions />} />
               <Route path="/ipd/admissions/:id" element={<AdmissionDetails />} />
+              <Route path="/ipd/billing" element={<IPDBillingPage />} />
+
+              {/* Diagnostics Routes */}
+              <Route path="/diagnostics" element={<Diagnostics />} />
 
               {/* Payment Routes */}
               <Route path="/payments/transactions" element={<Transactions />} />

@@ -2,44 +2,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useOpdVisit } from '@/hooks/useOpdVisit';
-
-import { Card, CardContent } from '@/components/ui/card';
+import { Loader2, User, Calendar, Activity, Droplet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogDescription,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-
-import {
-  ArrowLeft,
-  Loader2,
-  User,
-  Phone,
-  Calendar,
-  Activity,
-  Droplet,
-  ChevronLeft,
-  ChevronRight,
-  Play,
-  CheckCircle,
-} from 'lucide-react';
-
 import { format } from 'date-fns';
 import { toast } from 'sonner';
-
-import { ConsultationTab } from '@/components/consultation/ConsultationTab';
-import { HistoryTab } from '@/components/consultation/HistoryTab';
-import { ProfileTab } from '@/components/consultation/ProfileTab';
+import { OPDVisitHeader, OPDVisitTabs } from '@/components/opd/shared';
 import { OPDBillingContent } from '@/components/opd/OPDBillingContent';
 
 export const OPDVisitDetails: React.FC = () => {
@@ -207,253 +176,92 @@ export const OPDVisitDetails: React.FC = () => {
   const doctor = visit.doctor_details;
 
   return (
-    <div className="p-6 max-w-8xl mx-auto space-y-6">
-      {/* Sticky Header (same style as consultation page) */}
-      <div className="sticky top-0 z-20 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="flex items-center justify-between px-6 py-3">
-          <div className="flex items-center gap-6">
-            <Button variant="ghost" size="icon" onClick={handleBack} className="-ml-2">
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
+    <div className="flex flex-col h-full bg-background/95">
+      <OPDVisitHeader
+        visit={visit}
+        currentIndex={currentIndex}
+        totalVisits={todayVisits.length}
+        prevVisitId={prevVisitId}
+        nextVisitId={nextVisitId}
+        isSaving={isSaving}
+        showCompleteDialog={showCompleteDialog}
+        completeNote={completeNote}
+        onBack={handleBack}
+        onPrevVisit={handlePrevVisit}
+        onNextVisit={handleNextVisit}
+        onStartConsultation={handleStartConsultation}
+        onCompleteConsultation={handleCompleteConsultation}
+        setShowCompleteDialog={setShowCompleteDialog}
+        setCompleteNote={setCompleteNote}
+      />
 
-            <div className="flex items-center gap-3">
-              <Avatar className="h-10 w-10 border">
-                <AvatarFallback className="bg-primary/10 text-primary">
-                  {patient?.full_name?.charAt(0) || 'P'}
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <h1
-                  className="text-lg font-bold leading-none cursor-pointer hover:underline decoration-primary/50 underline-offset-4"
-                  onClick={() => navigate(`/patients/${visit.patient}`)}
-                >
-                  {patient?.full_name || 'Unknown Patient'}
-                </h1>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
-                  <span className="font-mono bg-muted px-1 rounded">
-                    PID: {patient?.patient_id || 'N/A'}
-                  </span>
-                  <span>•</span>
-                  <span>
-                    {patient?.age || '-'} yrs / {patient?.gender || '-'}
-                  </span>
-                  <span>•</span>
-                  <Phone className="h-3 w-3" /> {patient?.mobile_primary || 'N/A'}
+      <div className="flex-1 overflow-auto p-6 max-w-8xl mx-auto w-full space-y-6">
+        {/* Quick Stats Card */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                <User className="h-4 w-4 text-blue-600" />
+                <div>
+                  <p className="text-xs text-muted-foreground">Doctor</p>
+                  <p className="text-sm font-semibold">{doctor?.full_name || 'N/A'}</p>
                 </div>
               </div>
-            </div>
+            </CardContent>
+          </Card>
 
-            {/* Navigation Controls */}
-            <div className="flex items-center bg-muted/50 rounded-lg border p-0.5 ml-4">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7"
-                onClick={handlePrevVisit}
-                disabled={!prevVisitId}
-                title="Previous Patient"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <div className="px-3 text-xs font-medium border-x border-muted-foreground/20">
-                {todayVisits.length ? currentIndex + 1 : 0} / {todayVisits.length}
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                <Droplet className="h-4 w-4 text-red-600" />
+                <div>
+                  <p className="text-xs text-muted-foreground">Blood Group</p>
+                  <p className="text-lg font-bold">{patient?.blood_group || 'N/A'}</p>
+                </div>
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7"
-                onClick={handleNextVisit}
-                disabled={!nextVisitId}
-                title="Next Patient"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
 
-          <div className="flex items-center gap-3">
-            <Badge
-              variant={visit.status === 'completed' ? 'default' : 'secondary'}
-              className={`px-3 py-1 text-xs uppercase tracking-wide ${
-                visit.status === 'completed'
-                  ? 'bg-green-100 text-green-700 hover:bg-green-100'
-                  : visit.status === 'in_consultation' || visit.status === 'in_progress'
-                  ? 'bg-blue-100 text-blue-700 hover:bg-blue-100'
-                  : 'bg-orange-100 text-orange-700 hover:bg-orange-100'
-              }`}
-            >
-              {visit.status?.replace('_', ' ')}
-            </Badge>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                <Activity className="h-4 w-4 text-purple-600" />
+                <div>
+                  <p className="text-xs text-muted-foreground">Visit Type</p>
+                  <p className="text-sm font-semibold">
+                    {visit.visit_type?.replace('_', ' ').toUpperCase() || 'N/A'}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-            {/* Action Buttons based on Status */}
-            {visit.status === 'waiting' && (
-              <Button
-                onClick={handleStartConsultation}
-                disabled={isSaving}
-                className="gap-2 bg-blue-600 hover:bg-blue-700 text-white"
-              >
-                {isSaving ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Play className="h-4 w-4" />
-                )}
-                Start Consultation
-              </Button>
-            )}
-
-            {(visit.status === 'in_consultation' || visit.status === 'in_progress') && (
-              <Button
-                onClick={() => setShowCompleteDialog(true)}
-                disabled={isSaving}
-                className="gap-2 bg-green-600 hover:bg-green-700 text-white"
-              >
-                {isSaving ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <CheckCircle className="h-4 w-4" />
-                )}
-                Complete Visit
-              </Button>
-            )}
-          </div>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-green-600" />
+                <div>
+                  <p className="text-xs text-muted-foreground">Priority</p>
+                  <Badge
+                    variant={visit.priority === 'urgent' || visit.priority === 'high' ? 'destructive' : 'outline'}
+                    className={`${visit.priority === 'high' ? 'bg-orange-600 text-white' : ''}`}
+                  >
+                    {visit.priority?.toUpperCase() || 'NORMAL'}
+                  </Badge>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
+
+        {/* Tabs */}
+        <OPDVisitTabs
+          visit={visit}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          billingContent={<OPDBillingContent visit={visit} />}
+        />
       </div>
-
-      {/* Quick Stats Card */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <User className="h-4 w-4 text-blue-600" />
-              <div>
-                <p className="text-xs text-muted-foreground">Doctor</p>
-                <p className="text-sm font-semibold">{doctor?.full_name || 'N/A'}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Droplet className="h-4 w-4 text-red-600" />
-              <div>
-                <p className="text-xs text-muted-foreground">Blood Group</p>
-                <p className="text-lg font-bold">{patient?.blood_group || 'N/A'}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Activity className="h-4 w-4 text-purple-600" />
-              <div>
-                <p className="text-xs text-muted-foreground">Visit Type</p>
-                <p className="text-sm font-semibold">
-                  {visit.visit_type?.replace('_', ' ').toUpperCase() || 'N/A'}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-green-600" />
-              <div>
-                <p className="text-xs text-muted-foreground">Priority</p>
-                <Badge
-                  variant={visit.priority === 'urgent' || visit.priority === 'high' ? 'destructive' : 'outline'}
-                  className={`${visit.priority === 'high' ? 'bg-orange-600 text-white' : ''}`}
-                >
-                  {visit.priority?.toUpperCase() || 'NORMAL'}
-                </Badge>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="consultation">Consultation</TabsTrigger>
-          <TabsTrigger value="billing">Billing</TabsTrigger>
-          <TabsTrigger value="history">History</TabsTrigger>
-          <TabsTrigger value="profile">Profile</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="consultation" className="mt-6">
-          <Card>
-            <CardContent className="pt-6">
-              <ConsultationTab visit={visit} />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="billing" className="mt-6">
-          <Card>
-            <CardContent className="pt-6">
-              <OPDBillingContent visit={visit} />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="history" className="mt-6">
-          <Card>
-            <CardContent className="pt-6">
-              <HistoryTab patientId={visit.patient} />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="profile" className="mt-6">
-          <Card>
-            <CardContent className="pt-6">
-              <ProfileTab patientId={visit.patient} />
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-
-      {/* Complete Visit Dialog */}
-      <Dialog open={showCompleteDialog} onOpenChange={setShowCompleteDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Complete Consultation</DialogTitle>
-            <DialogDescription>
-              Finalize this visit. This will move the patient to the completed list.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-2 py-4">
-            <Label htmlFor="complete-note">Final Diagnosis / Notes</Label>
-            <Input
-              id="complete-note"
-              placeholder="Enter diagnosis or completion summary..."
-              value={completeNote}
-              onChange={(e) => setCompleteNote(e.target.value)}
-            />
-          </div>
-
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setShowCompleteDialog(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleCompleteConsultation}
-              disabled={isSaving}
-              className="bg-green-600 hover:bg-green-700 text-white"
-            >
-              {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Complete Visit
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

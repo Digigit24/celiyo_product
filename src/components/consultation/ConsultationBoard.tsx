@@ -180,7 +180,7 @@ export const ConsultationBoard: React.FC<ConsultationBoardProps> = ({
   return (
     <div className="h-full flex flex-col">
       {/* Header with Action Button */}
-      <div className="flex items-center justify-between pt-6">
+      <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-primary/10 rounded-lg">
             <LayoutGrid className="h-5 w-5 text-primary" />
@@ -206,7 +206,7 @@ export const ConsultationBoard: React.FC<ConsultationBoardProps> = ({
       </div>
 
       {/* Board Content */}
-      <div className="flex-1 overflow-auto px-4">
+      <div className="flex-1 overflow-auto">
         {isLoadingResponses ? (
           // Loading State
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">

@@ -14,6 +14,7 @@ import {
   OPDBillStatistics,
   PaginatedResponse,
 } from '@/types/opdBill.types';
+import { UnbilledRequisitionsResponse } from '@/types/diagnostics.types';
 import { useAuth } from './useAuth';
 
 export const useOPDBill = () => {
@@ -99,6 +100,31 @@ export const useOPDBill = () => {
         onError: (err) => {
           console.error('Failed to fetch bill statistics:', err);
           setError(err.message || 'Failed to fetch bill statistics');
+        },
+      }
+    );
+  };
+
+  /**
+   * Fetch unbilled requisitions for a visit.
+   *
+   * @example
+   * const { data, error, isLoading, mutate } = useUnbilledRequisitions(visitId);
+   */
+  const useUnbilledRequisitions = (visitId: number | null) => {
+    const key = visitId ? ['unbilled-requisitions', visitId] : null;
+
+    return useSWR<UnbilledRequisitionsResponse>(
+      key,
+      () => opdBillService.getUnbilledRequisitions(visitId!),
+      {
+        revalidateOnFocus: true,
+        revalidateOnReconnect: true,
+        shouldRetryOnError: false,
+        refreshInterval: 10000, // Refresh every 10 seconds to catch new requisitions
+        onError: (err) => {
+          console.error('Failed to fetch unbilled requisitions:', err);
+          setError(err.message || 'Failed to fetch unbilled requisitions');
         },
       }
     );
@@ -228,11 +254,53 @@ export const useOPDBill = () => {
     }
   }, []);
 
+  /**
+   * Import requisition orders as bill items.
+   *
+   * @example
+   * const { importRequisition } = useOPDBill();
+   * await importRequisition(billId, requisitionId);
+   */
+  const importRequisition = useCallback(
+    async (billId: number, requisitionId: number): Promise<OPDBill | null> => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const updatedBill = await opdBillService.importRequisition(billId, requisitionId);
+        return updatedBill;
+      } catch (err: any) {
+        setError(err.message || 'Failed to import requisition');
+        throw err;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    []
+  );
+
+  const syncClinicalCharges = useCallback(
+    async (visitId: number): Promise<OPDBill | null> => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const updatedBill = await opdBillService.syncClinicalCharges(visitId);
+        return updatedBill;
+      } catch (err: any) {
+        setError(err.message || 'Failed to import clinical charges');
+        throw err;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    []
+  );
+
   return {
     // Query hooks
     useOPDBills,
     useOPDBillById,
     useOPDBillStatistics,
+    useUnbilledRequisitions,
 
     // Mutation callbacks
     createBill,
@@ -240,6 +308,8 @@ export const useOPDBill = () => {
     deleteBill,
     recordBillPayment,
     printBill,
+    importRequisition,
+    syncClinicalCharges,
 
     // State
     isLoading,

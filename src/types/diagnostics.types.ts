@@ -17,6 +17,38 @@ export type RequisitionPriority = 'routine' | 'urgent' | 'stat';
 
 export type RequisitionType = 'investigation' | 'medicine' | 'procedure' | 'package';
 
+export type ClinicalOrderType = 'diagnostic' | 'medicine' | 'procedure' | 'package';
+
+export interface UnbilledOrderSummary {
+  type: ClinicalOrderType | 'investigation';
+  id: number;
+  name: string;
+  quantity?: number;
+  price: string;
+  total?: string;
+  status: string;
+  category?: string;
+}
+
+export interface UnbilledRequisitionSummary {
+  requisition_id: number;
+  requisition_number: string;
+  requisition_type: RequisitionType;
+  status: RequisitionStatus;
+  order_date: string;
+  priority?: RequisitionPriority;
+  unbilled_orders: UnbilledOrderSummary[];
+}
+
+export interface UnbilledRequisitionsResponse {
+  success?: boolean;
+  visit_id: number;
+  visit_number: string;
+  total_unbilled_items: number;
+  estimated_amount: number;
+  requisitions: UnbilledRequisitionSummary[];
+}
+
 export type DiagnosticOrderStatus = 'pending' | 'sample_collected' | 'processing' | 'completed' | 'cancelled';
 
 export type EncounterType = 'opd.visit' | 'ipd.admission';

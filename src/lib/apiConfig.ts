@@ -131,6 +131,7 @@ export const API_CONFIG = {
         QUEUE: '/opd/visits/queue/',
         CALL_NEXT: '/opd/visits/call_next/',
         COMPLETE: '/opd/visits/:id/complete/',
+        SYNC_CLINICAL_CHARGES: '/opd/visits/:id/sync_clinical_charges/',
       },
       BILLS: {
         LIST: '/opd/opd-bills/',
@@ -141,6 +142,15 @@ export const API_CONFIG = {
         RECORD_PAYMENT: '/opd/opd-bills/:id/record_payment/',
         PRINT: '/opd/opd-bills/:id/print/',
         STATISTICS: '/opd/opd-bills/statistics/',
+        IMPORT_REQUISITION: '/opd/opd-bills/:id/import_requisition/',
+        UNBILLED_REQUISITIONS: '/opd/visits/:visit_id/unbilled_requisitions/',
+      },
+      BILL_ITEMS: {
+        LIST: '/opd/opd-bill-items/',
+        DETAIL: '/opd/opd-bill-items/:id/',
+        CREATE: '/opd/opd-bill-items/',
+        UPDATE: '/opd/opd-bill-items/:id/',
+        DELETE: '/opd/opd-bill-items/:id/',
       },
       CLINICAL_NOTES: {
         LIST: '/opd/clinical-notes/',

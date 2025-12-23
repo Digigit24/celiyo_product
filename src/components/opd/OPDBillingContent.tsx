@@ -27,6 +27,7 @@ import {
   Plus,
   FlaskConical,
   Download,
+  Trash2,
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -262,6 +263,7 @@ export const OPDBillingContent: React.FC<OPDBillingContentProps> = ({ visit }) =
     useOPDBills,
     createBill,
     updateBill,
+    deleteBill,
     useUnbilledRequisitions,
     importRequisition,
     syncClinicalCharges,
@@ -409,6 +411,8 @@ export const OPDBillingContent: React.FC<OPDBillingContentProps> = ({ visit }) =
   const [activeTab, setActiveTab] = useState<'billing' | 'preview'>('billing');
   const [isInvestigationsModalOpen, setIsInvestigationsModalOpen] = useState(false);
   const [isProceduresModalOpen, setIsProceduresModalOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [billToDelete, setBillToDelete] = useState<number | null>(null);
 
   // Calculate current payment status based on bill or billing data
   const currentPaymentStatus = useMemo((): 'paid' | 'partial' | 'unpaid' => {
@@ -686,8 +690,14 @@ export const OPDBillingContent: React.FC<OPDBillingContentProps> = ({ visit }) =
       notes: investigation.category || '',
     };
 
-    // If bill exists, create item in backend immediately
+    // If bill exists, create item with optimistic update
     if (existingBill) {
+      // OPTIMISTIC: Add to UI immediately with temporary ID
+      const tempItem = { ...newItem, id: Date.now() }; // Temporary ID
+      setBillItems((prev) => [...prev, tempItem]);
+      toast.success('Investigation added to bill');
+
+      // API call in background
       try {
         const itemData: OPDBillItemCreateData = {
           bill: existingBill.id,
@@ -701,13 +711,13 @@ export const OPDBillingContent: React.FC<OPDBillingContentProps> = ({ visit }) =
 
         await opdBillService.createBillItem(itemData);
 
-        // Refresh bills to get updated items
+        // Refresh bills to get real item with actual ID
         await mutateBills();
         await mutateVisitBills();
-
-        toast.success('Investigation added to bill');
       } catch (error) {
         console.error('Failed to add investigation:', error);
+        // ROLLBACK: Remove the temp item
+        setBillItems((prev) => prev.filter(item => item.id !== tempItem.id));
         toast.error('Failed to add investigation to bill');
       }
     } else {
@@ -729,8 +739,14 @@ export const OPDBillingContent: React.FC<OPDBillingContentProps> = ({ visit }) =
       notes: procedure.category || '',
     };
 
-    // If bill exists, create item in backend immediately
+    // If bill exists, create item with optimistic update
     if (existingBill) {
+      // OPTIMISTIC: Add to UI immediately with temporary ID
+      const tempItem = { ...newItem, id: Date.now() }; // Temporary ID
+      setBillItems((prev) => [...prev, tempItem]);
+      toast.success('Procedure added to bill');
+
+      // API call in background
       try {
         const itemData: OPDBillItemCreateData = {
           bill: existingBill.id,
@@ -744,13 +760,13 @@ export const OPDBillingContent: React.FC<OPDBillingContentProps> = ({ visit }) =
 
         await opdBillService.createBillItem(itemData);
 
-        // Refresh bills to get updated items
+        // Refresh bills to get real item with actual ID
         await mutateBills();
         await mutateVisitBills();
-
-        toast.success('Procedure added to bill');
       } catch (error) {
         console.error('Failed to add procedure:', error);
+        // ROLLBACK: Remove the temp item
+        setBillItems((prev) => prev.filter(item => item.id !== tempItem.id));
         toast.error('Failed to add procedure to bill');
       }
     } else {
@@ -780,8 +796,14 @@ export const OPDBillingContent: React.FC<OPDBillingContentProps> = ({ visit }) =
         notes: `Package: ${packageName}`,
       }));
 
-      // If bill exists, create items in backend immediately
+      // If bill exists, create items with optimistic update
       if (existingBill) {
+        // OPTIMISTIC: Add to UI immediately with temporary IDs
+        const tempItems = newItems.map((item, idx) => ({ ...item, id: Date.now() + idx }));
+        setBillItems((prev) => [...prev, ...tempItems]);
+        toast.success(`Added ${newItems.length} procedures from package to bill`);
+
+        // API call in background
         try {
           // Create all items from the package
           for (const item of newItems) {
@@ -798,13 +820,14 @@ export const OPDBillingContent: React.FC<OPDBillingContentProps> = ({ visit }) =
             await opdBillService.createBillItem(itemData);
           }
 
-          // Refresh bills to get updated items
+          // Refresh bills to get real items with actual IDs
           await mutateBills();
           await mutateVisitBills();
-
-          toast.success(`Added ${newItems.length} procedures from package to bill`);
         } catch (error) {
           console.error('Failed to add package items:', error);
+          // ROLLBACK: Remove the temp items
+          const tempIds = tempItems.map(i => i.id);
+          setBillItems((prev) => prev.filter(item => !tempIds.includes(item.id)));
           toast.error('Failed to add package items to bill');
         }
       } else {
@@ -895,33 +918,41 @@ export const OPDBillingContent: React.FC<OPDBillingContentProps> = ({ visit }) =
   const handleRemoveBillItem = async (index: number) => {
     const item = billItems[index];
 
+    // OPTIMISTIC: Remove from UI immediately
+    const removedItem = billItems[index];
+    setBillItems((prev) => prev.filter((_, i) => i !== index));
+    toast.success('Item removed from bill');
+
     // If bill exists and item has ID, delete from backend
     if (existingBill && item.id) {
       try {
         await opdBillService.deleteBillItem(item.id);
 
-        // Refresh bills to get updated items
+        // Refresh bills to get updated totals
         await mutateBills();
         await mutateVisitBills();
-
-        toast.success('Item removed from bill');
       } catch (error) {
         console.error('Failed to remove bill item:', error);
-        toast.error('Failed to remove item');
+        // ROLLBACK: Restore the item
+        setBillItems((prev) => {
+          const newItems = [...prev];
+          newItems.splice(index, 0, removedItem);
+          return newItems;
+        });
+        toast.error('Failed to remove item - Item restored');
       }
-    } else {
-      // If no bill exists yet, just remove from local state
-      setBillItems((prev) => prev.filter((_, i) => i !== index));
-      toast.success('Item removed');
     }
   };
 
   const handleSyncClinicalCharges = async () => {
     if (!visit?.id) return;
 
-    try {
-      setIsSyncingClinicalCharges(true);
+    setIsSyncingClinicalCharges(true);
 
+    // Show immediate feedback
+    toast.info('Syncing clinical charges...');
+
+    try {
       // First, ensure a bill exists. If not, create one
       if (!existingBill) {
         await handleCreateInitialBill();
@@ -937,6 +968,8 @@ export const OPDBillingContent: React.FC<OPDBillingContentProps> = ({ visit }) =
       });
 
       setShowBillingForm(true);
+
+      // Refresh in background
       mutateBills();
       mutateRequisitions();
     } catch (error: any) {
@@ -952,57 +985,153 @@ export const OPDBillingContent: React.FC<OPDBillingContentProps> = ({ visit }) =
   const handleCreateInitialBill = async () => {
     if (!visit) return;
 
-    try {
-      // Create initial bill with minimal data
-      const initialBillData = {
-        visit: visit.id,
-        doctor: parseInt(opdFormData.doctor || visit.doctor?.toString() || '0'),
-        opd_type: 'consultation' as OPDType,
-        charge_type: (opdFormData.chargeType as ChargeType) || 'first_visit',
-        diagnosis: '',
-        remarks: '',
-        discount_percent: '0',
-        total_amount: '0',
-        discount_amount: '0',
-        payment_mode: 'cash' as const,
-        received_amount: '0',
-        bill_date: new Date().toISOString(),
-      };
+    // OPTIMISTIC: Show form immediately
+    setShowBillingForm(true);
 
+    // Create initial bill data
+    const initialBillData = {
+      visit: visit.id,
+      doctor: parseInt(opdFormData.doctor || visit.doctor?.toString() || '0'),
+      opd_type: 'consultation' as OPDType,
+      charge_type: (opdFormData.chargeType as ChargeType) || 'first_visit',
+      diagnosis: '',
+      remarks: '',
+      discount_percent: '0',
+      total_amount: '0',
+      discount_amount: '0',
+      payment_mode: 'cash' as const,
+      received_amount: '0',
+      bill_date: new Date().toISOString(),
+    };
+
+    // Create temporary bill for optimistic UI update
+    const tempBillId = Date.now();
+    const tempBill: OPDBill = {
+      id: tempBillId,
+      bill_number: `BILL/${new Date().getFullYear()}/${String(new Date().getMonth() + 1).padStart(2, '0')}/NEW`,
+      visit: visit.id,
+      patient: visit.patient,
+      doctor: initialBillData.doctor,
+      bill_date: initialBillData.bill_date,
+      opd_type: initialBillData.opd_type,
+      charge_type: initialBillData.charge_type,
+      diagnosis: initialBillData.diagnosis || '',
+      remarks: initialBillData.remarks || '',
+      total_amount: '0.00',
+      discount_percent: '0',
+      discount_amount: '0.00',
+      payable_amount: '0.00',
+      payment_mode: initialBillData.payment_mode,
+      payment_status: 'unpaid',
+      received_amount: '0.00',
+      balance_amount: '0.00',
+      items: [],
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    // OPTIMISTIC: Add temp bill to UI immediately
+    mutateVisitBills(
+      (currentData) => {
+        if (!currentData) return { results: [tempBill], count: 1, next: null, previous: null };
+        return {
+          ...currentData,
+          results: [tempBill, ...currentData.results],
+          count: currentData.count + 1,
+        };
+      },
+      { revalidate: false }
+    );
+
+    mutatePatientBills(
+      (currentData) => {
+        if (!currentData) return { results: [tempBill], count: 1, next: null, previous: null };
+        return {
+          ...currentData,
+          results: [tempBill, ...currentData.results],
+          count: currentData.count + 1,
+        };
+      },
+      { revalidate: false }
+    );
+
+    // Select the temp bill immediately
+    setSelectedBillId(tempBillId);
+    toast.success('Bill created', {
+      description: 'Bill has been created. You can now add more items and update payment details.',
+    });
+
+    // API call in background
+    try {
       const newBill = await createBill(initialBillData);
 
-      // Create initial consultation item if billItems has items
-      if (billItems.length > 0) {
-        for (const item of billItems) {
-          const itemData: OPDBillItemCreateData = {
-            bill: newBill.id,
-            item_name: item.item_name,
-            source: item.source,
-            quantity: item.quantity,
-            unit_price: item.unit_price,
-            system_calculated_price: item.system_calculated_price || item.unit_price,
-            notes: item.notes || '',
+      // Replace temp bill with real bill
+      mutateVisitBills(
+        (currentData) => {
+          if (!currentData) return currentData;
+          return {
+            ...currentData,
+            results: currentData.results.map(bill =>
+              bill.id === tempBillId ? newBill : bill
+            ),
           };
-          await opdBillService.createBillItem(itemData);
-        }
-      }
+        },
+        { revalidate: false }
+      );
 
-      // Refresh bills to load the newly created bill
-      await mutateBills();
-      await mutateVisitBills();
+      mutatePatientBills(
+        (currentData) => {
+          if (!currentData) return currentData;
+          return {
+            ...currentData,
+            results: currentData.results.map(bill =>
+              bill.id === tempBillId ? newBill : bill
+            ),
+          };
+        },
+        { revalidate: false }
+      );
 
-      // Select the newly created bill
+      // Update selected bill ID to real ID
       if (newBill) {
         setSelectedBillId(newBill.id);
       }
 
-      toast.success('Bill created', {
-        description: 'Bill has been created. You can now add more items and update payment details.',
-      });
-
-      setShowBillingForm(true);
+      // Revalidate to ensure consistency
+      mutateVisitBills();
+      mutatePatientBills();
     } catch (error) {
       console.error('Failed to create initial bill:', error);
+
+      // ROLLBACK: Remove temp bill
+      mutateVisitBills(
+        (currentData) => {
+          if (!currentData) return currentData;
+          return {
+            ...currentData,
+            results: currentData.results.filter(bill => bill.id !== tempBillId),
+            count: currentData.count - 1,
+          };
+        },
+        { revalidate: false }
+      );
+
+      mutatePatientBills(
+        (currentData) => {
+          if (!currentData) return currentData;
+          return {
+            ...currentData,
+            results: currentData.results.filter(bill => bill.id !== tempBillId),
+            count: currentData.count - 1,
+          };
+        },
+        { revalidate: false }
+      );
+
+      // Clear selection and hide form
+      setSelectedBillId(null);
+      setShowBillingForm(false);
+
       toast.error('Failed to create bill', {
         description: 'Please try again.',
       });
@@ -1016,6 +1145,9 @@ export const OPDBillingContent: React.FC<OPDBillingContentProps> = ({ visit }) =
       toast.error('Add at least one item to the bill');
       return;
     }
+
+    // OPTIMISTIC: Show success immediately
+    toast.success(isEditMode ? 'Updating bill...' : 'Creating bill...');
 
     try {
       const billData = {
@@ -1067,6 +1199,7 @@ export const OPDBillingContent: React.FC<OPDBillingContentProps> = ({ visit }) =
         await opdBillService.createBillItem(itemData);
       }
 
+      // Refresh in background
       mutateBills();
       mutateVisitBills();
     } catch (error: any) {
@@ -1086,6 +1219,83 @@ export const OPDBillingContent: React.FC<OPDBillingContentProps> = ({ visit }) =
 
   const handleDownloadPDF = () => {
     toast.info('PDF download feature coming soon');
+  };
+
+  const handleDeleteBillClick = (billId: number) => {
+    setBillToDelete(billId);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!billToDelete) return;
+
+    // Close dialog immediately (optimistic)
+    setIsDeleteDialogOpen(false);
+    const deletedBillId = billToDelete;
+    setBillToDelete(null);
+
+    // Clear selection if deleted bill was selected
+    const wasSelected = selectedBillId === deletedBillId;
+    if (wasSelected) {
+      setSelectedBillId(null);
+      setShowBillingForm(false);
+    }
+
+    // Store original data for rollback
+    const originalVisitBills = visitBillsData;
+    const originalPatientBills = patientBillsData;
+
+    // OPTIMISTIC UPDATE: Remove bill from UI immediately
+    mutateVisitBills(
+      (currentData) => {
+        if (!currentData) return currentData;
+        return {
+          ...currentData,
+          results: currentData.results.filter(bill => bill.id !== deletedBillId),
+          count: currentData.count - 1,
+        };
+      },
+      { revalidate: false }
+    );
+
+    mutatePatientBills(
+      (currentData) => {
+        if (!currentData) return currentData;
+        return {
+          ...currentData,
+          results: currentData.results.filter(bill => bill.id !== deletedBillId),
+          count: currentData.count - 1,
+        };
+      },
+      { revalidate: false }
+    );
+
+    // Show optimistic success message
+    toast.success('Bill deleted successfully');
+
+    // Call API in background
+    try {
+      await deleteBill(deletedBillId);
+      // Revalidate to ensure consistency
+      mutateVisitBills();
+      mutatePatientBills();
+    } catch (error: any) {
+      console.error('Failed to delete bill:', error);
+
+      // ROLLBACK: Restore original data
+      mutateVisitBills(originalVisitBills, { revalidate: false });
+      mutatePatientBills(originalPatientBills, { revalidate: false });
+
+      // Restore selection if it was selected
+      if (wasSelected) {
+        setSelectedBillId(deletedBillId);
+        setShowBillingForm(true);
+      }
+
+      toast.error('Failed to delete bill', {
+        description: error?.message || 'The bill has been restored',
+      });
+    }
   };
 
   if (isLoading) {
@@ -1128,17 +1338,19 @@ export const OPDBillingContent: React.FC<OPDBillingContentProps> = ({ visit }) =
               {visitBills.map((bill) => (
                 <div
                   key={bill.id}
-                  className={`p-4 border rounded-lg cursor-pointer transition-all hover:border-primary ${
+                  className={`p-4 border rounded-lg transition-all hover:border-primary ${
                     existingBill?.id === bill.id ? 'border-primary bg-primary/5' : ''
                   }`}
-                  onClick={() => {
-                    setSelectedBillId(bill.id);
-                    setShowBillingForm(true);
-                    setActiveTab('billing');
-                  }}
                 >
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-1">
+                  <div className="flex items-start justify-between gap-4">
+                    <div
+                      className="flex-1 space-y-1 cursor-pointer"
+                      onClick={() => {
+                        setSelectedBillId(bill.id);
+                        setShowBillingForm(true);
+                        setActiveTab('billing');
+                      }}
+                    >
                       <div className="flex items-center gap-2">
                         <span className="font-mono font-semibold">{bill.bill_number}</span>
                         <Badge
@@ -1160,11 +1372,24 @@ export const OPDBillingContent: React.FC<OPDBillingContentProps> = ({ visit }) =
                           : 'N/A'}
                       </p>
                     </div>
-                    <div className="text-right">
-                      <p className="text-lg font-bold">₹{parseFloat(bill.total_amount || '0').toFixed(2)}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {bill.items?.length || 0} item(s)
-                      </p>
+                    <div className="flex items-center gap-3">
+                      <div className="text-right">
+                        <p className="text-lg font-bold">₹{parseFloat(bill.total_amount || '0').toFixed(2)}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {bill.items?.length || 0} item(s)
+                        </p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteBillClick(bill.id);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -1369,6 +1594,35 @@ export const OPDBillingContent: React.FC<OPDBillingContentProps> = ({ visit }) =
           </TabsContent>
         </Tabs>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Bill</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Are you sure you want to delete this bill? This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setIsDeleteDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleConfirmDelete}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete Bill
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -337,6 +337,8 @@ export const API_CONFIG = {
         DELETE: '/ipd/admissions/:id/',
         DISCHARGE: '/ipd/admissions/:id/discharge/',
         ACTIVE: '/ipd/admissions/active/',
+        SYNC_CLINICAL_CHARGES: '/ipd/admissions/:id/sync_clinical_charges/',
+        UNBILLED_REQUISITIONS: '/ipd/admissions/:id/unbilled_requisitions/',
       },
       // Bed Transfers
       BED_TRANSFERS: {

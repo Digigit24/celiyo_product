@@ -20,6 +20,22 @@ const routeTitles: Record<string, string> = {
   "/": "Dashboard",
   "/inbox": "Inbox",
   "/opd": "OPD",
+  "/patients": "Patient Master",
+  "/opd/consultation": "OPD Consultations",
+};
+
+// Dynamic route patterns (order matters - check from most specific to least)
+const getDynamicTitle = (pathname: string): string | null => {
+  if (pathname.startsWith("/opd/billing/")) {
+    return "OPD Billing";
+  }
+  if (pathname.startsWith("/opd/consultation/")) {
+    return "OPD Consultations";
+  }
+  if (pathname.startsWith("/patients/") && pathname !== "/patients") {
+    return "Patient Details Page";
+  }
+  return null;
 };
 
 // Get time-based greeting
@@ -55,7 +71,18 @@ export const UniversalHeader = ({ onMenuClick }: UniversalHeaderProps) => {
   const username = rawUsername.charAt(0).toUpperCase() + rawUsername.slice(1).toLowerCase();
   const greeting = `👋 ${username}, ${getTimeBasedGreeting()}!`;
 
-  const pageTitle = routeTitles[location.pathname] || greeting;
+  // Get page title: check exact match first, then dynamic patterns, then fallback to "HMS"
+  const getPageTitle = (): string => {
+    const exactMatch = routeTitles[location.pathname];
+    if (exactMatch) return exactMatch;
+
+    const dynamicMatch = getDynamicTitle(location.pathname);
+    if (dynamicMatch) return dynamicMatch;
+
+    return "HMS";
+  };
+
+  const pageTitle = getPageTitle();
 
   const handleLogout = () => {
     logout();
@@ -91,8 +118,7 @@ export const UniversalHeader = ({ onMenuClick }: UniversalHeaderProps) => {
             <Menu size={20} />
           </Button>
         )}
-        {/* <h1 className="text-xl font-semibold">{pageTitle}</h1> */}
-        <h1 className="text-xl font-semibold">HMS</h1>
+        <h1 className="text-xl font-semibold">{pageTitle}</h1>
       </div>
 
       {/* Right Side - Settings and Profile */}

@@ -2,11 +2,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useOpdVisit } from '@/hooks/useOpdVisit';
-import { Loader2, User, Calendar, Activity, Droplet } from 'lucide-react';
+import { Loader2, User, Calendar, Activity, Droplet, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
+
 import { toast } from 'sonner';
 import { OPDVisitHeader, OPDVisitTabs } from '@/components/opd/shared';
 import { OPDBillingContent } from '@/components/opd/OPDBillingContent';

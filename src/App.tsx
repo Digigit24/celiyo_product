@@ -58,9 +58,10 @@ import { AdminSettings } from "./pages/AdminSettings";
 import { Transactions } from "./pages/Transactions";
 import { PaymentCategories } from "./pages/PaymentCategories";
 import { AccountingPeriods } from "./pages/AccountingPeriods";
-import { PharmacyPage } from "./pages/Pharmacy"; // Import PharmacyPage
 import { PharmacyStatisticsPage } from "./pages/PharmacyStatistics"; // Import PharmacyStatisticsPage
 import { CartListPage } from "./pages/CartList";   // Import CartListPage
+import ProductsPage from "./pages/pharmacy/ProductsPage"; // Import Pharmacy Products
+import POSPage from "./pages/pharmacy/POSPage"; // Import Pharmacy POS
 import Wards from "./pages/ipd/Wards"; // Import IPD Wards
 import Beds from "./pages/ipd/Beds"; // Import IPD Beds
 import Admissions from "./pages/ipd/Admissions"; // Import IPD Admissions
@@ -150,7 +151,8 @@ const AppLayout = () => {
               <Route path="/payments/periods" element={<AccountingPeriods />} />
 
               {/* Pharmacy Routes */}
-              <Route path="/pharmacy" element={<PharmacyPage />} />
+              <Route path="/pharmacy/products" element={<ProductsPage />} />
+              <Route path="/pharmacy/pos" element={<POSPage />} />
               <Route path="/pharmacy/statistics" element={<PharmacyStatisticsPage />} />
               <Route path="/cart" element={<CartListPage />} />
 

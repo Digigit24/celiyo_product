@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Loader2, Save, Download, Printer, X, ArrowLeft, Maximize2, Pencil, Building2, Stethoscope, Microscope } from 'lucide-react';
 import { OpdVisit } from '@/types/opdVisit.types';
 import { toast } from 'sonner';
@@ -33,6 +34,7 @@ import {
 import { ConsultationBoard } from './ConsultationBoard';
 import { DiagnosticRequisitionSidebar } from './DiagnosticRequisitionSidebar';
 import { DiagnosticSummaryCard } from './DiagnosticSummaryCard';
+import { FloatingActionPanel } from './FloatingActionPanel';
 
 interface ConsultationTabProps {
   visit: OpdVisit;
@@ -62,6 +64,8 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
   const [responseDrawerOpen, setResponseDrawerOpen] = useState(false);
   const [encounterType, setEncounterType] = useState<'visit' | 'admission'>('visit');
   const [requisitionSidebarOpen, setRequisitionSidebarOpen] = useState(false);
+  const [templateDrawerOpen, setTemplateDrawerOpen] = useState(false);
+  const [previewDrawerOpen, setPreviewDrawerOpen] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
 
   // Fetch active admission for the patient
@@ -357,61 +361,34 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
   };
 
   return (
-    <div className="h-full flex flex-col">
-      {/* Encounter Type Toggle and Quick Actions */}
-      <div className="flex items-center justify-between gap-4 mb-6">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-3 bg-muted/30 px-4 py-2.5 rounded-lg border">
-            <div className={`flex items-center gap-2 font-medium ${encounterType === 'visit' ? 'text-primary' : 'text-muted-foreground'}`}>
+    <div className="h-full flex flex-col relative">
+      {/* Sticky Header - Encounter Type Toggle */}
+      <div className="sticky top-0 z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
+        <div className="flex items-center justify-between gap-4 px-4 py-3">
+          <div className="flex items-center gap-3 bg-muted/30 px-3 py-2 rounded-lg border">
+            <div className={`flex items-center gap-2 text-sm font-medium ${encounterType === 'visit' ? 'text-primary' : 'text-muted-foreground'}`}>
               <Stethoscope className="h-4 w-4" />
-              <span>OPD</span>
+              <span className="hidden sm:inline">OPD</span>
             </div>
             <Switch
               checked={encounterType === 'admission'}
               onCheckedChange={(checked) => setEncounterType(checked ? 'admission' : 'visit')}
               disabled={!activeAdmission}
             />
-            <div className={`flex items-center gap-2 font-medium ${encounterType === 'admission' ? 'text-primary' : 'text-muted-foreground'}`}>
+            <div className={`flex items-center gap-2 text-sm font-medium ${encounterType === 'admission' ? 'text-primary' : 'text-muted-foreground'}`}>
               <Building2 className="h-4 w-4" />
-              <span>IPD</span>
+              <span className="hidden sm:inline">IPD</span>
             </div>
           </div>
 
           {encounterType === 'admission' && activeAdmission && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground px-3 py-1 bg-muted/50 rounded-full">
+            <div className="hidden md:flex items-center gap-2 text-xs text-muted-foreground px-3 py-1.5 bg-muted/50 rounded-full">
               <Building2 className="h-3 w-3" />
-              <span>Active Admission: {activeAdmission.admission_id} ({activeAdmission.ward_name})</span>
+              <span>Admission: {activeAdmission.admission_id}</span>
             </div>
           )}
         </div>
-
-        {/* Order Tests Button */}
-        <Button
-          onClick={() => {
-            if (!currentObjectId) {
-              toast.error('No active encounter found for ordering tests.');
-              return;
-            }
-            setRequisitionSidebarOpen(true);
-          }}
-          disabled={!currentObjectId}
-          className="gap-2"
-        >
-          <Microscope className="h-4 w-4" />
-          Order Tests
-        </Button>
       </div>
-
-      {/* Diagnostic Summary Card */}
-      {currentObjectId && (
-        <div className="mb-6">
-          <DiagnosticSummaryCard
-            encounterType={encounterType}
-            objectId={currentObjectId}
-            onOrderTests={() => setRequisitionSidebarOpen(true)}
-          />
-        </div>
-      )}
 
       <div className="flex-1 overflow-hidden">
         {/* Kanban Board View */}
@@ -425,40 +402,29 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
           isLoadingTemplates={isLoadingTemplates}
           onViewResponse={handleViewResponse}
           onRefresh={mutateResponses}
+          templateDrawerOpen={templateDrawerOpen}
+          onTemplateDrawerChange={setTemplateDrawerOpen}
         />
       </div>
 
-      {/* Response Detail Dialog */}
-      <Dialog open={responseDrawerOpen} onOpenChange={(open) => !open && handleCloseResponseDrawer()}>
-        <DialogContent className="max-w-6xl h-[90vh] flex flex-col p-0">
-          <DialogHeader className="px-6 pt-6 pb-4 border-b">
-            <div className="flex items-start justify-between">
-              <div>
-                <DialogTitle className="text-2xl">
-                  {templateData?.name || 'Clinical Note'} - {selectedResponse?.template_name}
-                </DialogTitle>
-                <DialogDescription>
-                  {selectedResponse?.encounter_display || `${encounterType === 'visit' ? 'OPD Visit' : 'IPD Admission'}`} • {' '}
-                  Filled by: {filledByName} •{' '}
-                  Status: {selectedResponse?.status}
-                </DialogDescription>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleCloseResponseDrawer}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-          </DialogHeader>
+      {/* Response Detail Side Drawer */}
+      <Sheet open={responseDrawerOpen} onOpenChange={(open) => !open && handleCloseResponseDrawer()}>
+        <SheetContent side="right" className="w-full sm:max-w-3xl p-0 flex flex-col">
+          <SheetHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-3 border-b">
+            <SheetTitle className="text-lg sm:text-xl">
+              {templateData?.name || 'Clinical Note'}
+            </SheetTitle>
+            <SheetDescription className="text-xs sm:text-sm">
+              #{selectedResponse?.response_sequence} • {selectedResponse?.status} • Filled by: {filledByName}
+            </SheetDescription>
+          </SheetHeader>
 
-          {/* Custom Tab Navigation */}
-          <div className="border-b px-6">
-            <div className="flex gap-2">
+          {/* Compact Tab Navigation */}
+          <div className="border-b px-4 sm:px-6">
+            <div className="flex gap-1">
               <button
                 onClick={() => setActiveSubTab('fields')}
-                className={`px-4 py-2 font-medium transition-colors ${
+                className={`px-3 sm:px-4 py-2 text-sm font-medium transition-colors ${
                   activeSubTab === 'fields'
                     ? 'border-b-2 border-primary text-primary'
                     : 'text-muted-foreground hover:text-foreground'
@@ -468,29 +434,29 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
               </button>
               <button
                 onClick={() => setActiveSubTab('canvas')}
-                className={`px-4 py-2 font-medium transition-colors ${
+                className={`px-3 sm:px-4 py-2 text-sm font-medium transition-colors ${
                   activeSubTab === 'canvas'
                     ? 'border-b-2 border-primary text-primary'
                     : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
-                Canvas Drawing
+                Canvas
               </button>
             </div>
           </div>
 
           {/* Tab Content */}
-          <div className="flex-1 overflow-auto px-6 py-4">
+          <div className="flex-1 overflow-auto px-4 sm:px-6 py-4">
             {/* Fields Tab */}
             {activeSubTab === 'fields' && (
               <div className="space-y-4">
-                <div className="flex justify-end">
-                  <Button onClick={handleSave} disabled={isSaving}>
+                <div className="flex justify-end sticky top-0 bg-background z-10 pb-2">
+                  <Button onClick={handleSave} disabled={isSaving} size="sm">
                     {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                    Save Changes
+                    Save
                   </Button>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 gap-4">
                   {fieldsData.map(renderField)}
                 </div>
               </div>
@@ -499,32 +465,51 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
             {/* Canvas Tab */}
             {activeSubTab === 'canvas' && selectedResponse && (
               <div className="h-full flex items-center justify-center">
-                <div className="text-center space-y-4 p-8">
+                <div className="text-center space-y-4 p-4 sm:p-8">
                   <div className="flex justify-center">
-                    <div className="p-4 bg-white rounded-full shadow-md">
-                      <Pencil className="w-12 h-12 text-blue-500" />
+                    <div className="p-3 sm:p-4 bg-primary/10 rounded-full">
+                      <Pencil className="w-8 h-8 sm:w-12 sm:h-12 text-primary" />
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <h3 className="text-xl font-semibold text-gray-800">Digital Canvas</h3>
-                    <p className="text-sm text-gray-600 max-w-md">
-                      Open the full-screen canvas to draw, annotate, and create handwritten notes.
+                    <h3 className="text-lg sm:text-xl font-semibold">Digital Canvas</h3>
+                    <p className="text-xs sm:text-sm text-muted-foreground max-w-md">
+                      Open full-screen canvas for drawing and annotations
                     </p>
                   </div>
                   <Button
                     onClick={() => navigate(`/opd/consultation/${visit.id}/canvas/${selectedResponse.id}`)}
                     className="mt-4"
-                    size="lg"
+                    size="sm"
                   >
-                    <Maximize2 className="mr-2 h-5 w-5" />
+                    <Maximize2 className="mr-2 h-4 w-4" />
                     Open Canvas
                   </Button>
                 </div>
               </div>
             )}
           </div>
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
+
+      {/* Floating Action Panel */}
+      <FloatingActionPanel
+        onAddNotes={() => {
+          if (!currentObjectId) {
+            toast.error('No active encounter found for adding notes.');
+            return;
+          }
+          setTemplateDrawerOpen(true);
+        }}
+        onOpenDiagnostics={() => {
+          if (!currentObjectId) {
+            toast.error('No active encounter found for ordering tests.');
+            return;
+          }
+          setRequisitionSidebarOpen(true);
+        }}
+        disabled={!currentObjectId}
+      />
 
       {/* Diagnostic Requisition Sidebar */}
       {currentObjectId && (

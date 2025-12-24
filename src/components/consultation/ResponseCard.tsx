@@ -123,21 +123,21 @@ export const ResponseCard: React.FC<ResponseCardProps> = ({
   const canOpenCanvas = !!onOpenCanvas; // you can also change this to `hasCanvas && !!onOpenCanvas` if you want strict
 
   return (
-    <Card className="group hover:shadow-lg transition-all duration-200 hover:scale-[1.02] cursor-pointer border-2 hover:border-primary/50">
+    <Card className="group hover:shadow-lg transition-all duration-200 hover:scale-[1.01] cursor-pointer border hover:border-primary/50">
       <CardContent className="p-0">
         {/* Card Header with Template Name */}
-        <div className="bg-gradient-to-r from-primary/10 to-primary/5 p-4 border-b">
+        <div className="bg-gradient-to-r from-primary/10 to-primary/5 p-3 border-b">
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1">
-                <FileText className="h-4 w-4 text-primary flex-shrink-0" />
+              <div className="flex items-center gap-2 mb-1.5">
+                <FileText className="h-3.5 w-3.5 text-primary flex-shrink-0" />
                 <h3 className="font-semibold text-sm truncate">{templateName || 'Clinical Note'}</h3>
               </div>
-              <div className="flex items-center gap-2">
-                <Badge variant="outline" className="text-xs">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <Badge variant="outline" className="text-xs h-5 px-1.5">
                   #{response.response_sequence}
                 </Badge>
-                <Badge className={`text-xs ${config.className}`}>
+                <Badge className={`text-xs h-5 px-1.5 ${config.className}`}>
                   <StatusIcon className="h-3 w-3 mr-1" />
                   {config.label}
                 </Badge>
@@ -145,67 +145,54 @@ export const ResponseCard: React.FC<ResponseCardProps> = ({
             </div>
 
             {/* Right actions: Canvas + Form + Menu */}
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-0.5">
+              {/* Open Form */}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 p-0 hover:bg-primary hover:text-primary-foreground"
+                title="Open Form Fields"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleOpenForm();
+                }}
+              >
+                <ClipboardList className="h-3.5 w-3.5" />
+              </Button>
+
               {/* Open Canvas */}
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-8 w-8 p-0"
-                title={hasCanvas ? 'Open Canvas' : 'Canvas (no drawing yet)'}
+                className="h-7 w-7 p-0 hover:bg-primary hover:text-primary-foreground"
+                title={hasCanvas ? 'Open Canvas Drawing' : 'Open Canvas (empty)'}
                 disabled={!canOpenCanvas}
                 onClick={(e) => {
                   e.stopPropagation();
                   handleOpenCanvas();
                 }}
               >
-                <PenTool className="h-4 w-4" />
-              </Button>
-
-              {/* Open Form */}
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 w-8 p-0"
-                title="Open Form"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleOpenForm();
-                }}
-              >
-                <ClipboardList className="h-4 w-4" />
+                <PenTool className="h-3.5 w-3.5" />
               </Button>
 
               {/* Dropdown */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                    <MoreVertical className="h-4 w-4" />
+                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0 hover:bg-muted">
+                    <MoreVertical className="h-3.5 w-3.5" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onView();
-                    }}
-                  >
-                    <Eye className="mr-2 h-4 w-4" />
-                    View Details
-                  </DropdownMenuItem>
-
+                <DropdownMenuContent align="end" className="w-48">
                   {onCopyFromTemplate && (
-                    <>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onCopyFromTemplate();
-                        }}
-                      >
-                        <Copy className="mr-2 h-4 w-4" />
-                        Copy from Template
-                      </DropdownMenuItem>
-                    </>
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onCopyFromTemplate();
+                      }}
+                    >
+                      <Copy className="mr-2 h-4 w-4" />
+                      Copy from Template
+                    </DropdownMenuItem>
                   )}
 
                   {onSaveAsTemplate && (
@@ -232,20 +219,21 @@ export const ResponseCard: React.FC<ResponseCardProps> = ({
                     </DropdownMenuItem>
                   )}
 
+                  {(onCopyFromTemplate || onSaveAsTemplate || onMarkReviewed) && onDelete && (
+                    <DropdownMenuSeparator />
+                  )}
+
                   {onDelete && (
-                    <>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        className="text-destructive"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onDelete();
-                        }}
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete
-                      </DropdownMenuItem>
-                    </>
+                    <DropdownMenuItem
+                      className="text-destructive"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDelete();
+                      }}
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete
+                    </DropdownMenuItem>
                   )}
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -254,90 +242,42 @@ export const ResponseCard: React.FC<ResponseCardProps> = ({
         </div>
 
         {/* Card Content - Click to View */}
-        <div onClick={onView} className="p-4 space-y-3">
+        <div onClick={onView} className="p-3 space-y-2.5">
           {/* Filled By */}
-          <div className="flex items-center gap-2 text-sm">
-            <User className="h-4 w-4 text-muted-foreground" />
+          <div className="flex items-center gap-2 text-xs">
+            <User className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
             <span className="text-muted-foreground">Filled by:</span>
-            <span className="font-medium">{filledByName}</span>
+            <span className="font-medium truncate">{filledByName}</span>
           </div>
 
           {/* Doctor Switch Info */}
           {response.doctor_switched_reason && (
             <div className="text-xs bg-amber-50 border border-amber-200 rounded p-2">
-              <p className="font-semibold text-amber-800">Handover Note:</p>
-              <p className="text-amber-700 mt-1">{response.doctor_switched_reason}</p>
+              <p className="font-semibold text-amber-800">Handover:</p>
+              <p className="text-amber-700 mt-0.5 line-clamp-2">{response.doctor_switched_reason}</p>
             </div>
           )}
 
           {/* Reviewed Badge */}
           {response.is_reviewed && response.reviewed_by_id && (
-            <div className="flex items-center gap-2 text-xs bg-blue-50 border border-blue-200 rounded p-2">
-              <CheckCircle className="h-3 w-3 text-blue-600" />
-              <span className="text-blue-700">Reviewed by {reviewedByName}</span>
+            <div className="flex items-center gap-1.5 text-xs bg-blue-50 border border-blue-200 rounded px-2 py-1">
+              <CheckCircle className="h-3 w-3 text-blue-600 flex-shrink-0" />
+              <span className="text-blue-700 truncate">Reviewed by {reviewedByName}</span>
             </div>
           )}
 
-          {/* Timestamps */}
-          <div className="pt-2 border-t text-xs text-muted-foreground space-y-1">
-            <div className="flex justify-between">
-              <span>Created:</span>
-              <span className="font-medium">
-                {formatTimeAgo(response.response_date || response.created_at)}
-              </span>
-            </div>
-            {response.updated_at &&
-              response.updated_at !== (response.response_date || response.created_at) && (
-                <div className="flex justify-between">
-                  <span>Updated:</span>
-                  <span className="font-medium">{formatTimeAgo(response.updated_at)}</span>
+          {/* Compact Info Footer */}
+          <div className="pt-2 border-t flex items-center justify-between text-xs text-muted-foreground">
+            <div className="flex items-center gap-3">
+              <span className="truncate">{formatTimeAgo(response.response_date || response.created_at)}</span>
+              {hasCanvas && (
+                <div className="flex items-center gap-1 text-primary">
+                  <PenTool className="h-3 w-3" />
+                  <span className="hidden sm:inline">Drawing</span>
                 </div>
               )}
-          </div>
-
-          {/* Canvas Indicator */}
-          {hasCanvas && (
-            <div className="flex items-center gap-2 text-xs text-primary">
-              <FileText className="h-3 w-3" />
-              <span>Contains canvas drawing</span>
             </div>
-          )}
-
-          {/* Field Count */}
-          <div className="text-xs text-muted-foreground">
-            {response.field_response_count || 0} fields filled
-          </div>
-        </div>
-
-        {/* Bottom Actions */}
-        <div className="border-t p-3 bg-muted/30">
-          <div className="grid grid-cols-2 gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-colors"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleOpenForm();
-              }}
-            >
-              <ClipboardList className="mr-2 h-4 w-4" />
-              Open Form
-            </Button>
-
-            <Button
-              variant="ghost"
-              size="sm"
-              className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-colors"
-              disabled={!canOpenCanvas}
-              onClick={(e) => {
-                e.stopPropagation();
-                handleOpenCanvas();
-              }}
-            >
-              <PenTool className="mr-2 h-4 w-4" />
-              Open Canvas
-            </Button>
+            <span className="text-xs">{response.field_response_count || 0} fields</span>
           </div>
         </div>
       </CardContent>

@@ -364,7 +364,13 @@ const menuItems: MenuItem[] = [
         id: "pharmacy-products",
         label: "Products",
         icon: Package,
-        path: "/pharmacy",
+        path: "/pharmacy/products",
+      },
+      {
+        id: "pharmacy-pos",
+        label: "POS",
+        icon: ShoppingCart,
+        path: "/pharmacy/pos",
       },
       {
         id: "pharmacy-statistics",
@@ -375,7 +381,7 @@ const menuItems: MenuItem[] = [
       {
         id: "pharmacy-cart",
         label: "Cart",
-        icon: ShoppingCart,
+        icon: Receipt,
         path: "/cart",
       },
     ],

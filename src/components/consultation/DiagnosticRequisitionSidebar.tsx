@@ -294,185 +294,312 @@ export function DiagnosticRequisitionSidebar({
     <SideDrawer
       open={open}
       onOpenChange={onOpenChange}
-      title="Create Requisition"
-      description="Select requisition type and add items to the draft requisition."
+      title="Order Requisition"
+      description="Choose requisition type and add items to create your order."
       footerButtons={footerButtons}
-      className="w-full md:w-1/3"
+      className="w-full sm:w-[500px] md:w-[600px] lg:w-[700px]"
     >
       <div className="flex flex-col h-full -mx-4 -my-6">
-        <div className="p-4 space-y-4">
-          {/* Requisition Type Selector */}
-          <div>
-            <Label className="mb-2 block">Requisition Type</Label>
-            <Select value={requisitionType} onValueChange={(value) => setRequisitionType(value as RequisitionType)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {(['investigation', 'medicine', 'procedure', 'package'] as RequisitionType[]).map((type) => (
-                  <SelectItem key={type} value={type}>
-                    <div className="flex items-center gap-2">
-                      {REQUISITION_TYPE_ICONS[type]}
-                      <span>{REQUISITION_TYPE_LABELS[type]}</span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        {/* Icon Button Tabs */}
+        <div className="px-4 pt-4 pb-2 border-b bg-gradient-to-b from-background to-muted/20">
+          <div className="grid grid-cols-4 gap-2">
+            {(['investigation', 'medicine', 'procedure', 'package'] as RequisitionType[]).map((type) => (
+              <button
+                key={type}
+                onClick={() => setRequisitionType(type)}
+                className={`
+                  group relative flex flex-col items-center gap-2 p-3 rounded-xl
+                  transition-all duration-300 ease-out
+                  ${
+                    requisitionType === type
+                      ? 'bg-primary text-primary-foreground shadow-lg scale-105'
+                      : 'bg-muted/50 hover:bg-muted hover:scale-102 text-muted-foreground'
+                  }
+                `}
+              >
+                {/* Icon */}
+                <div className={`
+                  transition-transform duration-300
+                  ${requisitionType === type ? 'scale-110' : 'group-hover:scale-110'}
+                `}>
+                  {requisitionType === 'investigation' && type === 'investigation' && <Microscope className="h-5 w-5 sm:h-6 sm:w-6" />}
+                  {requisitionType === 'medicine' && type === 'medicine' && <Pill className="h-5 w-5 sm:h-6 sm:w-6" />}
+                  {requisitionType === 'procedure' && type === 'procedure' && <Stethoscope className="h-5 w-5 sm:h-6 sm:w-6" />}
+                  {requisitionType === 'package' && type === 'package' && <Package className="h-5 w-5 sm:h-6 sm:w-6" />}
+                  {requisitionType !== type && (
+                    <>
+                      {type === 'investigation' && <Microscope className="h-5 w-5 sm:h-6 sm:w-6" />}
+                      {type === 'medicine' && <Pill className="h-5 w-5 sm:h-6 sm:w-6" />}
+                      {type === 'procedure' && <Stethoscope className="h-5 w-5 sm:h-6 sm:w-6" />}
+                      {type === 'package' && <Package className="h-5 w-5 sm:h-6 sm:w-6" />}
+                    </>
+                  )}
+                </div>
+
+                {/* Label */}
+                <span className={`
+                  text-xs font-medium text-center leading-tight
+                  ${requisitionType === type ? 'font-semibold' : ''}
+                `}>
+                  {REQUISITION_TYPE_LABELS[type]}
+                </span>
+
+                {/* Active Indicator */}
+                {requisitionType === type && (
+                  <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-8 h-1 bg-primary rounded-full animate-in slide-in-from-bottom-2 duration-300" />
+                )}
+              </button>
+            ))}
           </div>
+        </div>
+
+        <div className="p-4 space-y-4">
 
           {/* Dynamic Item Search */}
-          <Command shouldFilter={false} className="border rounded-lg">
-            <CommandInput
-              value={search}
-              onValueChange={setSearch}
-              placeholder={`Search ${REQUISITION_TYPE_LABELS[requisitionType].toLowerCase()}...`}
-            />
-            <CommandList>
-              {isLoading && <div className="p-4 text-center">Loading...</div>}
-              <CommandEmpty>{!isLoading && `No ${REQUISITION_TYPE_LABELS[requisitionType].toLowerCase()} found.`}</CommandEmpty>
-              {searchResults.length > 0 && (
-                <CommandGroup heading="Suggestions">
-                  {searchResults.map((item: any) => (
-                    <CommandItem
-                      key={item.id}
-                      onSelect={() => handleSelectItem(item)}
-                      className="cursor-pointer"
-                    >
-                      <div className="flex items-center justify-between w-full">
-                        <div>
-                          <div className="font-medium">
-                            {requisitionType === 'investigation'
-                              ? item.name
-                              : requisitionType === 'medicine'
-                              ? item.product_name
-                              : item.name}
+          <div className="space-y-2">
+            <Label className="text-sm font-semibold flex items-center gap-2">
+              {REQUISITION_TYPE_ICONS[requisitionType]}
+              Search {REQUISITION_TYPE_LABELS[requisitionType]}
+            </Label>
+            <Command shouldFilter={false} className="border-2 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200">
+              <CommandInput
+                value={search}
+                onValueChange={setSearch}
+                placeholder={`Type to search ${REQUISITION_TYPE_LABELS[requisitionType].toLowerCase()}...`}
+                className="border-none focus:ring-0"
+              />
+              <CommandList className="max-h-[200px]">
+                {isLoading && (
+                  <div className="p-8 text-center">
+                    <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2 text-primary" />
+                    <p className="text-sm text-muted-foreground">Searching...</p>
+                  </div>
+                )}
+                <CommandEmpty>
+                  {!isLoading && (
+                    <div className="p-6 text-center">
+                      <div className="mx-auto mb-2 w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center">
+                        {REQUISITION_TYPE_ICONS[requisitionType] &&
+                          React.cloneElement(REQUISITION_TYPE_ICONS[requisitionType] as React.ReactElement, {
+                            className: 'h-5 w-5 text-muted-foreground',
+                          })}
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        No {REQUISITION_TYPE_LABELS[requisitionType].toLowerCase()} found
+                      </p>
+                    </div>
+                  )}
+                </CommandEmpty>
+                {searchResults.length > 0 && (
+                  <CommandGroup heading="Available Items" className="p-2">
+                    {searchResults.map((item: any) => (
+                      <CommandItem
+                        key={item.id}
+                        onSelect={() => handleSelectItem(item)}
+                        className="cursor-pointer rounded-lg mb-1 hover:bg-primary/5 transition-colors duration-150"
+                      >
+                        <div className="flex items-center justify-between w-full gap-3 py-1">
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium text-sm truncate">
+                              {requisitionType === 'investigation'
+                                ? item.name
+                                : requisitionType === 'medicine'
+                                ? item.product_name
+                                : item.name}
+                            </div>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              {item.code && (
+                                <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                                  {item.code}
+                                </span>
+                              )}
+                              {requisitionType === 'medicine' && item.company && (
+                                <span className="text-xs text-muted-foreground truncate">{item.company}</span>
+                              )}
+                            </div>
                           </div>
-                          {item.code && <div className="text-xs text-muted-foreground">{item.code}</div>}
-                          {requisitionType === 'medicine' && item.company && (
-                            <div className="text-xs text-muted-foreground">{item.company}</div>
+                          {(item.base_charge || item.selling_price || item.default_charge || item.total_charge) && (
+                            <Badge variant="secondary" className="shrink-0 font-semibold">
+                              ₹
+                              {item.base_charge ||
+                                item.selling_price ||
+                                item.default_charge ||
+                                item.discounted_charge ||
+                                item.total_charge}
+                            </Badge>
                           )}
                         </div>
-                        {(item.base_charge || item.selling_price || item.default_charge || item.total_charge) && (
-                          <Badge variant="secondary">
-                            ₹
-                            {item.base_charge ||
-                              item.selling_price ||
-                              item.default_charge ||
-                              item.discounted_charge ||
-                              item.total_charge}
-                          </Badge>
-                        )}
-                      </div>
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              )}
-            </CommandList>
-          </Command>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                )}
+              </CommandList>
+            </Command>
+          </div>
 
           {/* Priority Toggles */}
-          <div>
-            <Label className="mb-2 block">Priority</Label>
-            <div className="flex gap-2">
+          <div className="space-y-2">
+            <Label className="text-sm font-semibold">Priority Level</Label>
+            <div className="grid grid-cols-3 gap-2">
               {(['routine', 'urgent', 'stat'] as const).map((p) => (
-                <Button
+                <button
                   key={p}
-                  variant={priority === p ? 'default' : 'outline'}
-                  size="sm"
                   onClick={() => setPriority(p)}
-                  className="capitalize"
+                  className={`
+                    relative px-4 py-2.5 rounded-lg font-medium text-sm
+                    transition-all duration-200 ease-out capitalize
+                    ${
+                      priority === p
+                        ? p === 'routine'
+                          ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/50 scale-105'
+                          : p === 'urgent'
+                          ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/50 scale-105'
+                          : 'bg-red-500 text-white shadow-lg shadow-red-500/50 scale-105'
+                        : 'bg-muted hover:bg-muted/80 text-muted-foreground hover:scale-102'
+                    }
+                  `}
                 >
                   {p}
-                </Button>
+                  {priority === p && (
+                    <div className="absolute inset-0 rounded-lg bg-white/20 animate-pulse" />
+                  )}
+                </button>
               ))}
             </div>
           </div>
 
           {/* Practitioner Notes */}
-          <div>
-            <Label htmlFor="practitioner-notes">Clinical Notes (Optional)</Label>
+          <div className="space-y-2">
+            <Label htmlFor="practitioner-notes" className="text-sm font-semibold">
+              Clinical Notes <span className="text-xs text-muted-foreground font-normal">(Optional)</span>
+            </Label>
             <Textarea
               id="practitioner-notes"
               value={practitionerNotes}
               onChange={(e) => setPractitionerNotes(e.target.value)}
-              placeholder="Add any clinical notes for this requisition..."
+              placeholder="Add clinical context, symptoms, or special instructions..."
+              className="resize-none min-h-[80px] rounded-xl border-2 focus:border-primary/50 transition-colors"
             />
           </div>
         </div>
 
         {/* Draft List */}
-        <div className="flex-1 overflow-y-auto p-4 bg-muted/20">
-          <h3 className="font-semibold mb-2">
-            Draft Requisition ({draftItems.length} {draftItems.length === 1 ? 'item' : 'items'})
-          </h3>
+        <div className="flex-1 overflow-y-auto p-4 bg-gradient-to-b from-muted/10 to-muted/30">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-bold text-sm flex items-center gap-2">
+              <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                <span className="text-primary font-bold">{draftItems.length}</span>
+              </div>
+              Draft Order
+            </h3>
+            {draftItems.length > 0 && (
+              <Badge variant="outline" className="text-xs">
+                {draftItems.length} {draftItems.length === 1 ? 'item' : 'items'}
+              </Badge>
+            )}
+          </div>
+
           {draftItems.length === 0 ? (
-            <div className="text-center text-muted-foreground py-8">
-              {REQUISITION_TYPE_ICONS[requisitionType] &&
-                React.cloneElement(REQUISITION_TYPE_ICONS[requisitionType] as React.ReactElement, {
-                  className: 'mx-auto h-8 w-8 mb-2',
-                })}
-              <p className="text-sm">Items you add will appear here.</p>
+            <div className="text-center py-12 px-4">
+              <div className="mx-auto mb-4 w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
+                {REQUISITION_TYPE_ICONS[requisitionType] &&
+                  React.cloneElement(REQUISITION_TYPE_ICONS[requisitionType] as React.ReactElement, {
+                    className: 'h-7 w-7 text-primary',
+                  })}
+              </div>
+              <p className="text-sm font-medium text-foreground mb-1">No items added yet</p>
+              <p className="text-xs text-muted-foreground">
+                Search and select items to build your requisition
+              </p>
             </div>
           ) : (
-            <div className="space-y-3">
-              {draftItems.map((item) => (
-                <Card key={item.id} className="bg-white">
+            <div className="space-y-2">
+              {draftItems.map((item, index) => (
+                <Card
+                  key={item.id}
+                  className="bg-white border-2 hover:border-primary/30 transition-all duration-200 hover:shadow-md group"
+                >
                   <CardContent className="p-3">
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex-1">
-                        <p className="font-semibold">{item.item_name}</p>
-                        {item.item_code && <p className="text-xs text-muted-foreground">{item.item_code}</p>}
+                    <div className="flex items-start justify-between gap-3 mb-2">
+                      <div className="flex items-start gap-2 flex-1 min-w-0">
+                        <div className="mt-0.5 w-6 h-6 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
+                          <span className="text-xs font-bold text-primary">{index + 1}</span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-sm truncate">{item.item_name}</p>
+                          {item.item_code && (
+                            <p className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded inline-block mt-1">
+                              {item.item_code}
+                            </p>
+                          )}
+                        </div>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7"
+                      <button
                         onClick={() => handleRemoveDraftItem(item.id)}
+                        className="shrink-0 h-7 w-7 rounded-lg hover:bg-red-50 flex items-center justify-center transition-colors group/btn"
                       >
-                        <Trash2 className="h-4 w-4 text-red-500" />
-                      </Button>
+                        <Trash2 className="h-4 w-4 text-muted-foreground group-hover/btn:text-red-500 transition-colors" />
+                      </button>
                     </div>
 
                     {/* Quantity controls for non-investigation items */}
                     {requisitionType !== 'investigation' && (
-                      <div className="flex items-center gap-2 mt-2">
-                        <Label className="text-xs">Quantity:</Label>
-                        <div className="flex items-center gap-1">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-6 w-6 p-0"
-                            onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}
-                          >
-                            -
-                          </Button>
-                          <Input
-                            type="number"
-                            value={item.quantity}
-                            onChange={(e) => handleUpdateQuantity(item.id, parseInt(e.target.value) || 1)}
-                            className="h-6 w-16 text-center text-sm"
-                            min={1}
-                          />
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-6 w-6 p-0"
-                            onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
-                          >
-                            +
-                          </Button>
+                      <div className="flex items-center justify-between gap-3 mt-3 pt-3 border-t">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-medium text-muted-foreground">Qty:</span>
+                          <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-0.5">
+                            <button
+                              onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}
+                              className="h-7 w-7 rounded-md hover:bg-background flex items-center justify-center transition-colors font-semibold"
+                            >
+                              −
+                            </button>
+                            <input
+                              type="number"
+                              value={item.quantity}
+                              onChange={(e) => handleUpdateQuantity(item.id, parseInt(e.target.value) || 1)}
+                              className="h-7 w-12 text-center text-sm font-semibold bg-transparent border-none focus:outline-none"
+                              min={1}
+                            />
+                            <button
+                              onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
+                              className="h-7 w-7 rounded-md hover:bg-background flex items-center justify-center transition-colors font-semibold"
+                            >
+                              +
+                            </button>
+                          </div>
                         </div>
                         {item.unit_price && (
-                          <span className="text-xs text-muted-foreground ml-auto">
-                            ₹{(parseFloat(item.unit_price) * item.quantity).toFixed(2)}
-                          </span>
+                          <div className="text-right">
+                            <div className="text-xs text-muted-foreground">Total</div>
+                            <div className="text-sm font-bold text-primary">
+                              ₹{(parseFloat(item.unit_price) * item.quantity).toFixed(2)}
+                            </div>
+                          </div>
                         )}
                       </div>
                     )}
                   </CardContent>
                 </Card>
               ))}
+
+              {/* Total Summary */}
+              {draftItems.some(item => item.unit_price) && (
+                <div className="sticky bottom-0 mt-4 p-3 bg-gradient-to-r from-primary/10 to-primary/5 rounded-xl border-2 border-primary/20">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-sm">Estimated Total</span>
+                    <span className="text-lg font-bold text-primary">
+                      ₹
+                      {draftItems
+                        .reduce((sum, item) => {
+                          const price = item.unit_price ? parseFloat(item.unit_price) : 0;
+                          return sum + price * item.quantity;
+                        }, 0)
+                        .toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

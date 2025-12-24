@@ -14,7 +14,7 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, LayoutGrid, FileText } from 'lucide-react';
+import { LayoutGrid, FileText, Plus } from 'lucide-react';
 
 import { OpdVisit } from '@/types/opdVisit.types';
 import { TemplateResponse, Template, ResponseTemplate } from '@/types/opdTemplate.types';
@@ -35,6 +35,8 @@ interface ConsultationBoardProps {
   isLoadingTemplates: boolean;
   onViewResponse: (response: TemplateResponse) => void;
   onRefresh: () => void;
+  templateDrawerOpen: boolean;
+  onTemplateDrawerChange: (open: boolean) => void;
 }
 
 export const ConsultationBoard: React.FC<ConsultationBoardProps> = ({
@@ -47,10 +49,11 @@ export const ConsultationBoard: React.FC<ConsultationBoardProps> = ({
   isLoadingTemplates,
   onViewResponse,
   onRefresh,
+  templateDrawerOpen,
+  onTemplateDrawerChange,
 }) => {
   const navigate = useNavigate();
 
-  const [templateDrawerOpen, setTemplateDrawerOpen] = useState(false);
   const [saveAsTemplateDialog, setSaveAsTemplateDialog] = useState(false);
   const [copyFromTemplateDialog, setCopyFromTemplateDialog] = useState(false);
 
@@ -179,80 +182,71 @@ export const ConsultationBoard: React.FC<ConsultationBoardProps> = ({
 
   return (
     <div className="h-full flex flex-col">
-      {/* Header with Action Button */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-primary/10 rounded-lg">
-            <LayoutGrid className="h-5 w-5 text-primary" />
+      {/* Compact Header */}
+      <div className="flex items-center px-4 py-3 mb-4">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="p-1.5 sm:p-2 bg-primary/10 rounded-lg">
+            <LayoutGrid className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
           </div>
           <div>
-            <h2 className="text-xl font-bold">Clinical Notes Board</h2>
-            <p className="text-sm text-muted-foreground">
+            <h2 className="text-base sm:text-lg font-bold">Clinical Notes</h2>
+            <p className="text-xs text-muted-foreground hidden sm:block">
               {responses.length} {responses.length === 1 ? 'note' : 'notes'} •{' '}
               {Object.keys(responsesByTemplate).length}{' '}
               {Object.keys(responsesByTemplate).length === 1 ? 'template' : 'templates'}
             </p>
           </div>
         </div>
-
-        <Button
-          onClick={() => setTemplateDrawerOpen(true)}
-          className="bg-primary hover:bg-primary/90"
-          disabled={!objectId}
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Add Notes
-        </Button>
       </div>
 
       {/* Board Content */}
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto px-4">
         {isLoadingResponses ? (
           // Loading State
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="space-y-3 p-4 border rounded-lg">
-                <Skeleton className="h-6 w-3/4" />
+              <div key={i} className="space-y-2 p-3 border rounded-lg">
+                <Skeleton className="h-5 w-3/4" />
                 <Skeleton className="h-4 w-full" />
                 <Skeleton className="h-4 w-2/3" />
-                <Skeleton className="h-20 w-full" />
+                <Skeleton className="h-16 w-full" />
               </div>
             ))}
           </div>
         ) : responses.length === 0 ? (
           // Empty State
-          <div className="flex items-center justify-center h-full min-h-[400px]">
-            <div className="text-center space-y-6 max-w-md">
+          <div className="flex items-center justify-center h-full min-h-[300px] sm:min-h-[400px]">
+            <div className="text-center space-y-4 sm:space-y-6 max-w-md px-4">
               <div className="flex justify-center">
                 <div className="relative">
                   <div className="absolute inset-0 bg-primary/20 rounded-full blur-2xl"></div>
-                  <div className="relative p-6 bg-gradient-to-br from-primary/10 to-primary/5 rounded-full">
-                    <FileText className="h-16 w-16 text-primary" />
+                  <div className="relative p-4 sm:p-6 bg-gradient-to-br from-primary/10 to-primary/5 rounded-full">
+                    <FileText className="h-12 w-12 sm:h-16 sm:w-16 text-primary" />
                   </div>
                 </div>
               </div>
               <div className="space-y-2">
-                <h3 className="text-2xl font-bold">No Clinical Notes Yet</h3>
-                <p className="text-muted-foreground">
+                <h3 className="text-xl sm:text-2xl font-bold">No Clinical Notes Yet</h3>
+                <p className="text-sm sm:text-base text-muted-foreground">
                   {objectId
-                    ? 'Start documenting this consultation by adding your first clinical note. Choose from templates like OPD Notes, IPD Notes, or Discharge Summaries.'
-                    : 'No active admission found for this patient. You cannot add IPD notes.'}
+                    ? 'Start documenting by adding your first note'
+                    : 'No active encounter found'}
                 </p>
               </div>
               <Button
-                onClick={() => setTemplateDrawerOpen(true)}
-                size="lg"
+                onClick={() => onTemplateDrawerChange(true)}
+                size="default"
                 className="bg-primary hover:bg-primary/90"
                 disabled={!objectId}
               >
-                <Plus className="mr-2 h-5 w-5" />
+                <Plus className="mr-2 h-4 w-4" />
                 Add First Note
               </Button>
             </div>
           </div>
         ) : (
           // Grid View of Response Cards
-          <div className="space-y-8">
+          <div className="space-y-6 sm:space-y-8 pb-4">
             {Object.entries(responsesByTemplate).map(([templateId, templateResponses]) => {
               const template = templates.find((t) => t.id === Number(templateId));
               const sortedResponses = [...templateResponses].sort(
@@ -260,20 +254,20 @@ export const ConsultationBoard: React.FC<ConsultationBoardProps> = ({
               );
 
               return (
-                <div key={templateId} className="space-y-4">
+                <div key={templateId} className="space-y-3 sm:space-y-4">
                   {/* Template Header */}
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 sm:gap-3">
                     <div className="h-px flex-1 bg-border"></div>
-                    <div className="flex items-center gap-2 px-4 py-2 bg-muted/50 rounded-full">
-                      <FileText className="h-4 w-4 text-primary" />
-                      <span className="font-semibold text-sm">{template?.name || `Template ${templateId}`}</span>
+                    <div className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 bg-muted/50 rounded-full">
+                      <FileText className="h-3 w-3 sm:h-4 sm:w-4 text-primary" />
+                      <span className="font-semibold text-xs sm:text-sm">{template?.name || `Template ${templateId}`}</span>
                       <span className="text-xs text-muted-foreground">({sortedResponses.length})</span>
                     </div>
                     <div className="h-px flex-1 bg-border"></div>
                   </div>
 
                   {/* Response Cards Grid */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
                     {sortedResponses.map((response) => (
                       <ResponseCard
                         key={response.id}
@@ -298,7 +292,7 @@ export const ConsultationBoard: React.FC<ConsultationBoardProps> = ({
       {/* Template Selection Drawer */}
       <TemplateSelectionDrawer
         open={templateDrawerOpen}
-        onOpenChange={setTemplateDrawerOpen}
+        onOpenChange={onTemplateDrawerChange}
         templates={templates}
         isLoading={isLoadingTemplates}
         onSelectTemplate={handleSelectTemplate}

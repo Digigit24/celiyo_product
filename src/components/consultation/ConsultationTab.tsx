@@ -1,14 +1,11 @@
 // src/components/consultation/ConsultationTab.tsx
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import {
   Select,
@@ -17,9 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
-import { Loader2, Save, Download, Printer, X, ArrowLeft, Maximize2, Pencil, Building2, Stethoscope, Microscope } from 'lucide-react';
+import { Loader2, Save, Download, Printer, Building2, Stethoscope } from 'lucide-react';
 import { OpdVisit } from '@/types/opdVisit.types';
 import { toast } from 'sonner';
 import { useOPDTemplate } from '@/hooks/useOPDTemplate';
@@ -33,15 +28,14 @@ import {
 } from '@/types/opdTemplate.types';
 import { ConsultationBoard } from './ConsultationBoard';
 import { DiagnosticRequisitionSidebar } from './DiagnosticRequisitionSidebar';
-import { DiagnosticSummaryCard } from './DiagnosticSummaryCard';
 import { FloatingActionPanel } from './FloatingActionPanel';
+import { SideDrawer } from '@/components/SideDrawer';
 
 interface ConsultationTabProps {
   visit: OpdVisit;
 }
 
 export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
-  const navigate = useNavigate();
   const {
     useTemplates,
     useTemplate,
@@ -58,14 +52,12 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
 
   const [selectedResponse, setSelectedResponse] = useState<TemplateResponse | null>(null);
   const [formData, setFormData] = useState<Record<string, any>>({});
-  const [activeSubTab, setActiveSubTab] = useState<'fields' | 'preview' | 'canvas'>('fields');
-  const [mode, setMode] = useState<'edit' | 'preview'>('edit');
+  const [activeSubTab, setActiveSubTab] = useState<'fields' | 'preview'>('fields');
   const [isSaving, setIsSaving] = useState(false);
   const [responseDrawerOpen, setResponseDrawerOpen] = useState(false);
   const [encounterType, setEncounterType] = useState<'visit' | 'admission'>('visit');
   const [requisitionSidebarOpen, setRequisitionSidebarOpen] = useState(false);
   const [templateDrawerOpen, setTemplateDrawerOpen] = useState(false);
-  const [previewDrawerOpen, setPreviewDrawerOpen] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
 
   // Fetch active admission for the patient
@@ -210,6 +202,212 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
     if (optionCount <= 6) return 'grid-cols-3';
     return 'grid-cols-4';
   };
+
+  const handlePrint = useCallback(() => {
+    if (!previewRef.current) return;
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      toast.error('Please allow popups to print the preview');
+      return;
+    }
+
+    const patient = visit.patient_details;
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Consultation - ${patient?.full_name || 'Patient'}</title>
+          <meta charset="UTF-8">
+          <style>
+            * {
+              margin: 0;
+              padding: 0;
+              box-sizing: border-box;
+            }
+
+            body {
+              font-family: Arial, sans-serif;
+              margin: 0;
+              padding: 0;
+              background: white;
+            }
+
+            .preview-container {
+              background-color: #ffffff !important;
+              color: #000000 !important;
+              width: 210mm;
+              min-height: 297mm;
+              margin: 0 auto;
+              display: flex;
+              flex-direction: column;
+            }
+
+            .preview-container * {
+              color: inherit;
+            }
+
+            .preview-container .text-gray-700 { color: #374151 !important; }
+            .preview-container .text-gray-600 { color: #4b5563 !important; }
+            .preview-container .text-gray-400 { color: #9ca3af !important; }
+
+            .preview-container .border-t,
+            .preview-container .border-b { border-color: #e5e7eb !important; }
+
+            .preview-container .border-dotted { border-color: #9ca3af !important; }
+
+            .flex { display: flex; }
+            .flex-col { flex-direction: column; }
+            .flex-1 { flex: 1; }
+            .flex-shrink-0 { flex-shrink: 0; }
+            .items-start { align-items: flex-start; }
+            .items-center { align-items: center; }
+            .items-end { align-items: flex-end; }
+            .items-baseline { align-items: baseline; }
+            .justify-between { justify-content: space-between; }
+            .gap-1 { gap: 0.25rem; }
+            .gap-2 { gap: 0.5rem; }
+            .gap-4 { gap: 1rem; }
+            .gap-x-4 { column-gap: 1rem; }
+            .gap-x-8 { column-gap: 2rem; }
+            .gap-y-1 { row-gap: 0.25rem; }
+            .gap-y-2 { row-gap: 0.5rem; }
+            .space-y-2 > * + * { margin-top: 0.5rem; }
+            .grid { display: grid; }
+            .grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .grid-cols-12 { grid-template-columns: repeat(12, minmax(0, 1fr)); }
+            .col-span-3 { grid-column: span 3 / span 3; }
+            .col-span-4 { grid-column: span 4 / span 4; }
+            .col-span-6 { grid-column: span 6 / span 6; }
+            .col-span-12 { grid-column: span 12 / span 12; }
+            .px-8 { padding-left: 2rem; padding-right: 2rem; }
+            .py-1 { padding-top: 0.25rem; padding-bottom: 0.25rem; }
+            .py-4 { padding-top: 1rem; padding-bottom: 1rem; }
+            .py-6 { padding-top: 1.5rem; padding-bottom: 1.5rem; }
+            .py-8 { padding-top: 2rem; padding-bottom: 2rem; }
+            .pb-0\\.5 { padding-bottom: 0.125rem; }
+            .pb-1 { padding-bottom: 0.25rem; }
+            .ml-2 { margin-left: 0.5rem; }
+            .mb-2 { margin-bottom: 0.5rem; }
+            .mb-3 { margin-bottom: 0.75rem; }
+            .mt-1 { margin-top: 0.25rem; }
+            .max-w-md { max-width: 28rem; }
+            .min-w-0 { min-width: 0; }
+            .min-h-\\[32px\\] { min-height: 32px; }
+            .w-28 { width: 7rem; }
+            .h-16 { height: 4rem; }
+            .w-16 { width: 4rem; }
+            .text-xs { font-size: 0.75rem; line-height: 1rem; }
+            .text-sm { font-size: 0.875rem; line-height: 1.25rem; }
+            .text-base { font-size: 1rem; line-height: 1.5rem; }
+            .text-lg { font-size: 1.125rem; line-height: 1.75rem; }
+            .text-xl { font-size: 1.25rem; line-height: 1.75rem; }
+            .font-bold { font-weight: 700; }
+            .font-semibold { font-weight: 600; }
+            .text-center { text-align: center; }
+            .text-right { text-align: right; }
+            .leading-tight { line-height: 1.25; }
+            .whitespace-pre-wrap { white-space: pre-wrap; }
+            .break-words { word-wrap: break-word; }
+            .border-b { border-bottom-width: 1px; }
+            .border-t { border-top-width: 1px; }
+            .border-b-4 { border-bottom-width: 4px; }
+            .border-t-4 { border-top-width: 4px; }
+            .border-dotted { border-style: dotted; }
+            .border-gray-400 { border-color: #9ca3af; }
+            .opacity-90 { opacity: 0.9; }
+            .overflow-auto { overflow: auto; }
+            .object-contain { object-fit: contain; }
+
+            @media print {
+              @page {
+                size: A4;
+                margin: 0;
+              }
+
+              * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                color-adjust: exact !important;
+              }
+
+              body {
+                margin: 0 !important;
+                padding: 0 !important;
+              }
+
+              .preview-container {
+                width: 210mm !important;
+                margin: 0 !important;
+                box-shadow: none !important;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          ${previewRef.current.outerHTML}
+          <script>
+            window.onload = function() {
+              window.print();
+              setTimeout(() => window.close(), 100);
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  }, [visit]);
+
+  const handleDownload = useCallback(async () => {
+    if (!previewRef.current) return;
+
+    try {
+      toast.info('Generating PDF... Please wait.');
+
+      const html2canvas = (await import('html2canvas')).default;
+      const { jsPDF } = await import('jspdf');
+
+      const patient = visit.patient_details;
+
+      const canvas = await html2canvas(previewRef.current, {
+        scale: 3,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff',
+        windowWidth: 794,
+        windowHeight: 1123,
+      });
+
+      const pdfWidth = 210;
+      const pdfHeight = 297;
+      const imgWidth = pdfWidth;
+      const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+
+      const pdf = new jsPDF('p', 'mm', 'a4');
+
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pdfHeight;
+
+      while (heightLeft > 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pdfHeight;
+      }
+
+      const fileName = `consultation_${patient?.patient_id || 'patient'}_${visit.visit_number}_${new Date().getTime()}.pdf`;
+      pdf.save(fileName);
+
+      toast.success('PDF downloaded successfully!');
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast.error('Failed to generate PDF. Please try again.');
+    }
+  }, [visit]);
 
   const renderField = (field: TemplateField) => {
     const fieldId = String(field.id);
@@ -407,20 +605,22 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
         />
       </div>
 
-      {/* Response Detail Side Drawer */}
-      <Sheet open={responseDrawerOpen} onOpenChange={(open) => !open && handleCloseResponseDrawer()}>
-        <SheetContent side="right" className="w-full sm:max-w-3xl p-0 flex flex-col">
-          <SheetHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-3 border-b">
-            <SheetTitle className="text-lg sm:text-xl">
-              {templateData?.name || 'Clinical Note'}
-            </SheetTitle>
-            <SheetDescription className="text-xs sm:text-sm">
-              #{selectedResponse?.response_sequence} • {selectedResponse?.status} • Filled by: {filledByName}
-            </SheetDescription>
-          </SheetHeader>
-
+      {/* Response Detail Side Drawer (resizable) */}
+      <SideDrawer
+        open={responseDrawerOpen}
+        onOpenChange={(open) => (open ? setResponseDrawerOpen(true) : handleCloseResponseDrawer())}
+        title={templateData?.name || 'Clinical Note'}
+        description={
+          selectedResponse
+            ? `#${selectedResponse.response_sequence} - ${selectedResponse.status || 'Draft'} - Filled by: ${filledByName}`
+            : undefined
+        }
+        size="xl"
+        storageKey="consultation-response-drawer"
+      >
+        <div className="flex flex-col gap-4">
           {/* Compact Tab Navigation */}
-          <div className="border-b px-4 sm:px-6">
+          <div className="border-b -mx-4 sm:-mx-6 px-4 sm:px-6 pb-1">
             <div className="flex gap-1">
               <button
                 onClick={() => setActiveSubTab('fields')}
@@ -433,23 +633,23 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
                 Form Fields
               </button>
               <button
-                onClick={() => setActiveSubTab('canvas')}
+                onClick={() => setActiveSubTab('preview')}
                 className={`px-3 sm:px-4 py-2 text-sm font-medium transition-colors ${
-                  activeSubTab === 'canvas'
+                  activeSubTab === 'preview'
                     ? 'border-b-2 border-primary text-primary'
                     : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
-                Canvas
+                Preview
               </button>
             </div>
           </div>
 
           {/* Tab Content */}
-          <div className="flex-1 overflow-auto px-4 sm:px-6 py-4">
+          <div className="flex-1 overflow-auto">
             {/* Fields Tab */}
             {activeSubTab === 'fields' && (
-              <div className="space-y-4">
+              <div className="space-y-4 pt-4">
                 <div className="flex justify-end sticky top-0 bg-background z-10 pb-2">
                   <Button onClick={handleSave} disabled={isSaving} size="sm">
                     {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
@@ -462,35 +662,261 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
               </div>
             )}
 
-            {/* Canvas Tab */}
-            {activeSubTab === 'canvas' && selectedResponse && (
-              <div className="h-full flex items-center justify-center">
-                <div className="text-center space-y-4 p-4 sm:p-8">
-                  <div className="flex justify-center">
-                    <div className="p-3 sm:p-4 bg-primary/10 rounded-full">
-                      <Pencil className="w-8 h-8 sm:w-12 sm:h-12 text-primary" />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <h3 className="text-lg sm:text-xl font-semibold">Digital Canvas</h3>
-                    <p className="text-xs sm:text-sm text-muted-foreground max-w-md">
-                      Open full-screen canvas for drawing and annotations
-                    </p>
-                  </div>
-                  <Button
-                    onClick={() => navigate(`/opd/consultation/${visit.id}/canvas/${selectedResponse.id}`)}
-                    className="mt-4"
-                    size="sm"
-                  >
-                    <Maximize2 className="mr-2 h-4 w-4" />
-                    Open Canvas
+            {/* Preview Tab */}
+            {activeSubTab === 'preview' && selectedResponse && (
+              <div className="space-y-4 pt-4">
+                <div className="flex justify-end items-center gap-2 print:hidden">
+                  <Button variant="outline" size="sm" onClick={handlePrint}>
+                    <Printer className="h-4 w-4 mr-2" />
+                    Print
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={handleDownload}>
+                    <Download className="h-4 w-4 mr-2" />
+                    Download PDF
                   </Button>
                 </div>
+
+                <div className="overflow-auto">
+                  <div
+                    ref={previewRef}
+                    className="preview-container mx-auto bg-white shadow-lg print:shadow-none flex flex-col"
+                    style={{ width: '210mm', minHeight: '297mm' }}
+                  >
+                    <div
+                      className="border-b-4 py-8"
+                      style={{
+                        borderColor: tenantSettings.header_bg_color || '#3b82f6',
+                        background: tenantSettings.header_bg_color || '#3b82f6',
+                        color: tenantSettings.header_text_color || '#ffffff'
+                      }}
+                    >
+                      <div className="flex justify-between items-start px-8">
+                        <div className="flex items-start gap-4">
+                          {tenantSettings.logo && (
+                            <div className="flex-shrink-0">
+                              <img
+                                src={tenantSettings.logo}
+                                alt="Logo"
+                                className="h-16 w-16 object-contain"
+                              />
+                            </div>
+                          )}
+                          <div className="max-w-md">
+                            <h1 className="text-xl font-bold">
+                              {tenantData?.name || 'Medical Center'}
+                            </h1>
+                            <p className="text-sm mt-1 opacity-90 whitespace-pre-wrap break-words">
+                              {tenantSettings.address || 'Excellence in Healthcare'}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right text-sm">
+                          <p className="font-semibold">Contact Information</p>
+                          {tenantSettings.contact_phone && (
+                            <p className="opacity-90">Phone: {tenantSettings.contact_phone}</p>
+                          )}
+                          {tenantSettings.contact_email && (
+                            <p className="opacity-90">Email: {tenantSettings.contact_email}</p>
+                          )}
+                          {tenantSettings.website_url && (
+                            <p className="opacity-90">{tenantSettings.website_url}</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="px-8 py-4 border-t border-b flex-shrink-0">
+                      <h2 className="text-lg font-bold mb-3 text-center">CONSULTATION RECORD</h2>
+
+                      <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm">
+                        <div className="flex items-end">
+                          <span className="font-semibold w-28 flex-shrink-0">Patient Name:</span>
+                          <span className="flex-1 border-b border-dotted border-gray-400 print:border-0 pb-0.5 ml-2">{visit.patient_details?.full_name || 'N/A'}</span>
+                        </div>
+                        <div className="flex items-end">
+                          <span className="font-semibold w-28 flex-shrink-0">Patient ID:</span>
+                          <span className="flex-1 border-b border-dotted border-gray-400 print:border-0 pb-0.5 ml-2">{visit.patient_details?.patient_id || 'N/A'}</span>
+                        </div>
+                        <div className="flex items-end">
+                          <span className="font-semibold w-28 flex-shrink-0">Age/Gender:</span>
+                          <span className="flex-1 border-b border-dotted border-gray-400 print:border-0 pb-0.5 ml-2">
+                            {visit.patient_details?.age || 'N/A'} years / {visit.patient_details?.gender || 'N/A'}
+                          </span>
+                        </div>
+                        <div className="flex items-end">
+                          <span className="font-semibold w-28 flex-shrink-0">Visit Date:</span>
+                          <span className="flex-1 border-b border-dotted border-gray-400 print:border-0 pb-0.5 ml-2">{visit.visit_date || 'N/A'}</span>
+                        </div>
+                        <div className="flex items-end">
+                          <span className="font-semibold w-28 flex-shrink-0">Doctor:</span>
+                          <span className="flex-1 border-b border-dotted border-gray-400 print:border-0 pb-0.5 ml-2">{visit.doctor_details?.full_name || 'N/A'}</span>
+                        </div>
+                        <div className="flex items-end">
+                          <span className="font-semibold w-28 flex-shrink-0">Visit Number:</span>
+                          <span className="flex-1 border-b border-dotted border-gray-400 print:border-0 pb-0.5 ml-2">{visit.visit_number || 'N/A'}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="px-8 py-4 flex-1 overflow-auto border-b">
+                      {fieldsData && fieldsData.length > 0 ? (
+                        <div className="space-y-2">
+                          <h3 className="text-base font-bold pb-1 mb-2">
+                            {templates.find(t => t.id === selectedResponse.template)?.name || templateData?.name}
+                          </h3>
+
+                          <div className="grid grid-cols-12 gap-x-4 gap-y-1">
+                            {fieldsData
+                              .sort((a, b) => a.display_order - b.display_order)
+                              .map((field) => {
+                                const value = formData[field.id];
+                                if (!value || (Array.isArray(value) && value.length === 0) || value === false) return null;
+
+                                let colSpan = 'col-span-6';
+                                if (field.field_type === 'textarea' || (typeof value === 'string' && value.length > 50)) {
+                                  colSpan = 'col-span-12';
+                                } else if (
+                                  field.field_type === 'number' ||
+                                  field.field_type === 'date' ||
+                                  field.field_type === 'datetime' ||
+                                  field.field_label.toLowerCase().includes('age') ||
+                                  (typeof value === 'string' && value.length <= 10)
+                                ) {
+                                  colSpan = 'col-span-3';
+                                } else if (typeof value === 'string' && value.length <= 25) {
+                                  colSpan = 'col-span-4';
+                                }
+
+                                let displayValue: any = value;
+                                if (Array.isArray(value) && field.options && field.options.length > 0) {
+                                  const labels = value
+                                    .map((id: number) => {
+                                      const option = field.options?.find(opt => opt.id === id);
+                                      return option ? option.option_label : String(id);
+                                    })
+                                    .filter(Boolean);
+                                  displayValue = labels.join(', ');
+                                } else if (typeof value === 'number' && field.options && field.options.length > 0) {
+                                  const option = field.options.find(opt => opt.id === value);
+                                  displayValue = option ? option.option_label : String(value);
+                                } else if (typeof value === 'boolean') {
+                                  displayValue = value ? 'Yes' : 'No';
+                                }
+
+                                return (
+                                  <div
+                                    key={field.id}
+                                    className={`${colSpan} flex items-baseline gap-1 py-1`}
+                                  >
+                                    <span className="text-xs font-semibold text-gray-700 flex-shrink-0">
+                                      {field.field_label}:
+                                    </span>
+                                    <span className={`flex-1 border-b border-dotted border-gray-400 print:border-0 text-sm min-w-0 leading-tight ${colSpan === 'col-span-12' ? 'min-h-[32px]' : ''}`}>
+                                      {displayValue}
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                          </div>
+
+                          {fieldsData.every(field => {
+                            const value = formData[field.id];
+                            return !value || (Array.isArray(value) && value.length === 0) || value === false;
+                          }) && (
+                            <div className="text-center py-8 text-gray-400">
+                              <p className="text-sm">No data recorded</p>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="text-center py-8 text-gray-400">
+                          <p className="text-sm">No template selected</p>
+                        </div>
+                      )}
+                    </div>
+
+                    <div
+                      className="border-t-4 py-6 flex-shrink-0"
+                      style={{
+                        borderColor: tenantSettings.footer_bg_color || '#3b82f6',
+                        background: tenantSettings.footer_bg_color || '#3b82f6',
+                        color: tenantSettings.footer_text_color || '#ffffff'
+                      }}
+                    >
+                      <div className="flex justify-between items-center text-xs px-8">
+                        <div>
+                          <p className="font-semibold">{tenantData?.name || 'Medical Center'}</p>
+                          {tenantSettings.address && (
+                            <>
+                              {tenantSettings.address.split('\n').map((line: string, index: number) => (
+                                <p key={index} className="opacity-90">{line}</p>
+                              ))}
+                            </>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          <p className="opacity-90">This is an official medical document</p>
+                          <p className="opacity-90">Generated on: {new Date().toLocaleDateString()} at {new Date().toLocaleTimeString()}</p>
+                          <p className="font-semibold mt-1">Confidential Medical Record</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <style>{`
+                  .preview-container {
+                    background-color: #ffffff !important;
+                    color: #000000 !important;
+                  }
+
+                  .preview-container * {
+                    color: inherit;
+                  }
+
+                  .preview-container .text-gray-700 { color: #374151 !important; }
+                  .preview-container .text-gray-600 { color: #4b5563 !important; }
+                  .preview-container .text-gray-400 { color: #9ca3af !important; }
+                  .preview-container .border-t,
+                  .preview-container .border-b { border-color: #e5e7eb !important; }
+                  .preview-container .border-dotted { border-color: #9ca3af !important; }
+                  .preview-container .border-gray-300 { border-color: #d1d5db !important; }
+                  .preview-container .border-gray-400 { border-color: #9ca3af !important; }
+
+                  @media print {
+                    @page {
+                      size: A4;
+                      margin: 0;
+                    }
+
+                    * {
+                      -webkit-print-color-adjust: exact !important;
+                      print-color-adjust: exact !important;
+                      color-adjust: exact !important;
+                    }
+
+                    body * { visibility: hidden; }
+                    .preview-container,
+                    .preview-container * { visibility: visible; }
+
+                    .preview-container {
+                      position: absolute;
+                      left: 0;
+                      top: 0;
+                      width: 210mm !important;
+                      margin: 0 !important;
+                      box-shadow: none !important;
+                    }
+
+                    .print\:hidden { display: none !important; }
+                    .print\:shadow-none { box-shadow: none !important; }
+                  }
+                `}</style>
               </div>
             )}
           </div>
-        </SheetContent>
-      </Sheet>
+        </div>
+      </SideDrawer>
 
       {/* Floating Action Panel */}
       <FloatingActionPanel

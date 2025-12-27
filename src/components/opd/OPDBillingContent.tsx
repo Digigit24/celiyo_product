@@ -483,7 +483,7 @@ export const OPDBillingContent: React.FC<OPDBillingContentProps> = ({ visit }) =
 
   // Load bill items from existing bill
   useEffect(() => {
-    if (existingBill && !billsLoading) {
+    if (existingBill && !billsLoading && visit) {
       // ALWAYS sync items from existing bill (they come from API with updated totals)
       setBillItems(existingBill.items || []);
 
@@ -499,16 +499,20 @@ export const OPDBillingContent: React.FC<OPDBillingContentProps> = ({ visit }) =
         remarks: existingBill.remarks || '',
       }));
 
-      // Extract consultation fee from bill items
-      const consultationItem = existingBill.items?.find(
-        item => item.source === 'Consultation' || item.item_name === 'Consultation Fee'
-      );
-      if (consultationItem) {
-        setOpdFormData((prev) => ({
-          ...prev,
-          opdAmount: consultationItem.unit_price || '0',
-        }));
-      }
+      // ALWAYS use visit's consultation fee as source of truth (from API)
+      // This ensures the UI shows the current consultation fee for the visit
+      const isFollowUp = visit.visit_type === 'follow_up';
+      const opdAmount = visit.consultation_fee ||
+        (visit.doctor_details
+          ? isFollowUp
+            ? visit.doctor_details.follow_up_fee
+            : visit.doctor_details.consultation_fee
+          : '0.00');
+
+      setOpdFormData((prev) => ({
+        ...prev,
+        opdAmount: opdAmount || '0',
+      }));
 
       // Load billing data from API response (these are calculated server-side)
       setBillingData((prev) => ({
@@ -523,7 +527,7 @@ export const OPDBillingContent: React.FC<OPDBillingContentProps> = ({ visit }) =
       }));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [existingBill, billsLoading]);
+  }, [existingBill, billsLoading, visit]);
 
   // Sync consultation fee from opdAmount to bill items
   useEffect(() => {

@@ -439,12 +439,14 @@ export const OPDBillingContent: React.FC<OPDBillingContentProps> = ({ visit }) =
           new Date().getDate(),
         ).padStart(2, '0')}/001`;
 
+      // Use visit's consultation fee if set, otherwise fall back to doctor's default fee
       const isFollowUp = visit.visit_type === 'follow_up';
-      const opdAmount = visit.doctor_details
-        ? isFollowUp
-          ? visit.doctor_details.follow_up_fee
-          : visit.doctor_details.consultation_fee
-        : '0.00';
+      const opdAmount = visit.consultation_fee ||
+        (visit.doctor_details
+          ? isFollowUp
+            ? visit.doctor_details.follow_up_fee
+            : visit.doctor_details.consultation_fee
+          : '0.00');
 
       let chargeType = '';
       if (isFollowUp) chargeType = 'follow_up';

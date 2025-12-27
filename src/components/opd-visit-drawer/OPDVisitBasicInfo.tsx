@@ -103,6 +103,8 @@ const OPDVisitBasicInfo = forwardRef<OPDVisitBasicInfoHandle, OPDVisitBasicInfoP
     const [showInlinePatientForm, setShowInlinePatientForm] = useState(false);
     const [inlinePatientData, setInlinePatientData] = useState({
       first_name: '',
+      last_name: '',
+      date_of_birth: '',
       gender: '' as 'male' | 'female' | 'other' | '',
       mobile_primary: '',
     });
@@ -344,8 +346,11 @@ const OPDVisitBasicInfo = forwardRef<OPDVisitBasicInfoHandle, OPDVisitBasicInfoP
       try {
         const newPatient = await createPatient({
           first_name: inlinePatientData.first_name.trim(),
+          last_name: inlinePatientData.last_name.trim() || undefined,
+          date_of_birth: inlinePatientData.date_of_birth || undefined,
           gender: inlinePatientData.gender,
           mobile_primary: inlinePatientData.mobile_primary.trim(),
+          create_user: false,
         } as PatientCreateData);
 
         toast.success('Patient created successfully');
@@ -359,6 +364,8 @@ const OPDVisitBasicInfo = forwardRef<OPDVisitBasicInfoHandle, OPDVisitBasicInfoP
         // Reset and hide form
         setInlinePatientData({
           first_name: '',
+          last_name: '',
+          date_of_birth: '',
           gender: '',
           mobile_primary: '',
         });
@@ -498,6 +505,8 @@ const OPDVisitBasicInfo = forwardRef<OPDVisitBasicInfoHandle, OPDVisitBasicInfoP
                             setShowInlinePatientForm(false);
                             setInlinePatientData({
                               first_name: '',
+                              last_name: '',
+                              date_of_birth: '',
                               gender: '',
                               mobile_primary: '',
                             });
@@ -508,16 +517,47 @@ const OPDVisitBasicInfo = forwardRef<OPDVisitBasicInfoHandle, OPDVisitBasicInfoP
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-3">
-                      {/* First Name */}
+                      {/* Name Fields - First and Last Name */}
+                      <div className="grid grid-cols-2 gap-2">
+                        {/* First Name */}
+                        <div className="space-y-1">
+                          <Label htmlFor="inline_first_name" className="text-sm">
+                            First Name <span className="text-destructive">*</span>
+                          </Label>
+                          <Input
+                            id="inline_first_name"
+                            value={inlinePatientData.first_name}
+                            onChange={(e) => setInlinePatientData(prev => ({ ...prev, first_name: e.target.value }))}
+                            placeholder="First name"
+                            className="h-9"
+                          />
+                        </div>
+
+                        {/* Last Name */}
+                        <div className="space-y-1">
+                          <Label htmlFor="inline_last_name" className="text-sm">
+                            Last Name
+                          </Label>
+                          <Input
+                            id="inline_last_name"
+                            value={inlinePatientData.last_name}
+                            onChange={(e) => setInlinePatientData(prev => ({ ...prev, last_name: e.target.value }))}
+                            placeholder="Last name"
+                            className="h-9"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Date of Birth */}
                       <div className="space-y-1">
-                        <Label htmlFor="inline_first_name" className="text-sm">
-                          First Name <span className="text-destructive">*</span>
+                        <Label htmlFor="inline_date_of_birth" className="text-sm">
+                          Date of Birth
                         </Label>
                         <Input
-                          id="inline_first_name"
-                          value={inlinePatientData.first_name}
-                          onChange={(e) => setInlinePatientData(prev => ({ ...prev, first_name: e.target.value }))}
-                          placeholder="Enter first name"
+                          id="inline_date_of_birth"
+                          type="date"
+                          value={inlinePatientData.date_of_birth}
+                          onChange={(e) => setInlinePatientData(prev => ({ ...prev, date_of_birth: e.target.value }))}
                           className="h-9"
                         />
                       </div>

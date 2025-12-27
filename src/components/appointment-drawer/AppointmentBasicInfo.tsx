@@ -1,6 +1,6 @@
 // src/components/appointment-drawer/AppointmentBasicInfo.tsx
 import { forwardRef, useImperativeHandle, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 
@@ -17,6 +17,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { DatePicker } from '@/components/ui/date-picker';
+import { TimePicker } from '@/components/ui/time-picker';
 
 import type { Appointment, AppointmentCreateData, AppointmentUpdateData } from '@/types/appointment.types';
 import type { Doctor } from '@/types/doctor.types';
@@ -131,6 +133,7 @@ const AppointmentBasicInfo = forwardRef<AppointmentBasicInfoHandle, AppointmentB
       watch,
       setValue,
       trigger,
+      control,
     } = useForm<any>({
       resolver: zodResolver(schema),
       defaultValues,
@@ -313,12 +316,17 @@ const AppointmentBasicInfo = forwardRef<AppointmentBasicInfoHandle, AppointmentB
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="appointment_date">Appointment Date *</Label>
-                <Input
-                  id="appointment_date"
-                  type="date"
-                  {...register('appointment_date')}
-                  disabled={isReadOnly}
-                  className={errors.appointment_date ? 'border-destructive' : ''}
+                <Controller
+                  name="appointment_date"
+                  control={control}
+                  render={({ field }) => (
+                    <DatePicker
+                      date={field.value ? new Date(field.value) : undefined}
+                      onDateChange={(date) => field.onChange(date ? date.toISOString().split('T')[0] : '')}
+                      disabled={isReadOnly}
+                      placeholder="Select appointment date"
+                    />
+                  )}
                 />
                 {errors.appointment_date && (
                   <p className="text-sm text-destructive">{errors.appointment_date.message as string}</p>
@@ -327,12 +335,17 @@ const AppointmentBasicInfo = forwardRef<AppointmentBasicInfoHandle, AppointmentB
 
               <div className="space-y-2">
                 <Label htmlFor="appointment_time">Appointment Time *</Label>
-                <Input
-                  id="appointment_time"
-                  type="time"
-                  {...register('appointment_time')}
-                  disabled={isReadOnly}
-                  className={errors.appointment_time ? 'border-destructive' : ''}
+                <Controller
+                  name="appointment_time"
+                  control={control}
+                  render={({ field }) => (
+                    <TimePicker
+                      time={field.value}
+                      onTimeChange={field.onChange}
+                      disabled={isReadOnly}
+                      placeholder="Select appointment time"
+                    />
+                  )}
                 />
                 {errors.appointment_time && (
                   <p className="text-sm text-destructive">{errors.appointment_time.message as string}</p>

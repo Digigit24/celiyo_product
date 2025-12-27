@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/select';
 import { DatePicker } from '@/components/ui/date-picker';
 import { DateTimePicker } from '@/components/ui/datetime-picker';
+import { TimePicker } from '@/components/ui/time-picker';
 import { UserPlus, Edit2, X } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -694,12 +695,17 @@ const OPDVisitBasicInfo = forwardRef<OPDVisitBasicInfoHandle, OPDVisitBasicInfoP
 
               <div className="space-y-2">
                 <Label htmlFor="visit_time">Visit Time *</Label>
-                <Input
-                  id="visit_time"
-                  type="time"
-                  {...register('visit_time')}
-                  disabled={isReadOnly}
-                  className={errors.visit_time ? 'border-destructive' : ''}
+                <Controller
+                  name="visit_time"
+                  control={control}
+                  render={({ field }) => (
+                    <TimePicker
+                      time={field.value}
+                      onTimeChange={field.onChange}
+                      disabled={isReadOnly}
+                      placeholder="Select visit time"
+                    />
+                  )}
                 />
                 {errors.visit_time && (
                   <p className="text-sm text-destructive">{errors.visit_time.message as string}</p>

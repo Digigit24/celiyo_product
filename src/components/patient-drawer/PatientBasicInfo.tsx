@@ -404,6 +404,9 @@ const PatientBasicInfo = forwardRef<PatientBasicInfoHandle, PatientBasicInfoProp
                           onDateChange={(date) => field.onChange(date ? date.toISOString().split('T')[0] : '')}
                           disabled={isReadOnly}
                           placeholder="Select date of birth"
+                          mode="birth-date"
+                          fromYear={1920}
+                          toYear={new Date().getFullYear()}
                         />
                       )}
                     />

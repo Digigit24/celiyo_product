@@ -567,6 +567,9 @@ const OPDVisitBasicInfo = forwardRef<OPDVisitBasicInfoHandle, OPDVisitBasicInfoP
                           }
                           placeholder="Select date of birth"
                           className="h-9"
+                          mode="birth-date"
+                          fromYear={1920}
+                          toYear={new Date().getFullYear()}
                         />
                       </div>
 

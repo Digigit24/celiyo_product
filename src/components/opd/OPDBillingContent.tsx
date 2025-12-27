@@ -1340,9 +1340,15 @@ export const OPDBillingContent: React.FC<OPDBillingContentProps> = ({ visit }) =
       <style>{`
         @page {
           size: A4;
-          margin: 12mm;
+          margin: 0;
         }
         @media print {
+          /* Hide browser default headers and footers */
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+
           .no-print {
             display: none !important;
           }
@@ -1358,6 +1364,7 @@ export const OPDBillingContent: React.FC<OPDBillingContentProps> = ({ visit }) =
             left: 0;
             top: 0;
             width: 100%;
+            padding: 15mm 15mm 15mm 15mm;
           }
           /* Ensure colors print */
           * {

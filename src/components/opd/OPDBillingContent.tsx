@@ -558,11 +558,10 @@ export const OPDBillingContent: React.FC<OPDBillingContentProps> = ({ visit }) =
     });
   }, [opdFormData.opdAmount]);
 
-  // Recalculate billing totals from bill items (ONLY for new bills, not existing ones)
+  // Recalculate billing totals from bill items
+  // This provides immediate (optimistic) updates to the UI
+  // Backend-calculated values will overwrite these when the bill is reloaded from API
   useEffect(() => {
-    // Skip recalculation if we have an existing bill - backend handles this
-    if (existingBill) return;
-
     const subtotal = billItems.reduce((sum, item) => sum + parseFloat(item.total_price || '0'), 0);
     const disc = parseFloat(billingData.discount) || 0;
     const recv = parseFloat(billingData.receivedAmount) || 0;
@@ -577,7 +576,7 @@ export const OPDBillingContent: React.FC<OPDBillingContentProps> = ({ visit }) =
       totalAmount: total.toFixed(2),
       balanceAmount: balance.toFixed(2),
     }));
-  }, [billItems, billingData.discount, billingData.receivedAmount, existingBill]);
+  }, [billItems, billingData.discount, billingData.receivedAmount]);
 
   const handleOpdInputChange = async (field: string, value: string) => {
     setOpdFormData((prev) => ({ ...prev, [field]: value }));

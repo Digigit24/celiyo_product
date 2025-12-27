@@ -484,8 +484,43 @@ export const OPDBillingContent: React.FC<OPDBillingContentProps> = ({ visit }) =
   // Load bill items from existing bill
   useEffect(() => {
     if (existingBill && !billsLoading && visit) {
-      // ALWAYS sync items from existing bill (they come from API with updated totals)
-      setBillItems(existingBill.items || []);
+      // ALWAYS use visit's consultation fee as source of truth (from API)
+      const isFollowUp = visit.visit_type === 'follow_up';
+      const opdAmount = visit.consultation_fee ||
+        (visit.doctor_details
+          ? isFollowUp
+            ? visit.doctor_details.follow_up_fee
+            : visit.doctor_details.consultation_fee
+          : '0.00');
+
+      // Update bill items with visit's consultation fee
+      const billItemsFromApi = existingBill.items || [];
+      const consultationIndex = billItemsFromApi.findIndex(
+        item => item.source === 'Consultation' || item.item_name === 'Consultation Fee'
+      );
+
+      let updatedBillItems = [...billItemsFromApi];
+      if (consultationIndex >= 0) {
+        // Update existing consultation item with visit's fee
+        updatedBillItems[consultationIndex] = {
+          ...updatedBillItems[consultationIndex],
+          unit_price: opdAmount || '0',
+          total_price: opdAmount || '0',
+        };
+      } else {
+        // Add consultation item if it doesn't exist
+        updatedBillItems = [{
+          item_name: 'Consultation Fee',
+          source: 'Consultation',
+          quantity: 1,
+          system_calculated_price: opdAmount || '0',
+          unit_price: opdAmount || '0',
+          total_price: opdAmount || '0',
+          notes: '',
+        }, ...updatedBillItems];
+      }
+
+      setBillItems(updatedBillItems);
 
       // Load form data
       setOpdFormData((prev) => ({
@@ -497,20 +532,6 @@ export const OPDBillingContent: React.FC<OPDBillingContentProps> = ({ visit }) =
         chargeType: existingBill.charge_type || prev.chargeType,
         diagnosis: existingBill.diagnosis || '',
         remarks: existingBill.remarks || '',
-      }));
-
-      // ALWAYS use visit's consultation fee as source of truth (from API)
-      // This ensures the UI shows the current consultation fee for the visit
-      const isFollowUp = visit.visit_type === 'follow_up';
-      const opdAmount = visit.consultation_fee ||
-        (visit.doctor_details
-          ? isFollowUp
-            ? visit.doctor_details.follow_up_fee
-            : visit.doctor_details.consultation_fee
-          : '0.00');
-
-      setOpdFormData((prev) => ({
-        ...prev,
         opdAmount: opdAmount || '0',
       }));
 
@@ -1317,8 +1338,38 @@ export const OPDBillingContent: React.FC<OPDBillingContentProps> = ({ visit }) =
   return (
     <div className="space-y-6">
       <style>{`
-        @page { size: A4; margin: 12mm; }
-        @media print { .no-print { display: none !important; } }
+        @page {
+          size: A4;
+          margin: 12mm;
+        }
+        @media print {
+          .no-print {
+            display: none !important;
+          }
+          body * {
+            visibility: hidden;
+          }
+          #bill-preview-area,
+          #bill-preview-area * {
+            visibility: visible;
+          }
+          #bill-preview-area {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+          }
+          /* Ensure colors print */
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
+          }
+          /* Remove shadows and borders that don't print well */
+          .shadow, .shadow-sm, .shadow-md, .shadow-lg {
+            box-shadow: none !important;
+          }
+        }
       `}</style>
 
       {/* Bills Selector - Show if multiple bills exist for this visit */}

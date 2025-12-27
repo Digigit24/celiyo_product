@@ -67,6 +67,7 @@ export const BillPreviewTab = forwardRef<HTMLDivElement, BillPreviewTabProps>(
         {/* Preview Card */}
         <Card className="lg:col-span-2">
           <div
+            id="bill-preview-area"
             ref={printAreaRef}
             className="p-8 space-y-6"
             style={{
@@ -323,9 +324,9 @@ export const BillPreviewTab = forwardRef<HTMLDivElement, BillPreviewTabProps>(
         </Card>
 
         {/* Print / Download Actions */}
-        <Card>
+        <Card className="no-print">
           <CardContent className="pt-6">
-            <div className="flex gap-3 justify-center no-print">
+            <div className="flex gap-3 justify-center">
               <Button variant="outline" size="lg" onClick={onDownloadPDF}>
                 <FileText className="mr-2 h-4 w-4" />
                 Download PDF
@@ -339,7 +340,7 @@ export const BillPreviewTab = forwardRef<HTMLDivElement, BillPreviewTabProps>(
         </Card>
 
         {/* Bill History */}
-        <Card>
+        <Card className="no-print">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>

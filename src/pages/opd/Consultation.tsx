@@ -28,14 +28,20 @@ export const OPDConsultation: React.FC = () => {
   // Fetch current visit
   const { data: visit, isLoading, error, mutate: mutateVisit } = useOpdVisitById(visitId ? parseInt(visitId) : null);
 
-  // Fetch context for navigation (Today's visits)
+  // Get visit IDs from navigation state (passed from previous page) or fallback to today's visits
+  const visitIdsFromState = (location.state as any)?.visitIds as number[] | undefined;
+
+  // Fetch context for navigation (Today's visits) - only if no visitIds passed
   const { data: todayVisitsData } = useTodayVisits({ page_size: 100 });
   const todayVisits = todayVisitsData?.results || [];
 
-  // Determine Prev/Next IDs
-  const currentIndex = todayVisits.findIndex(v => v.id === parseInt(visitId || '0'));
-  const prevVisitId = currentIndex > 0 ? todayVisits[currentIndex - 1].id : null;
-  const nextVisitId = currentIndex !== -1 && currentIndex < todayVisits.length - 1 ? todayVisits[currentIndex + 1].id : null;
+  // Use visitIds from state if available, otherwise use today's visits
+  const visitIds = visitIdsFromState || todayVisits.map(v => v.id);
+
+  // Determine Prev/Next IDs based on the visit queue
+  const currentIndex = visitIds.findIndex(id => id === parseInt(visitId || '0'));
+  const prevVisitId = currentIndex > 0 ? visitIds[currentIndex - 1] : null;
+  const nextVisitId = currentIndex !== -1 && currentIndex < visitIds.length - 1 ? visitIds[currentIndex + 1] : null;
 
   // Handle back navigation
   const handleBack = () => {
@@ -48,11 +54,19 @@ export const OPDConsultation: React.FC = () => {
   };
 
   const handlePrevVisit = () => {
-    if (prevVisitId) navigate(`/opd/consultation/${prevVisitId}`);
+    if (prevVisitId) {
+      navigate(`/opd/consultation/${prevVisitId}`, {
+        state: { visitIds, from: location.state?.from || '/opd/visits' }
+      });
+    }
   };
 
   const handleNextVisit = () => {
-    if (nextVisitId) navigate(`/opd/consultation/${nextVisitId}`);
+    if (nextVisitId) {
+      navigate(`/opd/consultation/${nextVisitId}`, {
+        state: { visitIds, from: location.state?.from || '/opd/visits' }
+      });
+    }
   };
 
   const handleStartConsultation = async () => {
@@ -120,7 +134,7 @@ export const OPDConsultation: React.FC = () => {
       <OPDVisitHeader
         visit={visit}
         currentIndex={currentIndex}
-        totalVisits={todayVisits.length}
+        totalVisits={visitIds.length}
         prevVisitId={prevVisitId}
         nextVisitId={nextVisitId}
         isSaving={isSaving}

@@ -116,7 +116,11 @@ export const OPDVisits: React.FC = () => {
   };
 
   const handleConsultation = (visit: OpdVisit) => {
-    navigate(`/opd/consultation/${visit.id}`);
+    // Pass the list of visit IDs for navigation
+    const visitIds = visits.map(v => v.id);
+    navigate(`/opd/consultation/${visit.id}`, {
+      state: { visitIds, from: '/opd/visits' }
+    });
   };
 
   // Format date and time for display

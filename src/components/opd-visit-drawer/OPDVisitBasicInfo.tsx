@@ -1,6 +1,6 @@
 // src/components/opd-visit-drawer/OPDVisitBasicInfo.tsx
 import { forwardRef, useImperativeHandle, useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 
@@ -18,6 +18,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { DatePicker } from '@/components/ui/date-picker';
+import { DateTimePicker } from '@/components/ui/datetime-picker';
 import { UserPlus, Edit2, X } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -553,11 +555,15 @@ const OPDVisitBasicInfo = forwardRef<OPDVisitBasicInfoHandle, OPDVisitBasicInfoP
                         <Label htmlFor="inline_date_of_birth" className="text-sm">
                           Date of Birth
                         </Label>
-                        <Input
-                          id="inline_date_of_birth"
-                          type="date"
-                          value={inlinePatientData.date_of_birth}
-                          onChange={(e) => setInlinePatientData(prev => ({ ...prev, date_of_birth: e.target.value }))}
+                        <DatePicker
+                          date={inlinePatientData.date_of_birth ? new Date(inlinePatientData.date_of_birth) : undefined}
+                          onDateChange={(date) =>
+                            setInlinePatientData(prev => ({
+                              ...prev,
+                              date_of_birth: date ? date.toISOString().split('T')[0] : ''
+                            }))
+                          }
+                          placeholder="Select date of birth"
                           className="h-9"
                         />
                       </div>
@@ -668,12 +674,17 @@ const OPDVisitBasicInfo = forwardRef<OPDVisitBasicInfoHandle, OPDVisitBasicInfoP
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="visit_date">Visit Date *</Label>
-                <Input
-                  id="visit_date"
-                  type="date"
-                  {...register('visit_date')}
-                  disabled={isReadOnly}
-                  className={errors.visit_date ? 'border-destructive' : ''}
+                <Controller
+                  name="visit_date"
+                  control={control}
+                  render={({ field }) => (
+                    <DatePicker
+                      date={field.value ? new Date(field.value) : undefined}
+                      onDateChange={(date) => field.onChange(date ? date.toISOString().split('T')[0] : '')}
+                      disabled={isReadOnly}
+                      placeholder="Select visit date"
+                    />
+                  )}
                 />
                 {errors.visit_date && (
                   <p className="text-sm text-destructive">{errors.visit_date.message as string}</p>

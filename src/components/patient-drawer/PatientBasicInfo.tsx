@@ -1,6 +1,6 @@
 // src/components/patient-drawer/PatientBasicInfo.tsx
 import { forwardRef, useImperativeHandle, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 
@@ -16,6 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { DatePicker } from '@/components/ui/date-picker';
 
 import type { Patient, PatientCreateData, PatientUpdateData } from '@/types/patient.types';
 
@@ -393,12 +394,17 @@ const PatientBasicInfo = forwardRef<PatientBasicInfoHandle, PatientBasicInfoProp
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="date_of_birth">Date of Birth</Label>
-                    <Input
-                      id="date_of_birth"
-                      type="date"
-                      {...register('date_of_birth')}
-                      disabled={isReadOnly}
-                      className={errors.date_of_birth ? 'border-destructive' : ''}
+                    <Controller
+                      name="date_of_birth"
+                      control={control}
+                      render={({ field }) => (
+                        <DatePicker
+                          date={field.value ? new Date(field.value) : undefined}
+                          onDateChange={(date) => field.onChange(date ? date.toISOString().split('T')[0] : '')}
+                          disabled={isReadOnly}
+                          placeholder="Select date of birth"
+                        />
+                      )}
                     />
                     {errors.date_of_birth && (
                       <p className="text-sm text-destructive">{errors.date_of_birth.message as string}</p>
@@ -786,11 +792,17 @@ const PatientBasicInfo = forwardRef<PatientBasicInfoHandle, PatientBasicInfoProp
 
               <div className="space-y-2">
                 <Label htmlFor="insurance_expiry_date">Expiry Date</Label>
-                <Input
-                  id="insurance_expiry_date"
-                  type="date"
-                  {...register('insurance_expiry_date')}
-                  disabled={isReadOnly}
+                <Controller
+                  name="insurance_expiry_date"
+                  control={control}
+                  render={({ field }) => (
+                    <DatePicker
+                      date={field.value ? new Date(field.value) : undefined}
+                      onDateChange={(date) => field.onChange(date ? date.toISOString().split('T')[0] : '')}
+                      disabled={isReadOnly}
+                      placeholder="Select expiry date"
+                    />
+                  )}
                 />
               </div>
             </div>

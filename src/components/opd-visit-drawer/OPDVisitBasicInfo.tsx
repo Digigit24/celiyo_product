@@ -193,6 +193,7 @@ const OPDVisitBasicInfo = forwardRef<OPDVisitBasicInfoHandle, OPDVisitBasicInfoP
       watch,
       setValue,
       reset,
+      control,
     } = useForm<any>({
       resolver: zodResolver(schema),
       defaultValues,

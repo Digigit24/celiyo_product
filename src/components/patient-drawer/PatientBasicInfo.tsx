@@ -196,6 +196,7 @@ const PatientBasicInfo = forwardRef<PatientBasicInfoHandle, PatientBasicInfoProp
       watch,
       setValue,
       reset,
+      control,
     } = useForm<any>({
       resolver: zodResolver(schema),
       defaultValues,

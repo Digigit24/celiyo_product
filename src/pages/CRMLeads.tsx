@@ -1,10 +1,11 @@
 // src/pages/CRMLeads.tsx
-import { useState, useCallback, useMemo, useRef } from 'react';
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCRM } from '@/hooks/useCRM';
 import { useAuth } from '@/hooks/useAuth';
 import { usePatient } from '@/hooks/usePatient';
 import { useCurrency } from '@/hooks/useCurrency';
+import { useFormsApi } from '@/hooks/useFormsApi';
 import { DataTable, type DataTableColumn } from '@/components/DataTable';
 import { LeadsFormDrawer } from '@/components/LeadsFormDrawer';
 import { LeadStatusFormDrawer } from '@/components/LeadStatusFormDrawer';
@@ -31,6 +32,40 @@ export const CRMLeads: React.FC = () => {
   const { hasHMSAccess, createPatient } = usePatient();
   const { formatCurrency: formatCurrencyDynamic, getCurrencyCode, getCurrencySymbol } = useCurrency();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Forms API integration - fetch external leads/submissions
+  const {
+    submissions: formsSubmissions,
+    clients: formsClients,
+    isLoading: formsLoading,
+    error: formsError,
+    isAuthenticated: formsAuthenticated
+  } = useFormsApi(true); // autoFetch = true
+
+  // Log Forms API data to console whenever it changes
+  useEffect(() => {
+    if (formsSubmissions.length > 0) {
+      console.log('====== FORMS API - SUBMISSIONS ======');
+      console.log('Total Submissions:', formsSubmissions.length);
+      console.log('Submissions Data:', formsSubmissions);
+      console.log('=====================================');
+    }
+  }, [formsSubmissions]);
+
+  useEffect(() => {
+    if (formsError) {
+      console.error('====== FORMS API - ERROR ======');
+      console.error('Error:', formsError);
+      console.error('===============================');
+    }
+  }, [formsError]);
+
+  useEffect(() => {
+    console.log('====== FORMS API - AUTH STATUS ======');
+    console.log('Authenticated:', formsAuthenticated);
+    console.log('Loading:', formsLoading);
+    console.log('====================================');
+  }, [formsAuthenticated, formsLoading]);
 
   // View mode state
   const [viewMode, setViewMode] = useState<ViewMode>('list');

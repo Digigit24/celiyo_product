@@ -46,6 +46,8 @@ import {
   Building, // Added for Wards
   UserRoundCheck, // Added for Admissions
   FlaskConical, // Added for Diagnostics module
+  Plug, // Added for Integrations
+  Zap, // Added for Workflows
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -185,6 +187,25 @@ const menuItems: MenuItem[] = [
         label: "Settings",
         icon: Settings2,
         path: "/crm/settings",
+      },
+    ],
+  },
+  {
+    id: "integrations",
+    label: "Integrations",
+    icon: Plug,
+    children: [
+      {
+        id: "integrations-overview",
+        label: "Overview",
+        icon: LayoutDashboard,
+        path: "/integrations",
+      },
+      {
+        id: "integrations-workflows",
+        label: "Workflows",
+        icon: Zap,
+        path: "/integrations",
       },
     ],
   },

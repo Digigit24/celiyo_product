@@ -6,11 +6,14 @@
 
 export const API_CONFIG = {
   // ==================== BASE URLS ====================
-  
+
   // You can override these via Vite env vars in .env/.env.local
   // VITE_AUTH_BASE_URL, VITE_CRM_BASE_URL, VITE_WHATSAPP_BASE_URL, VITE_WHATSAPP_WS_URL
+  //
+  // IMPORTANT: For OAuth integrations (like Google Sheets), use 'localhost' instead of '127.0.0.1'
+  // to match the redirect URIs configured in Google Cloud Console
   AUTH_BASE_URL: import.meta.env.VITE_AUTH_BASE_URL || 'https://admin.celiyo.com/api',
-  CRM_BASE_URL: import.meta.env.VITE_CRM_BASE_URL || 'http://127.0.0.1:8000/api',
+  CRM_BASE_URL: import.meta.env.VITE_CRM_BASE_URL || 'http://localhost:8000/api',
   HMS_BASE_URL: import.meta.env.VITE_HMS_BASE_URL || 'https://hms.celiyo.com/api',
   WHATSAPP_BASE_URL: import.meta.env.VITE_WHATSAPP_BASE_URL || 'https://whatsapp.celiyo.com/api',
 

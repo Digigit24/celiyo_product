@@ -75,6 +75,20 @@ export const Integrations = () => {
           integration_id: integration.id
         });
 
+        // Validate that we received a valid authorization URL
+        if (!result?.authorization_url) {
+          throw new Error('No authorization URL received from server');
+        }
+
+        // Ensure the authorization URL points to Google OAuth
+        if (!result.authorization_url.includes('accounts.google.com')) {
+          console.error('Invalid authorization URL:', result.authorization_url);
+          throw new Error('Invalid authorization URL received');
+        }
+
+        // Log the authorization URL for debugging (helps verify redirect_uri parameter)
+        console.log('OAuth authorization URL:', result.authorization_url);
+
         // Redirect to Google OAuth
         window.location.href = result.authorization_url;
       } else {
@@ -82,6 +96,7 @@ export const Integrations = () => {
         navigate(`/integrations/connect/${integration.id}`);
       }
     } catch (error: any) {
+      console.error('OAuth initiation error:', error);
       toast.error(error.message || 'Failed to initiate connection');
     }
   }, [navigate, initiateOAuth]);

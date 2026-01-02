@@ -1,6 +1,6 @@
 // src/pages/Integrations.tsx
-import { useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useCallback, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useIntegrations } from '@/hooks/useIntegrations';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,13 +13,50 @@ import type { Integration } from '@/types/integration.types';
 
 export const Integrations = () => {
   const navigate = useNavigate();
-  const { useIntegrationsList, useConnectionsList, useWorkflowsList } = useIntegrations();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { useIntegrationsList, useConnectionsList, useWorkflowsList, initiateOAuth } = useIntegrations();
   const [activeTab, setActiveTab] = useState<'available' | 'connected' | 'workflows'>('available');
 
   // Fetch data
   const { data: integrationsData, error: integrationsError, isLoading: integrationsLoading, mutate: mutateIntegrations } = useIntegrationsList({ is_active: true });
   const { data: connectionsData, error: connectionsError, isLoading: connectionsLoading, mutate: mutateConnections } = useConnectionsList({ is_active: true });
   const { data: workflowsData, error: workflowsError, isLoading: workflowsLoading, mutate: mutateWorkflows } = useWorkflowsList();
+
+  // Handle OAuth callback success
+  useEffect(() => {
+    const success = searchParams.get('oauth_success');
+    const connectionName = searchParams.get('connection_name');
+
+    if (success === 'true') {
+      toast.success(`Successfully connected ${connectionName || 'Google Sheets'}!`, {
+        description: 'You can now create workflows using this connection',
+        duration: 5000,
+      });
+
+      // Refresh connections list
+      mutateConnections();
+
+      // Switch to connected tab
+      setActiveTab('connected');
+
+      // Clean up URL
+      searchParams.delete('oauth_success');
+      searchParams.delete('connection_name');
+      setSearchParams(searchParams, { replace: true });
+    }
+
+    const error = searchParams.get('oauth_error');
+    if (error) {
+      toast.error(`Connection failed: ${error}`, {
+        description: 'Please try again or contact support',
+        duration: 7000,
+      });
+
+      // Clean up URL
+      searchParams.delete('oauth_error');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams, mutateConnections]);
 
   const handleRefresh = useCallback(() => {
     mutateIntegrations();
@@ -28,9 +65,27 @@ export const Integrations = () => {
     toast.success('Refreshed successfully');
   }, [mutateIntegrations, mutateConnections, mutateWorkflows]);
 
-  const handleConnectIntegration = useCallback((integration: Integration) => {
-    navigate(`/integrations/connect/${integration.id}`);
-  }, [navigate]);
+  const handleConnectIntegration = useCallback(async (integration: Integration) => {
+    try {
+      if (integration.requires_oauth) {
+        // Initiate OAuth flow
+        toast.info('Redirecting to Google for authorization...');
+
+        const result = await initiateOAuth({
+          integration_id: integration.id,
+          redirect_uri: window.location.origin + '/integrations'
+        });
+
+        // Redirect to Google OAuth
+        window.location.href = result.authorization_url;
+      } else {
+        // For non-OAuth integrations, navigate to manual setup
+        navigate(`/integrations/connect/${integration.id}`);
+      }
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to initiate connection');
+    }
+  }, [navigate, initiateOAuth]);
 
   const handleViewWorkflows = useCallback(() => {
     navigate('/integrations/workflows');

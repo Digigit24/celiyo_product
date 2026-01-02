@@ -152,7 +152,7 @@ export const Integrations = () => {
                     Try Again
                   </Button>
                 </div>
-              ) : !integrationsData || integrationsData.count === 0 ? (
+              ) : !integrationsData || !integrationsData.results || integrationsData.results.length === 0 ? (
                 <div className="text-center py-12">
                   <Plug className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                   <p className="text-lg font-medium">No integrations available</p>
@@ -160,7 +160,7 @@ export const Integrations = () => {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {integrationsData.results.map((integration) => (
+                  {integrationsData.results?.map((integration) => (
                     <Card key={integration.id} className="hover:shadow-md transition-shadow">
                       <CardContent className="p-6">
                         <div className="flex items-start justify-between mb-4">
@@ -237,7 +237,7 @@ export const Integrations = () => {
                     </div>
                   ))}
                 </div>
-              ) : !connectionsData || connectionsData.count === 0 ? (
+              ) : !connectionsData || !connectionsData.results || connectionsData.results.length === 0 ? (
                 <div className="text-center py-12">
                   <Check className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                   <p className="text-lg font-medium">No connected apps</p>
@@ -251,7 +251,7 @@ export const Integrations = () => {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {connectionsData.results.map((connection) => (
+                  {connectionsData.results?.map((connection) => (
                     <div
                       key={connection.id}
                       className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
@@ -326,7 +326,7 @@ export const Integrations = () => {
                     </div>
                   ))}
                 </div>
-              ) : !workflowsData || workflowsData.count === 0 ? (
+              ) : !workflowsData || !workflowsData.results || workflowsData.results.length === 0 ? (
                 <div className="text-center py-12">
                   <Workflow className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                   <p className="text-lg font-medium">No workflows yet</p>
@@ -340,7 +340,7 @@ export const Integrations = () => {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {workflowsData.results.map((workflow) => (
+                  {workflowsData.results?.map((workflow) => (
                     <div
                       key={workflow.id}
                       className="p-4 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"

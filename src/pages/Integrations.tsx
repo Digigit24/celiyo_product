@@ -72,8 +72,7 @@ export const Integrations = () => {
         toast.info('Redirecting to Google for authorization...');
 
         const result = await initiateOAuth({
-          integration_id: integration.id,
-          redirect_uri: window.location.origin + '/integrations'
+          integration_id: integration.id
         });
 
         // Redirect to Google OAuth

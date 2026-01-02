@@ -480,7 +480,7 @@ export const API_CONFIG = {
       CREATE: '/integrations/connections/',
       UPDATE: '/integrations/connections/:id/',
       DELETE: '/integrations/connections/:id/',
-      OAUTH_INITIATE: '/integrations/connections/oauth_initiate/',
+      OAUTH_INITIATE: '/integrations/connections/initiate_oauth/',
       OAUTH_CALLBACK: '/integrations/connections/oauth_callback/',
       DISCONNECT: '/integrations/connections/:id/disconnect/',
       TEST: '/integrations/connections/:id/test/',

@@ -468,11 +468,11 @@ export const API_CONFIG = {
 
     // Integration System endpoints
     INTEGRATIONS: {
-      LIST: '/integrations/',
-      DETAIL: '/integrations/:id/',
-      CREATE: '/integrations/',
-      UPDATE: '/integrations/:id/',
-      DELETE: '/integrations/:id/',
+      LIST: '/integrations/integrations/',
+      DETAIL: '/integrations/integrations/:id/',
+      CREATE: '/integrations/integrations/',
+      UPDATE: '/integrations/integrations/:id/',
+      DELETE: '/integrations/integrations/:id/',
     },
     CONNECTIONS: {
       LIST: '/integrations/connections/',

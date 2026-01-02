@@ -72,6 +72,8 @@ import Diagnostics from "./pages/Diagnostics"; // Import Diagnostics page
 import { Requisitions } from "./pages/diagnostics/Requisitions"; // Import Requisitions page
 import { Investigations } from "./pages/diagnostics/Investigations"; // Import Investigations page
 import { LabReports } from "./pages/diagnostics/LabReports"; // Import Lab Reports page
+import Integrations from "./pages/Integrations"; // Import Integrations page
+import WorkflowEditor from "./pages/WorkflowEditor"; // Import Workflow Editor page
 
 import { WebSocketProvider } from "./context/WebSocketProvider";
 
@@ -172,6 +174,11 @@ const AppLayout = () => {
               <Route path="/admin/roles" element={<Roles />} />
               <Route path="/admin/settings" element={<AdminSettings />} />
               <Route path="/admin/debug" element={<Debug />} />
+
+              {/* Integration Routes */}
+              <Route path="/integrations" element={<Integrations />} />
+              <Route path="/integrations/workflows/new" element={<WorkflowEditor />} />
+              <Route path="/integrations/workflows/:workflowId" element={<WorkflowEditor />} />
 
               {/* 404 */}
               <Route path="*" element={<NotFound />} />

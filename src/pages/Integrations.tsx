@@ -16,13 +16,107 @@ export const Integrations = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { useIntegrationsList, useConnectionsList, useWorkflowsList, initiateOAuth } = useIntegrations();
   const [activeTab, setActiveTab] = useState<'available' | 'connected' | 'workflows'>('available');
+  const [isProcessingOAuth, setIsProcessingOAuth] = useState(false);
 
   // Fetch data
   const { data: integrationsData, error: integrationsError, isLoading: integrationsLoading, mutate: mutateIntegrations } = useIntegrationsList({ is_active: true });
   const { data: connectionsData, error: connectionsError, isLoading: connectionsLoading, mutate: mutateConnections } = useConnectionsList({ is_active: true });
   const { data: workflowsData, error: workflowsError, isLoading: workflowsLoading, mutate: mutateWorkflows } = useWorkflowsList();
 
-  // Handle OAuth callback success
+  // Handle OAuth callback from Google
+  useEffect(() => {
+    const code = searchParams.get('code');
+    const state = searchParams.get('state');
+
+    // If we have code and state, this is an OAuth callback from Google
+    if (code && state && !isProcessingOAuth) {
+      setIsProcessingOAuth(true);
+
+      const handleOAuthCallback = async () => {
+        try {
+          toast.info('Processing Google authorization...');
+
+          // Get authentication token and tenant ID
+          const token = localStorage.getItem('celiyo_access_token');
+          let tenantId = '';
+
+          try {
+            const userJson = localStorage.getItem('celiyo_user');
+            if (userJson) {
+              const user = JSON.parse(userJson);
+              tenantId = user?.tenant?.id || user?.tenant?.tenant_id || '';
+            }
+          } catch (e) {
+            console.error('Failed to parse user for tenant ID:', e);
+          }
+
+          // Build headers
+          const headers: Record<string, string> = {
+            'Content-Type': 'application/json',
+          };
+
+          if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+          }
+
+          if (tenantId) {
+            headers['X-Tenant-Id'] = tenantId;
+            headers['tenanttoken'] = tenantId;
+          }
+
+          // Call the backend OAuth callback endpoint
+          const response = await fetch(`${import.meta.env.VITE_CRM_BASE_URL || 'http://localhost:8000/api'}/integrations/connections/oauth_callback/?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state)}`, {
+            method: 'GET',
+            headers,
+            credentials: 'include', // Include cookies for session auth
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ error: 'Failed to connect' }));
+            throw new Error(errorData.error || errorData.message || 'Failed to complete OAuth');
+          }
+
+          const data = await response.json();
+
+          toast.success(`Successfully connected ${data.connection?.name || 'Google Sheets'}!`, {
+            description: 'You can now create workflows using this connection',
+            duration: 5000,
+          });
+
+          // Refresh connections list
+          mutateConnections();
+
+          // Switch to connected tab
+          setActiveTab('connected');
+
+          // Clean up URL
+          searchParams.delete('code');
+          searchParams.delete('state');
+          searchParams.delete('scope');
+          setSearchParams(searchParams, { replace: true });
+
+        } catch (error: any) {
+          console.error('OAuth callback error:', error);
+          toast.error(`Connection failed: ${error.message}`, {
+            description: 'Please try again or contact support',
+            duration: 7000,
+          });
+
+          // Clean up URL even on error
+          searchParams.delete('code');
+          searchParams.delete('state');
+          searchParams.delete('scope');
+          setSearchParams(searchParams, { replace: true });
+        } finally {
+          setIsProcessingOAuth(false);
+        }
+      };
+
+      handleOAuthCallback();
+    }
+  }, [searchParams, setSearchParams, mutateConnections, isProcessingOAuth]);
+
+  // Handle OAuth callback success/error from backend redirect (legacy support)
   useEffect(() => {
     const success = searchParams.get('oauth_success');
     const connectionName = searchParams.get('connection_name');

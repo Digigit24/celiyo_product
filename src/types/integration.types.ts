@@ -250,6 +250,7 @@ export interface WorkflowMapping {
 
 export interface WorkflowMappingCreateData {
   workflow: number;
+  workflow_action_id: number;
   source_field: string;
   destination_field: string;
   transformation_type: TransformationTypeEnum;

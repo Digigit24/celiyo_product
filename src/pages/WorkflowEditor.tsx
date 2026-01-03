@@ -250,6 +250,11 @@ export const WorkflowEditor = () => {
       return;
     }
 
+    if (!actions || actions.length === 0) {
+      toast.error('Please add an action before creating field mappings');
+      return;
+    }
+
     if (!newMapping.source_field || !newMapping.destination_field) {
       toast.error('Please select both source and destination fields');
       return;
@@ -257,7 +262,12 @@ export const WorkflowEditor = () => {
 
     setIsSaving(true);
     try {
-      await createWorkflowMapping(parseInt(workflowId), newMapping);
+      // Use the first action's ID for the mapping
+      const actionId = actions[0].id;
+      await createWorkflowMapping(parseInt(workflowId), {
+        ...newMapping,
+        workflow_action_id: actionId
+      });
       toast.success('Field mapping added successfully');
       mutateMappings();
       setNewMapping({

@@ -130,7 +130,9 @@ export const WorkflowEditor = () => {
   const loadSpreadsheets = async (connectionId: number) => {
     try {
       const result = await getSpreadsheets(connectionId);
-      setSpreadsheets(result.spreadsheets);
+      // Handle both array response and object with spreadsheets property
+      const spreadsheetsArray = Array.isArray(result) ? result : result.spreadsheets;
+      setSpreadsheets(spreadsheetsArray || []);
     } catch (error: any) {
       toast.error(error.message || 'Failed to load spreadsheets');
     }
@@ -139,7 +141,9 @@ export const WorkflowEditor = () => {
   const loadSheets = async (connectionId: number, spreadsheetId: string) => {
     try {
       const result = await getSheets(connectionId, spreadsheetId);
-      setSheets(result.sheets);
+      // Handle both array response and object with sheets property
+      const sheetsArray = Array.isArray(result) ? result : result.sheets;
+      setSheets(sheetsArray || []);
     } catch (error: any) {
       toast.error(error.message || 'Failed to load sheets');
     }

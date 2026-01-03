@@ -18,79 +18,86 @@ export const Integrations = () => {
   const { useIntegrationsList, useConnectionsList, useWorkflowsList, initiateOAuth } = useIntegrations();
   const [activeTab, setActiveTab] = useState<'available' | 'connected' | 'workflows'>('available');
   const [isProcessingOAuth, setIsProcessingOAuth] = useState(false);
+  const debugOAuth = import.meta.env.DEV || import.meta.env.VITE_DEBUG_OAUTH === 'true';
+
+  const logOAuth = (...args: unknown[]) => {
+    if (debugOAuth) {
+      // eslint-disable-next-line no-console
+      console.debug('[Integrations][OAuth]', ...args);
+    }
+  };
 
   // Fetch data
   const { data: integrationsData, error: integrationsError, isLoading: integrationsLoading, mutate: mutateIntegrations } = useIntegrationsList({ is_active: true });
   const { data: connectionsData, error: connectionsError, isLoading: connectionsLoading, mutate: mutateConnections } = useConnectionsList({ is_active: true });
   const { data: workflowsData, error: workflowsError, isLoading: workflowsLoading, mutate: mutateWorkflows } = useWorkflowsList();
 
-  // Handle OAuth callback from Google
-  useEffect(() => {
-    const code = searchParams.get('code');
-    const state = searchParams.get('state');
+  // In your useEffect for OAuth callback, add a check
+useEffect(() => {
+  const code = searchParams.get('code');
+  const state = searchParams.get('state');
 
-    // If we have code and state, this is an OAuth callback from Google
-    if (code && state && !isProcessingOAuth) {
-      setIsProcessingOAuth(true);
+  // WAIT for integrations data to load before processing
+  if (code && state && !isProcessingOAuth && integrationsData?.results) {
+    logOAuth('Detected OAuth params in URL', { codePreview: `${code.slice(0, 6)}...`, state });
+    setIsProcessingOAuth(true);
 
-      const handleOAuthCallback = async () => {
-        try {
-          toast.info('Processing Google authorization...');
+    const handleOAuthCallback = async () => {
+      try {
+        toast.info('Processing Google authorization...');
 
-          // Find Google Sheets integration
-          const googleIntegration = integrationsData?.results?.find(
-            (integration) => integration.type === 'GOOGLE_SHEETS'
-          );
+        const googleIntegration = integrationsData.results.find(
+          (integration) => integration.type === 'GOOGLE_SHEETS'
+        );
 
-          if (!googleIntegration) {
-            throw new Error('Google Sheets integration not found');
-          }
-
-          // Use the integration service which has proper auth headers via crmClient
-          const data = await integrationService.oauthCallback({
-            code,
-            state,
-            integration_id: googleIntegration.id,
-            connection_name: 'Google Sheets',
-          });
-
-          toast.success(`Successfully connected ${data.connection?.name || 'Google Sheets'}!`, {
-            description: 'You can now create workflows using this connection',
-            duration: 5000,
-          });
-
-          // Refresh connections list
-          mutateConnections();
-
-          // Switch to connected tab
-          setActiveTab('connected');
-
-          // Clean up URL
-          searchParams.delete('code');
-          searchParams.delete('state');
-          searchParams.delete('scope');
-          setSearchParams(searchParams, { replace: true });
-
-        } catch (error: any) {
-          console.error('OAuth callback error:', error);
-          toast.error(`Connection failed: ${error.message}`, {
-            description: 'Please try again or contact support',
-            duration: 7000,
-          });
-
-          // Clean up URL even on error
-          searchParams.delete('code');
-          searchParams.delete('state');
-          searchParams.delete('scope');
-          setSearchParams(searchParams, { replace: true });
-        } finally {
-          setIsProcessingOAuth(false);
+        if (!googleIntegration) {
+          logOAuth('Google integration not found in list', integrationsData.results);
+          throw new Error('Google Sheets integration not found');
         }
-      };
 
-      handleOAuthCallback();
-    }
-  }, [searchParams, setSearchParams, mutateConnections, isProcessingOAuth, integrationsData]);
+        logOAuth('Posting OAuth callback to backend', {
+          integrationId: googleIntegration.id,
+          state,
+        });
+
+        const data = await integrationService.oauthCallback({
+          code,
+          state,
+          integration_id: googleIntegration.id,
+          connection_name: 'Google Sheets',
+        });
+
+        logOAuth('OAuth callback response', data);
+        toast.success(`Successfully connected!`);
+        mutateConnections();
+        setActiveTab('connected');
+        
+        searchParams.delete('code');
+        searchParams.delete('state');
+        searchParams.delete('scope');
+        setSearchParams(searchParams, { replace: true });
+
+      } catch (error: any) {
+        console.error('OAuth callback error:', error);
+        logOAuth('OAuth callback failed', {
+          message: error?.message,
+          response: error?.response?.data,
+          stack: error?.stack,
+        });
+        toast.error(`Connection failed: ${error.message}`);
+
+        searchParams.delete('code');
+        searchParams.delete('state');
+        searchParams.delete('scope');
+        setSearchParams(searchParams, { replace: true });
+      } finally {
+        setIsProcessingOAuth(false);
+      }
+    };
+
+    handleOAuthCallback();
+  }
+}, [searchParams, setSearchParams, mutateConnections, isProcessingOAuth, integrationsData]); // ADD integrationsData to dependencies
 
   // Handle OAuth callback success/error from backend redirect (legacy support)
   useEffect(() => {
@@ -117,6 +124,7 @@ export const Integrations = () => {
 
     const error = searchParams.get('oauth_error');
     if (error) {
+      logOAuth('Received oauth_error from backend redirect', error);
       toast.error(`Connection failed: ${error}`, {
         description: 'Please try again or contact support',
         duration: 7000,
@@ -173,7 +181,19 @@ export const Integrations = () => {
         }
 
         // Log the authorization URL for debugging (helps verify redirect_uri parameter)
-        console.log('OAuth authorization URL:', result.authorization_url);
+        logOAuth('Authorization URL received', {
+          url: result.authorization_url,
+          state: result.state,
+          integrationId: integration.id,
+          parsedRedirect: (() => {
+            try {
+              const parsed = new URL(result.authorization_url);
+              return parsed.searchParams.get('redirect_uri');
+            } catch {
+              return 'unparseable';
+            }
+          })(),
+        });
 
         // Redirect to Google OAuth
         window.location.href = result.authorization_url;

@@ -76,6 +76,7 @@ import Integrations from "./pages/Integrations"; // Import Integrations page
 import WorkflowEditor from "./pages/WorkflowEditor"; // Import Workflow Editor page
 
 import { WebSocketProvider } from "./context/WebSocketProvider";
+import { OAuthCallback } from "./pages/OAuthCallback";
 
 const queryClient = new QueryClient();
 
@@ -179,6 +180,7 @@ const AppLayout = () => {
               <Route path="/integrations" element={<Integrations />} />
               <Route path="/integrations/workflows/new" element={<WorkflowEditor />} />
               <Route path="/integrations/workflows/:workflowId" element={<WorkflowEditor />} />
+              <Route path="/integrations/oauth/callback" element={<OAuthCallback />} />
 
               {/* 404 */}
               <Route path="*" element={<NotFound />} />

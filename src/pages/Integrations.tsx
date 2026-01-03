@@ -67,6 +67,22 @@ export const Integrations = () => {
 
   const handleConnectIntegration = useCallback(async (integration: Integration) => {
     try {
+      // Check if integration is already connected
+      const existingConnection = connectionsData?.results.find(conn => conn.integration === integration.id);
+
+      if (existingConnection) {
+        // Show info that integration is already connected
+        const accountName = existingConnection.name || existingConnection.integration_details?.name || 'your account';
+        toast.info(`Already connected to ${accountName}`, {
+          description: 'You can manage this connection from the Connected tab',
+          duration: 5000,
+        });
+
+        // Switch to connected tab to show the existing connection
+        setActiveTab('connected');
+        return;
+      }
+
       if (integration.requires_oauth) {
         // Initiate OAuth flow
         toast.info('Redirecting to Google for authorization...');
@@ -99,7 +115,7 @@ export const Integrations = () => {
       console.error('OAuth initiation error:', error);
       toast.error(error.message || 'Failed to initiate connection');
     }
-  }, [navigate, initiateOAuth]);
+  }, [navigate, initiateOAuth, connectionsData, setActiveTab]);
 
   const handleViewWorkflows = useCallback(() => {
     navigate('/integrations/workflows');

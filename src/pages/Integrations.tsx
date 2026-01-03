@@ -37,8 +37,22 @@ export const Integrations = () => {
         try {
           toast.info('Processing Google authorization...');
 
+          // Find Google Sheets integration
+          const googleIntegration = integrationsData?.results?.find(
+            (integration) => integration.type === 'GOOGLE_SHEETS'
+          );
+
+          if (!googleIntegration) {
+            throw new Error('Google Sheets integration not found');
+          }
+
           // Use the integration service which has proper auth headers via crmClient
-          const data = await integrationService.oauthCallback({ code, state });
+          const data = await integrationService.oauthCallback({
+            code,
+            state,
+            integration_id: googleIntegration.id,
+            connection_name: 'Google Sheets',
+          });
 
           toast.success(`Successfully connected ${data.connection?.name || 'Google Sheets'}!`, {
             description: 'You can now create workflows using this connection',
@@ -76,7 +90,7 @@ export const Integrations = () => {
 
       handleOAuthCallback();
     }
-  }, [searchParams, setSearchParams, mutateConnections, isProcessingOAuth]);
+  }, [searchParams, setSearchParams, mutateConnections, isProcessingOAuth, integrationsData]);
 
   // Handle OAuth callback success/error from backend redirect (legacy support)
   useEffect(() => {

@@ -117,6 +117,7 @@ export interface OAuthCallbackRequest {
   state: string;
   integration_id: number;
   connection_name?: string;
+  redirect_uri?: string;
 }
 
 export interface OAuthCallbackResponse {

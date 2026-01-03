@@ -55,9 +55,16 @@ useEffect(() => {
           throw new Error('Google Sheets integration not found');
         }
 
+        // Construct the same redirect_uri used during OAuth initiation
+        let redirectUri = `${window.location.origin}${window.location.pathname}`;
+        if (!redirectUri.endsWith('/')) {
+          redirectUri += '/';
+        }
+
         logOAuth('Posting OAuth callback to backend', {
           integrationId: googleIntegration.id,
           state,
+          redirectUri,
         });
 
         const data = await integrationService.oauthCallback({
@@ -65,6 +72,7 @@ useEffect(() => {
           state,
           integration_id: googleIntegration.id,
           connection_name: 'Google Sheets',
+          redirect_uri: redirectUri,
         });
 
         logOAuth('OAuth callback response', data);

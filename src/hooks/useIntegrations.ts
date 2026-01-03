@@ -28,6 +28,7 @@ import type {
   ExecutionLogsQueryParams,
   PaginatedResponse,
   WorkflowTestRequest,
+  SheetColumnsResponse,
 } from '@/types/integration.types';
 
 // SWR Keys
@@ -185,6 +186,17 @@ export const useIntegrations = () => {
    */
   const getSheets = async (connectionId: number, spreadsheetId: string) => {
     return integrationService.getSheets(connectionId, spreadsheetId);
+  };
+
+  /**
+   * Get column headers for a sheet
+   */
+  const getSheetColumns = async (
+    connectionId: number,
+    spreadsheetId: string,
+    sheetName: string
+  ): Promise<SheetColumnsResponse> => {
+    return integrationService.getSheetColumns(connectionId, spreadsheetId, sheetName);
   };
 
   // ==================== WORKFLOWS ====================
@@ -455,6 +467,7 @@ export const useIntegrations = () => {
     refreshConnectionToken,
     getSpreadsheets,
     getSheets,
+    getSheetColumns,
 
     // Workflows
     useWorkflowsList,

@@ -13,7 +13,7 @@ export const API_CONFIG = {
   // IMPORTANT: For OAuth integrations (like Google Sheets), use 'localhost' instead of '127.0.0.1'
   // to match the redirect URIs configured in Google Cloud Console
   AUTH_BASE_URL: import.meta.env.VITE_AUTH_BASE_URL || 'https://admin.celiyo.com/api',
-  CRM_BASE_URL: import.meta.env.VITE_CRM_BASE_URL || 'https://crm.celiyo.com/api',
+  CRM_BASE_URL: import.meta.env.VITE_CRM_BASE_URL || 'http://127.0.0.1:8000/api',
   HMS_BASE_URL: import.meta.env.VITE_HMS_BASE_URL || 'https://hms.celiyo.com/api',
   WHATSAPP_BASE_URL: import.meta.env.VITE_WHATSAPP_BASE_URL || 'https://whatsapp.celiyo.com/api',
 
@@ -490,6 +490,7 @@ export const API_CONFIG = {
       REFRESH_TOKEN: '/integrations/connections/:id/refresh_token/',
       SPREADSHEETS: '/integrations/connections/:id/spreadsheets/',
       SHEETS: '/integrations/connections/:id/sheets/',
+      SHEET_COLUMNS: '/integrations/connections/:id/sheet-columns/',
     },
     WORKFLOWS: {
       LIST: '/integrations/workflows/',

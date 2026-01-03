@@ -15,6 +15,7 @@ import type {
   ConnectionTestResponse,
   SpreadsheetsResponse,
   SheetsResponse,
+  SheetColumnsResponse,
   Workflow,
   WorkflowCreateData,
   WorkflowUpdateData,
@@ -37,6 +38,14 @@ import type {
   WorkflowTestRequest,
   WorkflowTestResponse,
 } from '@/types/integration.types';
+
+/**
+ * Some endpoints are paginated by DRF. Normalize responses so callers always get arrays.
+ */
+const unwrapListResponse = <T>(data: T[] | PaginatedResponse<T>): T[] => {
+  if (Array.isArray(data)) return data;
+  return data?.results ?? [];
+};
 
 class IntegrationService {
   // ==================== INTEGRATIONS ====================
@@ -262,6 +271,27 @@ class IntegrationService {
     }
   }
 
+  // Get column headers for a sheet
+  async getSheetColumns(
+    connectionId: number,
+    spreadsheetId: string,
+    sheetName: string
+  ): Promise<SheetColumnsResponse> {
+    try {
+      const queryString = buildQueryString({
+        spreadsheet_id: spreadsheetId,
+        sheet_name: sheetName,
+      });
+      const response = await crmClient.get<SheetColumnsResponse>(
+        `${API_CONFIG.CRM.CONNECTIONS.SHEET_COLUMNS.replace(':id', connectionId.toString())}${queryString}`
+      );
+      return response.data;
+    } catch (error: any) {
+      const message = error.response?.data?.error || error.response?.data?.message || 'Failed to fetch sheet columns';
+      throw new Error(message);
+    }
+  }
+
   // ==================== WORKFLOWS ====================
 
   // Get all workflows
@@ -371,10 +401,10 @@ class IntegrationService {
   // Get triggers for a workflow
   async getWorkflowTriggers(workflowId: number): Promise<WorkflowTrigger[]> {
     try {
-      const response = await crmClient.get<WorkflowTrigger[]>(
+      const response = await crmClient.get<WorkflowTrigger[] | PaginatedResponse<WorkflowTrigger>>(
         API_CONFIG.CRM.WORKFLOWS.TRIGGERS.replace(':workflow_id', workflowId.toString())
       );
-      return response.data;
+      return unwrapListResponse(response.data);
     } catch (error: any) {
       const message = error.response?.data?.error || error.response?.data?.message || 'Failed to fetch triggers';
       throw new Error(message);
@@ -430,10 +460,10 @@ class IntegrationService {
   // Get actions for a workflow
   async getWorkflowActions(workflowId: number): Promise<WorkflowAction[]> {
     try {
-      const response = await crmClient.get<WorkflowAction[]>(
+      const response = await crmClient.get<WorkflowAction[] | PaginatedResponse<WorkflowAction>>(
         API_CONFIG.CRM.WORKFLOWS.ACTIONS.replace(':workflow_id', workflowId.toString())
       );
-      return response.data;
+      return unwrapListResponse(response.data);
     } catch (error: any) {
       const message = error.response?.data?.error || error.response?.data?.message || 'Failed to fetch actions';
       throw new Error(message);
@@ -489,10 +519,10 @@ class IntegrationService {
   // Get mappings for a workflow
   async getWorkflowMappings(workflowId: number): Promise<WorkflowMapping[]> {
     try {
-      const response = await crmClient.get<WorkflowMapping[]>(
+      const response = await crmClient.get<WorkflowMapping[] | PaginatedResponse<WorkflowMapping>>(
         API_CONFIG.CRM.WORKFLOWS.MAPPINGS.replace(':workflow_id', workflowId.toString())
       );
-      return response.data;
+      return unwrapListResponse(response.data);
     } catch (error: any) {
       const message = error.response?.data?.error || error.response?.data?.message || 'Failed to fetch mappings';
       throw new Error(message);

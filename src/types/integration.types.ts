@@ -151,6 +151,10 @@ export interface SheetsResponse {
   sheets: Sheet[];
 }
 
+export interface SheetColumnsResponse {
+  headers: string[];
+}
+
 // ==================== WORKFLOW TYPES ====================
 
 export interface Workflow {
@@ -193,7 +197,7 @@ export interface WorkflowTrigger {
   connection: number;
   connection_details?: Connection;
   trigger_type: TriggerTypeEnum;
-  config: Record<string, any>;
+  trigger_config: Record<string, any>;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -203,7 +207,8 @@ export interface WorkflowTriggerCreateData {
   workflow: number;
   connection: number;
   trigger_type: TriggerTypeEnum;
-  config: Record<string, any>;
+  trigger_config: Record<string, any>;
+  poll_interval_minutes?: number;
   is_active?: boolean;
 }
 
@@ -215,8 +220,8 @@ export interface WorkflowAction {
   id: number;
   workflow: number;
   action_type: ActionTypeEnum;
-  config: Record<string, any>;
-  order_index: number;
+  action_config: Record<string, any>;
+  order: number;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -225,8 +230,8 @@ export interface WorkflowAction {
 export interface WorkflowActionCreateData {
   workflow: number;
   action_type: ActionTypeEnum;
-  config: Record<string, any>;
-  order_index?: number;
+  action_config: Record<string, any>;
+  order?: number;
   is_active?: boolean;
 }
 

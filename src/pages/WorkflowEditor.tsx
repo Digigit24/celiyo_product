@@ -53,13 +53,16 @@ export const WorkflowEditor = () => {
     useWorkflowActions,
     useWorkflowMappings,
     createWorkflowTrigger,
+    updateWorkflowTrigger,
     createWorkflowAction,
+    updateWorkflowAction,
     createWorkflowMapping,
     deleteWorkflowTrigger,
     deleteWorkflowAction,
     deleteWorkflowMapping,
     getSpreadsheets,
     getSheets,
+    getSheetColumns,
   } = useIntegrations();
 
   // Fetch workflow data if editing
@@ -92,6 +95,8 @@ export const WorkflowEditor = () => {
   const [sheetName, setSheetName] = useState('');
   const [spreadsheets, setSpreadsheets] = useState<any[]>([]);
   const [sheets, setSheets] = useState<any[]>([]);
+  const [sheetColumns, setSheetColumns] = useState<string[]>([]);
+  const [isLoadingColumns, setIsLoadingColumns] = useState(false);
 
   // Action state
   const [actionType, setActionType] = useState<ActionTypeEnum>('CREATE_LEAD');
@@ -103,6 +108,7 @@ export const WorkflowEditor = () => {
     transformation_type: 'TEXT' as TransformationTypeEnum,
     is_required: false,
   });
+  const [pendingMappings, setPendingMappings] = useState<typeof newMapping[]>([]);
 
   // Load workflow data when editing
   useEffect(() => {
@@ -112,6 +118,34 @@ export const WorkflowEditor = () => {
       setIsActive(workflow.is_active);
     }
   }, [workflow]);
+
+  // Prefill trigger/action state when editing
+  useEffect(() => {
+    if (triggers && triggers.length > 0) {
+      const t = triggers[0];
+      setSelectedConnection(t.connection);
+      if (t.trigger_config?.spreadsheet_id) {
+        setSpreadsheetId(t.trigger_config.spreadsheet_id);
+      }
+      if (t.trigger_config?.sheet_name) {
+        setSheetName(t.trigger_config.sheet_name);
+      }
+      setTriggerType(t.trigger_type);
+    }
+  }, [triggers]);
+
+  useEffect(() => {
+    if (actions && actions.length > 0) {
+      setActionType(actions[0].action_type);
+    }
+  }, [actions]);
+
+  // Ensure columns load when trigger prefills state
+  useEffect(() => {
+    if (selectedConnection && spreadsheetId && sheetName) {
+      loadSheetColumns(selectedConnection, spreadsheetId, sheetName);
+    }
+  }, [selectedConnection, spreadsheetId, sheetName]);
 
   // Load spreadsheets when connection is selected
   useEffect(() => {
@@ -126,6 +160,15 @@ export const WorkflowEditor = () => {
       loadSheets(selectedConnection, spreadsheetId);
     }
   }, [selectedConnection, spreadsheetId]);
+
+  // Load sheet columns when sheet changes
+  useEffect(() => {
+    if (selectedConnection && spreadsheetId && sheetName) {
+      loadSheetColumns(selectedConnection, spreadsheetId, sheetName);
+    } else {
+      setSheetColumns([]);
+    }
+  }, [selectedConnection, spreadsheetId, sheetName]);
 
   const loadSpreadsheets = async (connectionId: number) => {
     try {
@@ -153,6 +196,33 @@ export const WorkflowEditor = () => {
     } catch (error: any) {
       toast.error(error.message || 'Failed to load sheets');
     }
+  };
+
+  const loadSheetColumns = async (connectionId: number, spreadsheet: string, sheet: string) => {
+    try {
+      setIsLoadingColumns(true);
+      const result = await getSheetColumns(connectionId, spreadsheet, sheet);
+      setSheetColumns(result.headers || []);
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to load sheet columns');
+      setSheetColumns([]);
+    } finally {
+      setIsLoadingColumns(false);
+    }
+  };
+
+  const handleReloadColumns = () => {
+    // Prefer current state; fallback to existing trigger data
+    const connectionId = selectedConnection || triggers?.[0]?.connection;
+    const sheetId = spreadsheetId || triggers?.[0]?.trigger_config?.spreadsheet_id;
+    const sheet = sheetName || triggers?.[0]?.trigger_config?.sheet_name;
+
+    if (!connectionId || !sheetId || !sheet) {
+      toast.error('Select connection, spreadsheet, and sheet first');
+      return;
+    }
+
+    loadSheetColumns(connectionId, sheetId, sheet);
   };
 
   const handleSaveBasic = async () => {
@@ -201,16 +271,30 @@ export const WorkflowEditor = () => {
 
     setIsSaving(true);
     try {
-      await createWorkflowTrigger(parseInt(workflowId), {
-        connection: selectedConnection,
-        trigger_type: triggerType,
-        config: {
-          spreadsheet_id: spreadsheetId,
-          sheet_name: sheetName,
-        },
-        is_active: true,
-      });
-      toast.success('Trigger added successfully');
+      if (triggers && triggers.length > 0) {
+        const existing = triggers[0];
+        await updateWorkflowTrigger(parseInt(workflowId), existing.id, {
+          connection: selectedConnection!,
+          trigger_type: triggerType,
+          trigger_config: {
+            spreadsheet_id: spreadsheetId,
+            sheet_name: sheetName,
+          },
+          is_active: true,
+        });
+        toast.success('Trigger updated successfully');
+      } else {
+        await createWorkflowTrigger(parseInt(workflowId), {
+          connection: selectedConnection,
+          trigger_type: triggerType,
+          trigger_config: {
+            spreadsheet_id: spreadsheetId,
+            sheet_name: sheetName,
+          },
+          is_active: true,
+        });
+        toast.success('Trigger added successfully');
+      }
       mutateTriggers();
       setActiveTab('action');
     } catch (error: any) {
@@ -228,13 +312,24 @@ export const WorkflowEditor = () => {
 
     setIsSaving(true);
     try {
-      await createWorkflowAction(parseInt(workflowId), {
-        action_type: actionType,
-        config: {},
-        order_index: (actions?.length || 0) + 1,
-        is_active: true,
-      });
-      toast.success('Action added successfully');
+      if (actions && actions.length > 0) {
+        const existing = actions[0];
+        await updateWorkflowAction(parseInt(workflowId), existing.id, {
+          action_type: actionType,
+          action_config: existing.action_config || {},
+          order: existing.order || 1,
+          is_active: true,
+        });
+        toast.success('Action updated successfully');
+      } else {
+        await createWorkflowAction(parseInt(workflowId), {
+          action_type: actionType,
+          action_config: {},
+          order: (actions?.length || 0) + 1,
+          is_active: true,
+        });
+        toast.success('Action added successfully');
+      }
       mutateActions();
       setActiveTab('mapping');
     } catch (error: any) {
@@ -244,44 +339,18 @@ export const WorkflowEditor = () => {
     }
   };
 
-  const handleSaveMapping = async () => {
-    if (!workflowId) {
-      toast.error('Please save the workflow first');
-      return;
-    }
-
-    if (!actions || actions.length === 0) {
-      toast.error('Please add an action before creating field mappings');
-      return;
-    }
-
-    if (!newMapping.source_field || !newMapping.destination_field) {
-      toast.error('Please select both source and destination fields');
-      return;
-    }
-
-    setIsSaving(true);
-    try {
-      // Use the first action's ID for the mapping
-      const actionId = actions[0].id;
-      await createWorkflowMapping(parseInt(workflowId), {
-        ...newMapping,
-        workflow_action_id: actionId
-      });
-      toast.success('Field mapping added successfully');
-      mutateMappings();
-      setNewMapping({
-        source_field: '',
-        destination_field: '',
-        transformation_type: 'TEXT',
-        is_required: false,
-      });
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to save mapping');
-    } finally {
-      setIsSaving(false);
-    }
-  };
+  // Destination CRM fields with required flags
+  const destinationFields = [
+    { value: 'name', label: 'Name', required: true },
+    { value: 'phone', label: 'Phone', required: true },
+    { value: 'email', label: 'Email', required: false },
+    { value: 'company', label: 'Company', required: false },
+    { value: 'title', label: 'Title', required: false },
+    { value: 'address_line1', label: 'Address Line 1', required: false },
+    { value: 'city', label: 'City', required: false },
+    { value: 'state', label: 'State', required: false },
+    { value: 'country', label: 'Country', required: false },
+  ];
 
   const handleTestWorkflow = async () => {
     if (!workflowId) {
@@ -291,12 +360,10 @@ export const WorkflowEditor = () => {
 
     setIsTesting(true);
     try {
-      const result = await testWorkflow(parseInt(workflowId));
-      if (result.success) {
-        toast.success('Workflow test successful!');
-      } else {
-        toast.error(result.message || 'Workflow test failed');
-      }
+      const result = await testWorkflow(parseInt(workflowId), {
+        reset_last_processed: true, // force full read for tests
+      });
+      toast.success(result.message || 'Workflow test executed');
     } catch (error: any) {
       toast.error(error.message || 'Failed to test workflow');
     } finally {
@@ -337,6 +404,98 @@ export const WorkflowEditor = () => {
     }
   };
 
+  const handleQueueMapping = () => {
+    if (!workflowId) {
+      toast.error('Please save the workflow first');
+      return;
+    }
+
+    if (!actions || actions.length === 0) {
+      toast.error('Please add an action before creating field mappings');
+      return;
+    }
+
+    if (!newMapping.source_field || !newMapping.destination_field) {
+      toast.error('Please select both source and destination fields');
+      return;
+    }
+
+    setPendingMappings((prev) => [...prev, newMapping]);
+    setNewMapping({
+      source_field: '',
+      destination_field: '',
+      transformation_type: 'TEXT',
+      is_required: false,
+    });
+  };
+
+  const handleSaveQueuedMappings = async () => {
+    if (!workflowId) {
+      toast.error('Please save the workflow first');
+      return;
+    }
+    if (!actions || actions.length === 0) {
+      toast.error('Please add an action before creating field mappings');
+      return;
+    }
+    if (pendingMappings.length === 0) {
+      toast.error('Add at least one mapping');
+      return;
+    }
+
+    setIsSaving(true);
+    const actionId = actions[0].id;
+    try {
+      for (const mapping of pendingMappings) {
+        await createWorkflowMapping(parseInt(workflowId), {
+          ...mapping,
+          workflow_action_id: actionId,
+        });
+      }
+      toast.success('Field mappings saved successfully');
+      setPendingMappings([]);
+      mutateMappings();
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to save mappings');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDestinationChange = (value: string) => {
+    const dest = destinationFields.find((field) => field.value === value);
+    const isRequired = dest?.required ?? false;
+
+    // Auto-set transformation type for known fields
+    const suggestedTransform =
+      value === 'phone' ? 'PHONE' :
+      value === 'email' ? 'EMAIL' :
+      'TEXT';
+
+    setNewMapping({
+      ...newMapping,
+      destination_field: value,
+      is_required: isRequired,
+      transformation_type: suggestedTransform as TransformationTypeEnum,
+    });
+  };
+
+  const goToActionTab = async () => {
+    if (triggers && triggers.length > 0) {
+      setActiveTab('action');
+      return;
+    }
+    await handleSaveTrigger();
+  };
+
+  const goToMappingTab = async () => {
+    if (actions && actions.length > 0) {
+      setActiveTab('mapping');
+      return;
+    }
+    await handleSaveAction();
+  };
+
   if (workflowLoading) {
     return (
       <div className="p-6 max-w-6xl mx-auto space-y-6">
@@ -347,7 +506,7 @@ export const WorkflowEditor = () => {
   }
 
   return (
-    <div className="p-6 max-w-6xl mx-auto space-y-6">
+    <div className="p-6 max-w-8xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
@@ -578,9 +737,9 @@ export const WorkflowEditor = () => {
               <div className="flex gap-2 pt-4">
                 <Button onClick={handleSaveTrigger} disabled={isSaving || !selectedConnection}>
                   <Plus className="h-4 w-4 mr-2" />
-                  Add Trigger
+                  {triggers && triggers.length > 0 ? 'Update Trigger' : 'Add Trigger'}
                 </Button>
-                <Button variant="outline" onClick={() => setActiveTab('action')}>
+                <Button variant="outline" onClick={goToActionTab}>
                   Next: Configure Action
                   <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
@@ -605,7 +764,7 @@ export const WorkflowEditor = () => {
                     <div key={action.id} className="flex items-center justify-between p-3 border rounded-lg">
                       <div>
                         <p className="font-medium">{action.action_type.replace('_', ' ')}</p>
-                        <Badge variant="outline">Order: {action.order_index}</Badge>
+                        <Badge variant="outline">Order: {action.order}</Badge>
                       </div>
                       <Button
                         variant="destructive"
@@ -638,9 +797,9 @@ export const WorkflowEditor = () => {
               <div className="flex gap-2 pt-4">
                 <Button onClick={handleSaveAction} disabled={isSaving}>
                   <Plus className="h-4 w-4 mr-2" />
-                  Add Action
+                  {actions && actions.length > 0 ? 'Update Action' : 'Add Action'}
                 </Button>
-                <Button variant="outline" onClick={() => setActiveTab('mapping')}>
+                <Button variant="outline" onClick={goToMappingTab}>
                   Next: Configure Field Mapping
                   <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
@@ -683,43 +842,81 @@ export const WorkflowEditor = () => {
                   </div>
                 </div>
               )}
+              {pendingMappings.length > 0 && (
+                <div className="space-y-2 mb-4">
+                  <Label>Pending Mappings (not saved yet)</Label>
+                  <div className="space-y-2">
+                    {pendingMappings.map((mapping, idx) => (
+                      <div key={`${mapping.destination_field}-${idx}`} className="flex items-center justify-between p-3 border rounded-lg bg-muted/40">
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-medium">{mapping.destination_field}</span>
+                          <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-medium">{mapping.source_field}</span>
+                          {mapping.is_required && <Badge variant="secondary">Required</Badge>}
+                        </div>
+                        <Badge variant="outline">Queued</Badge>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Add New Mapping */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Source Field (Google Sheets Column)</Label>
-                  <Input
-                    value={newMapping.source_field}
-                    onChange={(e) =>
-                      setNewMapping({ ...newMapping, source_field: e.target.value })
-                    }
-                    placeholder="e.g., Name, Email, Phone"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Destination Field (CRM Field)</Label>
+                  <Label>CRM Field (destination)</Label>
                   <Select
                     value={newMapping.destination_field}
-                    onValueChange={(value) =>
-                      setNewMapping({ ...newMapping, destination_field: value })
-                    }
+                    onValueChange={handleDestinationChange}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Choose CRM field" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="name">Name</SelectItem>
-                      <SelectItem value="phone">Phone</SelectItem>
-                      <SelectItem value="email">Email</SelectItem>
-                      <SelectItem value="company">Company</SelectItem>
-                      <SelectItem value="title">Title</SelectItem>
-                      <SelectItem value="address_line1">Address Line 1</SelectItem>
-                      <SelectItem value="city">City</SelectItem>
-                      <SelectItem value="state">State</SelectItem>
-                      <SelectItem value="country">Country</SelectItem>
+                      {destinationFields.map((field) => (
+                        <SelectItem key={field.value} value={field.value}>
+                          {field.label} {field.required ? '(required)' : ''}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Sheet Column (source)</Label>
+                  <Select
+                    value={newMapping.source_field}
+                    onValueChange={(value) => setNewMapping({ ...newMapping, source_field: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={isLoadingColumns ? 'Loading columns...' : sheetColumns.length ? 'Choose sheet column' : 'No columns found - reload?'} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {isLoadingColumns && (
+                        <SelectItem value="loading" disabled>
+                          Loading...
+                        </SelectItem>
+                      )}
+                      {!isLoadingColumns &&
+                        sheetColumns.map((col) => (
+                          <SelectItem key={col} value={col}>
+                            {col}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                  {!sheetName && (
+                    <p className="text-xs text-muted-foreground">Select a sheet to load its columns</p>
+                  )}
+                  {sheetColumns.length === 0 && sheetName && !isLoadingColumns && (
+                    <div className="flex items-center justify-between text-xs text-destructive">
+                      <span>No columns found in the selected sheet.</span>
+                      <Button size="sm" variant="ghost" onClick={handleReloadColumns}>
+                        Reload
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -731,15 +928,30 @@ export const WorkflowEditor = () => {
                     onCheckedChange={(checked) =>
                       setNewMapping({ ...newMapping, is_required: checked })
                     }
+                    disabled={destinationFields.find((f) => f.value === newMapping.destination_field)?.required}
                   />
-                  <Label htmlFor="required">Required field</Label>
+                  <Label htmlFor="required">
+                    {destinationFields.find((f) => f.value === newMapping.destination_field)?.required
+                      ? 'Required by CRM'
+                      : 'Mark as required'}
+                  </Label>
                 </div>
               </div>
 
               <div className="flex gap-2 pt-4">
-                <Button onClick={handleSaveMapping} disabled={isSaving}>
+                <Button
+                  onClick={handleQueueMapping}
+                  disabled={sheetColumns.length === 0 || !newMapping.destination_field}
+                >
                   <Plus className="h-4 w-4 mr-2" />
-                  Add Field Mapping
+                  Add Mapping to List
+                </Button>
+                <Button
+                  onClick={handleSaveQueuedMappings}
+                  disabled={isSaving || pendingMappings.length === 0}
+                  variant="secondary"
+                >
+                  {isSaving ? 'Saving...' : 'Save Mappings'}
                 </Button>
               </div>
             </CardContent>

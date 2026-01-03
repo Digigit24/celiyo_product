@@ -181,12 +181,13 @@ class IntegrationService {
     }
   }
 
-  // OAuth callback (handled by backend redirect, but available if needed)
+  // OAuth callback - POST code and state to backend to complete OAuth flow
   async oauthCallback(params: OAuthCallbackRequest): Promise<OAuthCallbackResponse> {
     try {
-      const queryString = buildQueryString(params as any);
-      const response = await crmClient.get<OAuthCallbackResponse>(
-        `${API_CONFIG.CRM.CONNECTIONS.OAUTH_CALLBACK}${queryString}`
+      // POST to backend with code and state in request body (requires authentication)
+      const response = await crmClient.post<OAuthCallbackResponse>(
+        API_CONFIG.CRM.CONNECTIONS.OAUTH_CALLBACK,
+        params
       );
       return response.data;
     } catch (error: any) {

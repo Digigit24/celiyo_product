@@ -463,7 +463,7 @@ export const WorkflowEditor = () => {
               {triggers && triggers.length > 0 && (
                 <div className="space-y-2 mb-4">
                   <Label>Existing Triggers</Label>
-                  {triggers.map((trigger) => (
+                  {(triggers || []).map((trigger) => (
                     <div key={trigger.id} className="flex items-center justify-between p-3 border rounded-lg">
                       <div>
                         <p className="font-medium">{trigger.trigger_type.replace('_', ' ')}</p>
@@ -494,7 +494,7 @@ export const WorkflowEditor = () => {
                     <SelectValue placeholder="Choose a connected app" />
                   </SelectTrigger>
                   <SelectContent>
-                    {connectionsData?.results.map((connection) => (
+                    {(connectionsData?.results || []).map((connection) => (
                       <SelectItem key={connection.id} value={connection.id.toString()}>
                         {connection.name}
                       </SelectItem>
@@ -526,7 +526,7 @@ export const WorkflowEditor = () => {
                         <SelectValue placeholder="Choose a spreadsheet" />
                       </SelectTrigger>
                       <SelectContent>
-                        {spreadsheets.map((spreadsheet) => (
+                        {(spreadsheets || []).map((spreadsheet) => (
                           <SelectItem key={spreadsheet.id} value={spreadsheet.id}>
                             {spreadsheet.name}
                           </SelectItem>
@@ -543,7 +543,7 @@ export const WorkflowEditor = () => {
                           <SelectValue placeholder="Choose a sheet" />
                         </SelectTrigger>
                         <SelectContent>
-                          {sheets.map((sheet) => (
+                          {(sheets || []).map((sheet) => (
                             <SelectItem key={sheet.id} value={sheet.name}>
                               {sheet.name}
                             </SelectItem>
@@ -581,7 +581,7 @@ export const WorkflowEditor = () => {
               {actions && actions.length > 0 && (
                 <div className="space-y-2 mb-4">
                   <Label>Existing Actions</Label>
-                  {actions.map((action) => (
+                  {(actions || []).map((action) => (
                     <div key={action.id} className="flex items-center justify-between p-3 border rounded-lg">
                       <div>
                         <p className="font-medium">{action.action_type.replace('_', ' ')}</p>
@@ -642,7 +642,7 @@ export const WorkflowEditor = () => {
                 <div className="space-y-2 mb-4">
                   <Label>Existing Mappings</Label>
                   <div className="space-y-2">
-                    {mappings.map((mapping) => (
+                    {(mappings || []).map((mapping) => (
                       <div key={mapping.id} className="flex items-center justify-between p-3 border rounded-lg">
                         <div className="flex items-center gap-2">
                           <FileText className="h-4 w-4 text-muted-foreground" />

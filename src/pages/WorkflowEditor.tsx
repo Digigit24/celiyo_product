@@ -143,7 +143,13 @@ export const WorkflowEditor = () => {
       const result = await getSheets(connectionId, spreadsheetId);
       // Handle both array response and object with sheets property
       const sheetsArray = Array.isArray(result) ? result : result.sheets;
-      setSheets(sheetsArray || []);
+      // Map API response to expected format (sheet_id -> id, title -> name)
+      const mappedSheets = (sheetsArray || []).map((sheet: any) => ({
+        id: sheet.sheet_id?.toString() || sheet.id,
+        name: sheet.title || sheet.name,
+        index: sheet.index
+      }));
+      setSheets(mappedSheets);
     } catch (error: any) {
       toast.error(error.message || 'Failed to load sheets');
     }

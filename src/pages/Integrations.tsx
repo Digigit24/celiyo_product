@@ -165,8 +165,18 @@ useEffect(() => {
         // Initiate OAuth flow
         toast.info('Redirecting to Google for authorization...');
 
+        // Construct the redirect URI - where Google should send the user back
+        // Ensure it ends with a trailing slash to match Google Cloud Console configuration
+        let redirectUri = `${window.location.origin}${window.location.pathname}`;
+        if (!redirectUri.endsWith('/')) {
+          redirectUri += '/';
+        }
+
+        logOAuth('Initiating OAuth with redirect_uri', { redirectUri });
+
         const result = await initiateOAuth({
-          integration_id: integration.id
+          integration_id: integration.id,
+          redirect_uri: redirectUri
         });
 
         // Validate that we received a valid authorization URL

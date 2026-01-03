@@ -415,7 +415,7 @@ export const WorkflowEditor = () => {
                       <SelectValue placeholder="Choose a connected app" />
                     </SelectTrigger>
                     <SelectContent>
-                      {connectionsData?.results.map((connection) => (
+                      {(connectionsData?.results || []).map((connection) => (
                         <SelectItem key={connection.id} value={connection.id.toString()}>
                           {connection.name} ({connection.integration_details?.name})
                         </SelectItem>

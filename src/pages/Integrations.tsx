@@ -2,6 +2,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useIntegrations } from '@/hooks/useIntegrations';
+import { integrationService } from '@/services/integrationService';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -36,47 +37,8 @@ export const Integrations = () => {
         try {
           toast.info('Processing Google authorization...');
 
-          // Get authentication token and tenant ID
-          const token = localStorage.getItem('celiyo_access_token');
-          let tenantId = '';
-
-          try {
-            const userJson = localStorage.getItem('celiyo_user');
-            if (userJson) {
-              const user = JSON.parse(userJson);
-              tenantId = user?.tenant?.id || user?.tenant?.tenant_id || '';
-            }
-          } catch (e) {
-            console.error('Failed to parse user for tenant ID:', e);
-          }
-
-          // Build headers
-          const headers: Record<string, string> = {
-            'Content-Type': 'application/json',
-          };
-
-          if (token) {
-            headers['Authorization'] = `Bearer ${token}`;
-          }
-
-          if (tenantId) {
-            headers['X-Tenant-Id'] = tenantId;
-            headers['tenanttoken'] = tenantId;
-          }
-
-          // Call the backend OAuth callback endpoint
-          const response = await fetch(`${import.meta.env.VITE_CRM_BASE_URL || 'http://localhost:8000/api'}/integrations/connections/oauth_callback/?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state)}`, {
-            method: 'GET',
-            headers,
-            credentials: 'include', // Include cookies for session auth
-          });
-
-          if (!response.ok) {
-            const errorData = await response.json().catch(() => ({ error: 'Failed to connect' }));
-            throw new Error(errorData.error || errorData.message || 'Failed to complete OAuth');
-          }
-
-          const data = await response.json();
+          // Use the integration service which has proper auth headers via crmClient
+          const data = await integrationService.oauthCallback({ code, state });
 
           toast.success(`Successfully connected ${data.connection?.name || 'Google Sheets'}!`, {
             description: 'You can now create workflows using this connection',

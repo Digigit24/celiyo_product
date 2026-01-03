@@ -171,6 +171,7 @@ export interface WorkflowCreateData {
   name: string;
   description?: string;
   is_active?: boolean;
+  connection_id: number;
 }
 
 export interface WorkflowUpdateData extends Partial<WorkflowCreateData> {}

@@ -151,13 +151,23 @@ export const WorkflowEditor = () => {
       return;
     }
 
+    if (!selectedConnection && !isEditMode) {
+      toast.error('Please select a connection');
+      return;
+    }
+
     setIsSaving(true);
     try {
       if (isEditMode && workflowId) {
         await updateWorkflow(parseInt(workflowId), { name, description, is_active: isActive });
         toast.success('Workflow updated successfully');
       } else {
-        const newWorkflow = await createWorkflow({ name, description, is_active: isActive });
+        const newWorkflow = await createWorkflow({
+          name,
+          description,
+          is_active: isActive,
+          connection_id: selectedConnection!
+        });
         toast.success('Workflow created successfully');
         navigate(`/integrations/workflows/${newWorkflow.id}`);
       }
@@ -393,6 +403,27 @@ export const WorkflowEditor = () => {
                   rows={3}
                 />
               </div>
+
+              {!isEditMode && (
+                <div className="space-y-2">
+                  <Label>Select Connection *</Label>
+                  <Select
+                    value={selectedConnection?.toString() || ''}
+                    onValueChange={(value) => setSelectedConnection(parseInt(value))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose a connected app" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {connectionsData?.results.map((connection) => (
+                        <SelectItem key={connection.id} value={connection.id.toString()}>
+                          {connection.name} ({connection.integration_details?.name})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               <div className="flex items-center justify-between">
                 <div>

@@ -333,11 +333,14 @@ const LeadDetailsForm = forwardRef<LeadFormHandle, LeadDetailsFormProps>(
                 <Controller
                   name="phone"
                   control={control}
-                  render={({ field }) => (
+                  render={({ field: { onChange, onBlur, value, name, ref } }) => (
                     <Input
-                      {...field}
-                      value={field.value || ''}
                       id="phone"
+                      name={name}
+                      ref={ref}
+                      value={value || ''}
+                      onChange={onChange}
+                      onBlur={onBlur}
                       type="text"
                       inputMode="numeric"
                       placeholder="+1 (555) 123-4567"
@@ -357,11 +360,14 @@ const LeadDetailsForm = forwardRef<LeadFormHandle, LeadDetailsFormProps>(
                 <Controller
                   name="email"
                   control={control}
-                  render={({ field }) => (
+                  render={({ field: { onChange, onBlur, value, name, ref } }) => (
                     <Input
-                      {...field}
-                      value={field.value || ''}
                       id="email"
+                      name={name}
+                      ref={ref}
+                      value={value || ''}
+                      onChange={onChange}
+                      onBlur={onBlur}
                       type="email"
                       placeholder="john@example.com"
                       disabled={isReadOnly}

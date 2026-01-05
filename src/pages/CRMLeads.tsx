@@ -63,7 +63,7 @@ export const CRMLeads: React.FC = () => {
   const [isDeleting, setIsDeleting] = useState(false);
 
   // Filter duplicate leads state
-  const [hideDuplicates, setHideDuplicates] = useState(false);
+  const [hideDuplicates, setHideDuplicates] = useState(true);
 
   // Fetch leads and statuses
   const { data: leadsData, error, isLoading, mutate } = useLeads(queryParams);
@@ -685,7 +685,7 @@ export const CRMLeads: React.FC = () => {
           onCheckedChange={() => toggleAllLeads(filteredLeads)}
           onClick={(e) => e.stopPropagation()}
         />
-      ) as any,
+      ),
       key: 'checkbox',
       cell: (lead) => (
         <Checkbox

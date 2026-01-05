@@ -58,7 +58,7 @@ export interface ColumnFilter {
 
 export interface DataTableColumn<T> {
   /** column label in <th> */
-  header: string;
+  header: string | React.ReactNode;
   /** unique key for this column */
   key: string;
   /** render cell content for desktop table */
@@ -535,20 +535,26 @@ export function DataTable<T>({
                   <div className="flex flex-col">
                     {/* Header row with sort and filter */}
                     <div className="flex items-center gap-1 px-4 py-3 h-10">
-                      {/* Sort button */}
-                      <button
-                        onClick={() => handleSort(col)}
-                        className={`
-                          group flex items-center gap-1 text-xs font-medium text-muted-foreground
-                          hover:text-foreground transition-colors select-none
-                          ${col.sortable ? 'cursor-pointer' : 'cursor-default'}
-                          ${sortConfig?.key === col.key ? 'text-foreground' : ''}
-                        `}
-                        disabled={!col.sortable}
-                      >
-                        {col.header}
-                        {getSortIcon(col)}
-                      </button>
+                      {/* Header content */}
+                      {typeof col.header === 'string' ? (
+                        <button
+                          onClick={() => handleSort(col)}
+                          className={`
+                            group flex items-center gap-1 text-xs font-medium text-muted-foreground
+                            hover:text-foreground transition-colors select-none
+                            ${col.sortable ? 'cursor-pointer' : 'cursor-default'}
+                            ${sortConfig?.key === col.key ? 'text-foreground' : ''}
+                          `}
+                          disabled={!col.sortable}
+                        >
+                          {col.header}
+                          {getSortIcon(col)}
+                        </button>
+                      ) : (
+                        <div className="flex items-center">
+                          {col.header}
+                        </div>
+                      )}
 
                       {/* Filter button */}
                       {col.filterable && (
@@ -575,7 +581,7 @@ export function DataTable<T>({
                             <div className="p-2 space-y-2">
                               <div className="flex items-center gap-2">
                                 <Input
-                                  placeholder={`Filter ${col.header.toLowerCase()}...`}
+                                  placeholder={`Filter ${typeof col.header === 'string' ? col.header.toLowerCase() : ''}...`}
                                   value={getFilterValue(col.key)}
                                   onChange={(e) =>
                                     handleFilterChange(col.key, e.target.value)

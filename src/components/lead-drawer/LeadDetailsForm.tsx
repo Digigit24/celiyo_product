@@ -109,7 +109,10 @@ const LeadDetailsForm = forwardRef<LeadFormHandle, LeadDetailsFormProps>(
           name: z.string().min(1, 'Name is required').max(255, 'Name is too long'),
         }),
         ...(isFieldVisible('phone') && {
-          phone: z.string().min(1, 'Phone is required').max(20, 'Phone is too long'),
+          phone: z.string()
+            .min(10, 'Phone must be at least 10 digits')
+            .max(10, 'Phone must be at most 10 digits')
+            .regex(/^\d{10}$/, 'Phone must be exactly 10 digits'),
         }),
         ...(isFieldVisible('email') && {
           email: z.string().email('Invalid email').optional().or(z.literal('')),
@@ -343,7 +346,9 @@ const LeadDetailsForm = forwardRef<LeadFormHandle, LeadDetailsFormProps>(
                       onBlur={onBlur}
                       type="text"
                       inputMode="numeric"
-                      placeholder="+1 (555) 123-4567"
+                      placeholder="9876543210"
+                      minLength={10}
+                      maxLength={10}
                       disabled={isReadOnly}
                       className={errors.phone ? 'border-destructive' : ''}
                     />

@@ -337,7 +337,8 @@ const LeadDetailsForm = forwardRef<LeadFormHandle, LeadDetailsFormProps>(
                     <Input
                       {...field}
                       id="phone"
-                      type="tel"
+                      type="text"
+                      inputMode="numeric"
                       placeholder="+1 (555) 123-4567"
                       disabled={isReadOnly}
                       className={errors.phone ? 'border-destructive' : ''}

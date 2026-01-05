@@ -15,7 +15,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Plus, RefreshCw, Building2, Phone, Mail, IndianRupee, LayoutGrid, List, Download, Upload, FileSpreadsheet, ChevronDown, MessageCircle } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Plus, RefreshCw, Building2, Phone, Mail, IndianRupee, LayoutGrid, List, Download, Upload, FileSpreadsheet, ChevronDown, MessageCircle, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 import type { Lead, LeadsQueryParams, PriorityEnum, LeadStatus } from '@/types/crmTypes';
@@ -56,6 +57,13 @@ export const CRMLeads: React.FC = () => {
   // Import mapping dialog state
   const [importMappingOpen, setImportMappingOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
+  // Bulk delete state
+  const [selectedLeadIds, setSelectedLeadIds] = useState<Set<number>>(new Set());
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Filter duplicate leads state
+  const [hideDuplicates, setHideDuplicates] = useState(false);
 
   // Fetch leads and statuses
   const { data: leadsData, error, isLoading, mutate } = useLeads(queryParams);
@@ -125,6 +133,72 @@ export const CRMLeads: React.FC = () => {
     },
     [deleteLead, mutate]
   );
+
+  // Bulk delete handler
+  const handleBulkDelete = useCallback(async () => {
+    if (selectedLeadIds.size === 0) {
+      toast.error('No leads selected');
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Delete ${selectedLeadIds.size} lead(s)? This action cannot be undone.`
+    );
+
+    if (!confirmed) return;
+
+    setIsDeleting(true);
+    let successCount = 0;
+    let failCount = 0;
+
+    try {
+      for (const id of selectedLeadIds) {
+        try {
+          await deleteLead(id);
+          successCount++;
+        } catch (error) {
+          failCount++;
+        }
+      }
+
+      if (successCount > 0) {
+        toast.success(`Deleted ${successCount} lead(s)`);
+        setSelectedLeadIds(new Set());
+        mutate();
+      }
+
+      if (failCount > 0) {
+        toast.error(`Failed to delete ${failCount} lead(s)`);
+      }
+    } finally {
+      setIsDeleting(false);
+    }
+  }, [selectedLeadIds, deleteLead, mutate]);
+
+  // Toggle single lead selection
+  const toggleLeadSelection = useCallback((leadId: number) => {
+    setSelectedLeadIds((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(leadId)) {
+        newSet.delete(leadId);
+      } else {
+        newSet.add(leadId);
+      }
+      return newSet;
+    });
+  }, []);
+
+  // Toggle all leads selection
+  const toggleAllLeads = useCallback((leads: Lead[]) => {
+    setSelectedLeadIds((prev) => {
+      const allSelected = leads.every((lead) => prev.has(lead.id));
+      if (allSelected) {
+        return new Set();
+      } else {
+        return new Set(leads.map((lead) => lead.id));
+      }
+    });
+  }, []);
 
   const handleDrawerSuccess = useCallback(() => {
     mutate(); // Refresh the list
@@ -553,6 +627,28 @@ export const CRMLeads: React.FC = () => {
     return formatCurrencyDynamic(numericAmount, true, 2);
   };
 
+  // Filter duplicate phone numbers
+  const filteredLeads = useMemo(() => {
+    if (!leadsData?.results) return [];
+
+    if (!hideDuplicates) {
+      return leadsData.results;
+    }
+
+    // Track unique phone numbers
+    const seenPhones = new Set<string>();
+    return leadsData.results.filter((lead) => {
+      if (!lead.phone) return true; // Keep leads without phone numbers
+
+      const normalizedPhone = lead.phone.replace(/\s+/g, '').toLowerCase();
+      if (seenPhones.has(normalizedPhone)) {
+        return false; // Skip duplicate
+      }
+      seenPhones.add(normalizedPhone);
+      return true;
+    });
+  }, [leadsData?.results, hideDuplicates]);
+
   // Create field visibility map
   const fieldVisibilityMap = useMemo(() => {
     const allFields = configurationsData?.results || [];
@@ -578,6 +674,30 @@ export const CRMLeads: React.FC = () => {
         .filter((field) => field.is_standard)
         .map((field) => [field.field_name, { order: field.display_order, visible: field.is_visible, config: field }])
     );
+
+    // Checkbox column definition
+    const allLeadsSelected = filteredLeads.length > 0 && filteredLeads.every((lead) => selectedLeadIds.has(lead.id));
+
+    const checkboxColumn: DataTableColumn<Lead> = {
+      header: (
+        <Checkbox
+          checked={allLeadsSelected}
+          onCheckedChange={() => toggleAllLeads(filteredLeads)}
+          onClick={(e) => e.stopPropagation()}
+        />
+      ) as any,
+      key: 'checkbox',
+      cell: (lead) => (
+        <Checkbox
+          checked={selectedLeadIds.has(lead.id)}
+          onCheckedChange={() => toggleLeadSelection(lead.id)}
+          onClick={(e) => e.stopPropagation()}
+        />
+      ),
+      className: 'w-[40px]',
+      sortable: false,
+      filterable: false,
+    };
 
     // Column definitions for each standard field
     const columnDefinitions: Record<string, DataTableColumn<Lead>> = {
@@ -741,6 +861,9 @@ export const CRMLeads: React.FC = () => {
       .sort((a, b) => a.order - b.order)
       .map((item) => item.column);
 
+    // Add checkbox column at the beginning
+    sortedColumns.unshift(checkboxColumn);
+
     // Always add the "Last Updated" column at the end
     sortedColumns.push({
       header: 'Last Updated',
@@ -756,7 +879,7 @@ export const CRMLeads: React.FC = () => {
     });
 
     return sortedColumns;
-  }, [configurationsData?.results, statusesData?.results]);
+  }, [configurationsData?.results, statusesData?.results, selectedLeadIds, toggleLeadSelection, filteredLeads, toggleAllLeads]);
 
   // Desktop table columns
   const columns: DataTableColumn<Lead>[] = dynamicColumns;
@@ -879,6 +1002,25 @@ export const CRMLeads: React.FC = () => {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setHideDuplicates(!hideDuplicates)}
+            className={hideDuplicates ? 'bg-blue-50 border-blue-200' : ''}
+          >
+            {hideDuplicates ? 'Show All' : 'Hide Duplicates'}
+          </Button>
+          {selectedLeadIds.size > 0 && (
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleBulkDelete}
+              disabled={isDeleting}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete ({selectedLeadIds.size})
+            </Button>
+          )}
           <Button
             variant="outline"
             size="sm"
@@ -1029,7 +1171,7 @@ export const CRMLeads: React.FC = () => {
         <Card>
           <CardContent className="p-0">
             <DataTable
-              rows={leadsData?.results || []}
+              rows={filteredLeads}
               isLoading={isLoading}
               columns={columns}
               renderMobileCard={renderMobileCard}
@@ -1078,7 +1220,7 @@ export const CRMLeads: React.FC = () => {
         <Card>
           <CardContent className="p-4">
             <KanbanBoard
-              leads={leadsData?.results || []}
+              leads={filteredLeads}
               statuses={statusesData?.results || []}
               onViewLead={handleViewLead}
               onCallLead={handleCallLead}

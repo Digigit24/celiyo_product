@@ -336,6 +336,7 @@ const LeadDetailsForm = forwardRef<LeadFormHandle, LeadDetailsFormProps>(
                   render={({ field }) => (
                     <Input
                       {...field}
+                      value={field.value || ''}
                       id="phone"
                       type="text"
                       inputMode="numeric"
@@ -359,6 +360,7 @@ const LeadDetailsForm = forwardRef<LeadFormHandle, LeadDetailsFormProps>(
                   render={({ field }) => (
                     <Input
                       {...field}
+                      value={field.value || ''}
                       id="email"
                       type="email"
                       placeholder="john@example.com"

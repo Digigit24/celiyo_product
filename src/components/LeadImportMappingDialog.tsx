@@ -144,7 +144,26 @@ export const LeadImportMappingDialog = ({
       return newRow;
     });
 
-    onConfirm(mappedData);
+    // Filter out duplicates based on phone number
+    const seenPhones = new Set<string>();
+    const uniqueData = mappedData.filter((row) => {
+      const phone = String(row.phone || '').trim();
+      if (!phone || seenPhones.has(phone)) {
+        return false; // Skip empty or duplicate phone numbers
+      }
+      seenPhones.add(phone);
+      return true;
+    });
+
+    const duplicatesCount = mappedData.length - uniqueData.length;
+    if (duplicatesCount > 0) {
+      const proceed = confirm(
+        `Found ${duplicatesCount} duplicate phone number(s) in your file. These will be skipped. Continue with ${uniqueData.length} unique leads?`
+      );
+      if (!proceed) return;
+    }
+
+    onConfirm(uniqueData);
   };
 
   return (

@@ -74,6 +74,7 @@ import { Investigations } from "./pages/diagnostics/Investigations"; // Import I
 import { LabReports } from "./pages/diagnostics/LabReports"; // Import Lab Reports page
 import Integrations from "./pages/Integrations"; // Import Integrations page
 import WorkflowEditor from "./pages/WorkflowEditor"; // Import Workflow Editor page
+import { WorkflowLogs } from "./pages/WorkflowLogs"; // Import Workflow Logs page
 
 import { WebSocketProvider } from "./context/WebSocketProvider";
 import { OAuthCallback } from "./pages/OAuthCallback";
@@ -180,6 +181,7 @@ const AppLayout = () => {
               <Route path="/integrations" element={<Integrations />} />
               <Route path="/integrations/workflows/new" element={<WorkflowEditor />} />
               <Route path="/integrations/workflows/:workflowId" element={<WorkflowEditor />} />
+              <Route path="/integrations/workflows/:workflowId/logs" element={<WorkflowLogs />} />
               <Route path="/integrations/oauth/callback" element={<OAuthCallback />} />
 
               {/* 404 */}

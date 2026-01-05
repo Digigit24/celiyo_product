@@ -144,14 +144,17 @@ export const LeadImportMappingDialog = ({
       return newRow;
     });
 
-    // Filter out duplicates based on phone number
+    // Filter out duplicates based on phone number (normalize by keeping only digits)
     const seenPhones = new Set<string>();
     const uniqueData = mappedData.filter((row) => {
-      const phone = String(row.phone || '').trim();
-      if (!phone || seenPhones.has(phone)) {
+      const rawPhone = String(row.phone || '').trim();
+      // Normalize phone: remove all non-digit characters
+      const normalizedPhone = rawPhone.replace(/\D/g, '');
+
+      if (!normalizedPhone || seenPhones.has(normalizedPhone)) {
         return false; // Skip empty or duplicate phone numbers
       }
-      seenPhones.add(phone);
+      seenPhones.add(normalizedPhone);
       return true;
     });
 

@@ -9,6 +9,7 @@ import { DataTable, type DataTableColumn } from '@/components/DataTable';
 import { LeadsFormDrawer } from '@/components/LeadsFormDrawer';
 import { LeadStatusFormDrawer } from '@/components/LeadStatusFormDrawer';
 import { KanbanBoard } from '@/components/KanbanBoard';
+import { LeadImportMappingDialog } from '@/components/LeadImportMappingDialog';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -51,6 +52,10 @@ export const CRMLeads: React.FC = () => {
   const [statusDrawerOpen, setStatusDrawerOpen] = useState(false);
   const [selectedStatusId, setSelectedStatusId] = useState<number | null>(null);
   const [statusDrawerMode, setStatusDrawerMode] = useState<DrawerMode>('view');
+
+  // Import mapping dialog state
+  const [importMappingOpen, setImportMappingOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   // Fetch leads and statuses
   const { data: leadsData, error, isLoading, mutate } = useLeads(queryParams);
@@ -406,7 +411,7 @@ export const CRMLeads: React.FC = () => {
     fileInputRef.current?.click();
   }, []);
 
-  // Handle file selection and import via API
+  // Handle file selection - show mapping dialog
   const handleFileChange = useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>) => {
       const file = event.target.files?.[0];
@@ -425,11 +430,25 @@ export const CRMLeads: React.FC = () => {
         return;
       }
 
+      // Show mapping dialog
+      setSelectedFile(file);
+      setImportMappingOpen(true);
+
+      // Reset file input
+      event.target.value = '';
+    },
+    []
+  );
+
+  // Handle import confirmation from mapping dialog
+  const handleImportConfirm = useCallback(
+    async (mappedData: any[]) => {
       try {
+        setImportMappingOpen(false);
         toast.info('Importing leads...');
 
-        // Import leads via API
-        const result = await importLeads(file);
+        // Import leads via API with mapped JSON data
+        const result = await importLeads(undefined, { leads: mappedData });
 
         // Show detailed results
         const { success_count, failed_count, total_count, failures } = result;
@@ -464,9 +483,6 @@ export const CRMLeads: React.FC = () => {
         }
       } catch (error: any) {
         toast.error(error.message || 'Failed to import leads');
-      } finally {
-        // Reset file input
-        event.target.value = '';
       }
     },
     [importLeads, mutate]
@@ -1103,6 +1119,14 @@ export const CRMLeads: React.FC = () => {
           // Already handled in handleDeleteStatus
         }}
         onModeChange={handleStatusModeChange}
+      />
+
+      {/* Import Mapping Dialog */}
+      <LeadImportMappingDialog
+        open={importMappingOpen}
+        onClose={() => setImportMappingOpen(false)}
+        file={selectedFile}
+        onConfirm={handleImportConfirm}
       />
     </div>
   );

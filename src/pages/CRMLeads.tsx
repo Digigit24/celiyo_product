@@ -10,13 +10,14 @@ import { LeadsFormDrawer } from '@/components/LeadsFormDrawer';
 import { LeadStatusFormDrawer } from '@/components/LeadStatusFormDrawer';
 import { KanbanBoard } from '@/components/KanbanBoard';
 import { LeadImportMappingDialog } from '@/components/LeadImportMappingDialog';
+import { NotesCell } from '@/components/NotesCell';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, RefreshCw, Building2, Phone, Mail, IndianRupee, LayoutGrid, List, Download, Upload, FileSpreadsheet, ChevronDown, MessageCircle, Trash2 } from 'lucide-react';
+import { Plus, RefreshCw, Building2, Phone, Mail, IndianRupee, LayoutGrid, List, Download, Upload, FileSpreadsheet, ChevronDown, MessageCircle, Trash2, StickyNote } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 import type { Lead, LeadsQueryParams, PriorityEnum, LeadStatus } from '@/types/crmTypes';
@@ -389,6 +390,19 @@ export const CRMLeads: React.FC = () => {
       duration: 2000,
     });
   }, []);
+
+  const handleUpdateNotes = useCallback(
+    async (leadId: number, notes: string) => {
+      try {
+        await patchLead(leadId, { notes });
+        mutate();
+      } catch (error: any) {
+        toast.error(error?.message || 'Failed to update notes');
+        throw error;
+      }
+    },
+    [patchLead, mutate]
+  );
 
   const handleMoveStatus = useCallback(
     async (status: LeadStatus, direction: 'up' | 'down') => {
@@ -826,6 +840,20 @@ export const CRMLeads: React.FC = () => {
         filterable: false,
         accessor: (lead) => parseFloat(lead.value_amount || '0'),
       },
+      notes: {
+        header: 'Notes',
+        key: 'notes',
+        cell: (lead) => (
+          <NotesCell
+            notes={lead.notes}
+            onSave={(notes) => handleUpdateNotes(lead.id, notes)}
+          />
+        ),
+        className: 'w-[250px]',
+        sortable: true,
+        filterable: true,
+        accessor: (lead) => lead.notes || '',
+      },
     };
 
     // Build columns array - show all fields by default, hide only if explicitly set to invisible
@@ -839,6 +867,7 @@ export const CRMLeads: React.FC = () => {
       status: 3,
       priority: 4,
       value_amount: 5,
+      notes: 6,
     };
 
     // Iterate through all column definitions

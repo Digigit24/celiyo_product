@@ -54,7 +54,7 @@ export const FloatingActionPanel: React.FC<FloatingActionPanelProps> = ({
         </Tooltip>
 
         {/* Dummy Action Button */}
-        <Tooltip>
+        {/* <Tooltip>
           <TooltipTrigger asChild>
             <Button
               onClick={onDummyAction}
@@ -68,7 +68,7 @@ export const FloatingActionPanel: React.FC<FloatingActionPanelProps> = ({
           <TooltipContent side="left">
             <p>Coming Soon</p>
           </TooltipContent>
-        </Tooltip>
+        </Tooltip> */}
       </TooltipProvider>
     </div>
   );

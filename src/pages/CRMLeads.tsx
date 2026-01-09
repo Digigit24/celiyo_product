@@ -10,6 +10,7 @@ import { LeadsFormDrawer } from '@/components/LeadsFormDrawer';
 import { LeadStatusFormDrawer } from '@/components/LeadStatusFormDrawer';
 import { KanbanBoard } from '@/components/KanbanBoard';
 import { LeadImportMappingDialog } from '@/components/LeadImportMappingDialog';
+import { EditableNotesCell } from '@/components/crm/EditableNotesCell';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -34,38 +35,28 @@ export const CRMLeads: React.FC = () => {
   const { formatCurrency: formatCurrencyDynamic, getCurrencyCode, getCurrencySymbol } = useCurrency();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // View mode state
   const [viewMode, setViewMode] = useState<ViewMode>('list');
-
-  // Query parameters state
   const [queryParams, setQueryParams] = useState<LeadsQueryParams>({
     page: 1,
-    page_size: viewMode === 'kanban' ? 1000 : 20, // Load more leads for kanban view
+    page_size: viewMode === 'kanban' ? 1000 : 20,
     ordering: '-created_at',
   });
 
-  // Drawer state
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedLeadId, setSelectedLeadId] = useState<number | null>(null);
   const [drawerMode, setDrawerMode] = useState<DrawerMode>('view');
 
-  // Status drawer state
   const [statusDrawerOpen, setStatusDrawerOpen] = useState(false);
   const [selectedStatusId, setSelectedStatusId] = useState<number | null>(null);
   const [statusDrawerMode, setStatusDrawerMode] = useState<DrawerMode>('view');
 
-  // Import mapping dialog state
   const [importMappingOpen, setImportMappingOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
-  // Bulk delete state
   const [selectedLeadIds, setSelectedLeadIds] = useState<Set<number>>(new Set());
   const [isDeleting, setIsDeleting] = useState(false);
-
-  // Filter duplicate leads state
   const [hideDuplicates, setHideDuplicates] = useState(true);
 
-  // Fetch leads and statuses
   const { data: leadsData, error, isLoading, mutate } = useLeads(queryParams);
   const { data: statusesData, mutate: mutateStatuses } = useLeadStatuses({
     page_size: 100,
@@ -73,14 +64,12 @@ export const CRMLeads: React.FC = () => {
     is_active: true
   });
 
-  // Fetch field configurations for dynamic columns
   const { data: configurationsData } = useFieldConfigurations({
     is_active: true,
     ordering: 'display_order',
     page_size: 200,
   });
 
-  // Check access
   if (!hasCRMAccess) {
     return (
       <div className="container mx-auto p-6">
@@ -98,12 +87,10 @@ export const CRMLeads: React.FC = () => {
     );
   }
 
-  // Handlers
   const handleCreateLead = useCallback((statusId?: number) => {
     setSelectedLeadId(null);
     setDrawerMode('create');
     setDrawerOpen(true);
-    // TODO: Pass statusId to the drawer for pre-selecting status
   }, []);
 
   const handleCreateLeadClick = useCallback(() => {
@@ -125,7 +112,7 @@ export const CRMLeads: React.FC = () => {
       try {
         await deleteLead(lead.id);
         toast.success(`Lead "${lead.name}" deleted successfully`);
-        mutate(); // Refresh the list
+        mutate();
       } catch (error: any) {
         toast.error(error?.message || 'Failed to delete lead');
         throw error;
@@ -134,7 +121,6 @@ export const CRMLeads: React.FC = () => {
     [deleteLead, mutate]
   );
 
-  // Bulk delete handler
   const handleBulkDelete = useCallback(async () => {
     if (selectedLeadIds.size === 0) {
       toast.error('No leads selected');
@@ -175,7 +161,6 @@ export const CRMLeads: React.FC = () => {
     }
   }, [selectedLeadIds, deleteLead, mutate]);
 
-  // Toggle single lead selection
   const toggleLeadSelection = useCallback((leadId: number) => {
     setSelectedLeadIds((prev) => {
       const newSet = new Set(prev);
@@ -188,7 +173,6 @@ export const CRMLeads: React.FC = () => {
     });
   }, []);
 
-  // Toggle all leads selection
   const toggleAllLeads = useCallback((leads: Lead[]) => {
     setSelectedLeadIds((prev) => {
       const allSelected = leads.every((lead) => prev.has(lead.id));
@@ -201,28 +185,39 @@ export const CRMLeads: React.FC = () => {
   }, []);
 
   const handleDrawerSuccess = useCallback(() => {
-    mutate(); // Refresh the list
-    mutateStatuses(); // Refresh statuses too
+    mutate();
+    mutateStatuses();
   }, [mutate, mutateStatuses]);
 
   const handleModeChange = useCallback((mode: DrawerMode) => {
     setDrawerMode(mode);
   }, []);
 
-  // Helper function to convert lead to patient data
+  const handleUpdateNotes = useCallback(
+    async (leadId: number, notes: string) => {
+      try {
+        await patchLead(leadId, { notes });
+        mutate();
+        toast.success('Notes updated');
+      } catch (error: any) {
+        toast.error(error?.message || 'Failed to update notes');
+        throw error;
+      }
+    },
+    [patchLead, mutate]
+  );
+
   const convertLeadToPatient = useCallback((lead: Lead): PatientCreateData => {
-    // Split name into first and last name
     const nameParts = lead.name.trim().split(' ');
     const first_name = nameParts[0] || 'Unknown';
     const last_name = nameParts.slice(1).join(' ') || 'Patient';
 
-    // Use defaults for missing required fields
     return {
-      create_user: false, // Don't create user account automatically
+      create_user: false,
       first_name,
       last_name,
-      date_of_birth: '1990-01-01', // Default date of birth
-      gender: 'other', // Default gender
+      date_of_birth: '1990-01-01',
+      gender: 'other',
       mobile_primary: lead.phone,
       email: lead.email || undefined,
       address_line1: lead.address_line1 || 'Not Provided',
@@ -231,32 +226,27 @@ export const CRMLeads: React.FC = () => {
       state: lead.state || 'Not Provided',
       country: lead.country || 'India',
       pincode: lead.postal_code || '000000',
-      emergency_contact_name: first_name + ' ' + last_name, // Use patient's own name as default
-      emergency_contact_phone: lead.phone, // Use patient's own phone as default
+      emergency_contact_name: first_name + ' ' + last_name,
+      emergency_contact_phone: lead.phone,
       emergency_contact_relation: 'Self',
     };
   }, []);
 
-  // Kanban-specific handlers with optimistic updates
   const handleUpdateLeadStatus = useCallback(
     async (leadId: number, newStatusId: number) => {
-      // Get current data
       const currentData = leadsData;
       if (!currentData) {
         throw new Error('No leads data available');
       }
 
-      // Find the lead being updated
       const lead = currentData.results.find(l => l.id === leadId);
       if (!lead) {
         throw new Error('Lead not found');
       }
 
-      // Find the new status to check if it's a won status
       const newStatus = statusesData?.results.find(s => s.id === newStatusId);
       const isWonStatus = newStatus?.is_won === true;
 
-      // Create optimistic update
       const optimisticData = {
         ...currentData,
         results: currentData.results.map(l =>
@@ -267,13 +257,9 @@ export const CRMLeads: React.FC = () => {
       };
 
       try {
-        // Optimistically update the cache immediately
-        await mutate(optimisticData, false); // false = don't revalidate immediately
-
-        // Make the API call
+        await mutate(optimisticData, false);
         await patchLead(leadId, { status: newStatusId });
 
-        // If status is won and HMS access is available, create patient
         if (isWonStatus && hasHMSAccess) {
           try {
             const patientData = convertLeadToPatient(lead);
@@ -283,7 +269,6 @@ export const CRMLeads: React.FC = () => {
               duration: 5000,
             });
           } catch (patientError: any) {
-            // Don't fail the status update if patient creation fails
             console.error('Failed to create patient:', patientError);
             toast.warning('Lead status updated, but patient creation failed', {
               description: patientError?.message || 'Please create patient manually',
@@ -297,10 +282,8 @@ export const CRMLeads: React.FC = () => {
           });
         }
 
-        // Revalidate to get fresh data from server
         await mutate();
       } catch (error: any) {
-        // Rollback on error by revalidating with current server data
         await mutate();
         throw new Error(error?.message || 'Failed to update lead status');
       }
@@ -336,24 +319,20 @@ export const CRMLeads: React.FC = () => {
   }, []);
 
   const handleStatusDrawerSuccess = useCallback(() => {
-    mutateStatuses(); // Refresh statuses
+    mutateStatuses();
   }, [mutateStatuses]);
 
   const handleStatusModeChange = useCallback((mode: DrawerMode) => {
     setStatusDrawerMode(mode);
   }, []);
 
-  // Call and WhatsApp handlers
   const handleCallLead = useCallback((lead: Lead) => {
     if (!lead.phone) {
       toast.error('No phone number available for this lead');
       return;
     }
 
-    // Format phone number by removing spaces and special characters except +
     const cleanPhone = lead.phone.replace(/[^\d+]/g, '');
-
-    // Open phone dialer
     window.location.href = `tel:${cleanPhone}`;
 
     toast.success(`Calling ${lead.name}...`, {
@@ -368,19 +347,14 @@ export const CRMLeads: React.FC = () => {
       return;
     }
 
-    // Format phone number for WhatsApp (remove all non-digits except +)
     let cleanPhone = lead.phone.replace(/[^\d+]/g, '');
 
-    // Remove leading + if present for WhatsApp API
     if (cleanPhone.startsWith('+')) {
       cleanPhone = cleanPhone.substring(1);
     }
 
-    // Create pre-filled message
     const message = `Hi ${lead.name}, I'm reaching out regarding your inquiry.`;
     const encodedMessage = encodeURIComponent(message);
-
-    // Open WhatsApp with pre-filled message
     const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodedMessage}`;
     window.open(whatsappUrl, '_blank');
 
@@ -403,7 +377,6 @@ export const CRMLeads: React.FC = () => {
       const targetStatus = statuses[targetIndex];
       
       try {
-        // Swap order_index values
         await Promise.all([
           updateLeadStatus(status.id, {
             ...status,
@@ -424,7 +397,6 @@ export const CRMLeads: React.FC = () => {
     [statusesData, updateLeadStatus, mutateStatuses]
   );
 
-  // View mode change handler
   const handleViewModeChange = useCallback((newMode: ViewMode) => {
     setViewMode(newMode);
     setQueryParams(prev => ({
@@ -434,7 +406,6 @@ export const CRMLeads: React.FC = () => {
     }));
   }, []);
 
-  // Export leads via API
   const handleExportLeads = useCallback(async (format: 'csv' | 'json' = 'csv') => {
     try {
       if (!leadsData || leadsData.count === 0) {
@@ -447,7 +418,6 @@ export const CRMLeads: React.FC = () => {
       const result = await exportLeads({ format });
 
       if (format === 'csv' && result instanceof Blob) {
-        // Download CSV file
         const url = window.URL.createObjectURL(result);
         const link = document.createElement('a');
         link.href = url;
@@ -460,7 +430,6 @@ export const CRMLeads: React.FC = () => {
 
         toast.success(`Exported leads successfully as CSV`);
       } else if (format === 'json') {
-        // Download JSON file
         const jsonResult = result as any;
         const blob = new Blob([JSON.stringify(jsonResult, null, 2)], { type: 'application/json' });
         const url = window.URL.createObjectURL(blob);
@@ -480,18 +449,15 @@ export const CRMLeads: React.FC = () => {
     }
   }, [leadsData, exportLeads]);
 
-  // Trigger file input click
   const handleImportClick = useCallback(() => {
     fileInputRef.current?.click();
   }, []);
 
-  // Handle file selection - show mapping dialog
   const handleFileChange = useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>) => {
       const file = event.target.files?.[0];
       if (!file) return;
 
-      // Validate file type
       const validTypes = [
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         'application/vnd.ms-excel',
@@ -504,27 +470,22 @@ export const CRMLeads: React.FC = () => {
         return;
       }
 
-      // Show mapping dialog
       setSelectedFile(file);
       setImportMappingOpen(true);
 
-      // Reset file input
       event.target.value = '';
     },
     []
   );
 
-  // Handle import confirmation from mapping dialog
   const handleImportConfirm = useCallback(
     async (mappedData: any[]) => {
       try {
         setImportMappingOpen(false);
         toast.info('Importing leads...');
 
-        // Import leads via API with mapped JSON data
         const result = await importLeads(undefined, { leads: mappedData });
 
-        // Show detailed results
         const { success_count, failed_count, total_count, failures } = result;
 
         if (success_count > 0 && failed_count === 0) {
@@ -551,7 +512,6 @@ export const CRMLeads: React.FC = () => {
           });
         }
 
-        // Refresh the leads list if any succeeded
         if (success_count > 0) {
           mutate();
         }
@@ -562,7 +522,6 @@ export const CRMLeads: React.FC = () => {
     [importLeads, mutate]
   );
 
-  // Priority badge helper
   const getPriorityBadge = (priority: PriorityEnum) => {
     const variants = {
       LOW: 'bg-gray-100 text-gray-800 border-gray-200',
@@ -577,11 +536,9 @@ export const CRMLeads: React.FC = () => {
     );
   };
 
-  // Status badge helper
   const getStatusBadge = (status?: LeadStatus | number) => {
     if (!status) return <Badge variant="outline">No Status</Badge>;
 
-    // If status is a number, find the status object from statusesData
     let statusObj: LeadStatus | undefined;
     if (typeof status === 'number') {
       statusObj = statusesData?.results.find(s => s.id === status);
@@ -592,7 +549,6 @@ export const CRMLeads: React.FC = () => {
     if (!statusObj) return <Badge variant="outline">Unknown Status</Badge>;
 
     const bgColor = statusObj.color_hex || '#6B7280';
-    const textColor = getContrastColor(bgColor);
 
     return (
       <Badge
@@ -608,7 +564,6 @@ export const CRMLeads: React.FC = () => {
     );
   };
 
-  // Helper to get contrasting text color
   const getContrastColor = (hexColor: string): string => {
     const r = parseInt(hexColor.slice(1, 3), 16);
     const g = parseInt(hexColor.slice(3, 5), 16);
@@ -617,17 +572,14 @@ export const CRMLeads: React.FC = () => {
     return luminance > 0.5 ? '#000000' : '#FFFFFF';
   };
 
-  // Format currency using tenant settings
   const formatCurrency = (amount?: string, currencyCode?: string) => {
     if (!amount) return '-';
     const numericAmount = parseFloat(amount);
     if (isNaN(numericAmount)) return '-';
 
-    // Use dynamic currency formatting from tenant settings
     return formatCurrencyDynamic(numericAmount, true, 2);
   };
 
-  // Filter duplicate phone numbers
   const filteredLeads = useMemo(() => {
     if (!leadsData?.results) return [];
 
@@ -635,21 +587,19 @@ export const CRMLeads: React.FC = () => {
       return leadsData.results;
     }
 
-    // Track unique phone numbers
     const seenPhones = new Set<string>();
     return leadsData.results.filter((lead) => {
-      if (!lead.phone) return true; // Keep leads without phone numbers
+      if (!lead.phone) return true;
 
       const normalizedPhone = lead.phone.replace(/\s+/g, '').toLowerCase();
       if (seenPhones.has(normalizedPhone)) {
-        return false; // Skip duplicate
+        return false;
       }
       seenPhones.add(normalizedPhone);
       return true;
     });
   }, [leadsData?.results, hideDuplicates]);
 
-  // Create field visibility map
   const fieldVisibilityMap = useMemo(() => {
     const allFields = configurationsData?.results || [];
     return new Map(
@@ -659,23 +609,18 @@ export const CRMLeads: React.FC = () => {
     );
   }, [configurationsData?.results]);
 
-  // Helper to check if a field is visible
   const isFieldVisible = useCallback((fieldName: string): boolean => {
-    // Default to visible if no configuration exists
     return fieldVisibilityMap.get(fieldName) ?? true;
   }, [fieldVisibilityMap]);
 
-  // Build dynamic columns based on field configurations
   const dynamicColumns = useMemo(() => {
     const allFields = configurationsData?.results || [];
-    // Map ALL standard fields (don't filter by visibility yet)
     const standardFieldsMap = new Map(
       allFields
         .filter((field) => field.is_standard)
         .map((field) => [field.field_name, { order: field.display_order, visible: field.is_visible, config: field }])
     );
 
-    // Checkbox column definition
     const allLeadsSelected = filteredLeads.length > 0 && filteredLeads.every((lead) => selectedLeadIds.has(lead.id));
 
     const checkboxColumn: DataTableColumn<Lead> = {
@@ -699,7 +644,6 @@ export const CRMLeads: React.FC = () => {
       filterable: false,
     };
 
-    // Column definitions for each standard field
     const columnDefinitions: Record<string, DataTableColumn<Lead>> = {
       name: {
         header: 'Name',
@@ -751,7 +695,6 @@ export const CRMLeads: React.FC = () => {
                 <span className="truncate">{lead.email}</span>
               </div>
             )}
-            {/* Action Buttons */}
             <div className="flex items-center gap-1 mt-1">
               <Button
                 variant="outline"
@@ -826,12 +769,28 @@ export const CRMLeads: React.FC = () => {
         filterable: false,
         accessor: (lead) => parseFloat(lead.value_amount || '0'),
       },
+      notes: {
+        header: 'Notes',
+        key: 'notes',
+        cell: (lead) => (
+          <div onClick={(e) => e.stopPropagation()}>
+            <EditableNotesCell
+              notes={lead.notes}
+              onSave={async (notes) => {
+                await handleUpdateNotes(lead.id, notes);
+              }}
+            />
+          </div>
+        ),
+        className: 'w-[200px]',
+        sortable: false,
+        filterable: true,
+        accessor: (lead) => lead.notes || '',
+      },
     };
 
-    // Build columns array - show all fields by default, hide only if explicitly set to invisible
     const visibleColumns: Array<{ column: DataTableColumn<Lead>; order: number }> = [];
 
-    // Define default order for fields (fallback if no config exists)
     const defaultFieldOrder: Record<string, number> = {
       name: 0,
       phone: 1,
@@ -839,15 +798,18 @@ export const CRMLeads: React.FC = () => {
       status: 3,
       priority: 4,
       value_amount: 5,
+      notes: 6,
     };
 
-    // Iterate through all column definitions
     Object.entries(columnDefinitions).forEach(([fieldName, columnDef]) => {
       const fieldConfig = standardFieldsMap.get(fieldName);
 
-      // Show field if:
-      // 1. No config exists (default to visible), OR
-      // 2. Config exists AND is_visible is true
+      if (fieldName === 'notes') {
+        const order = fieldConfig?.order ?? defaultFieldOrder[fieldName] ?? 6;
+        visibleColumns.push({ column: columnDef, order });
+        return;
+      }
+
       const shouldShow = !fieldConfig || fieldConfig.visible;
 
       if (shouldShow) {
@@ -856,15 +818,12 @@ export const CRMLeads: React.FC = () => {
       }
     });
 
-    // Sort by display_order and extract just the column definitions
     const sortedColumns = visibleColumns
       .sort((a, b) => a.order - b.order)
       .map((item) => item.column);
 
-    // Add checkbox column at the beginning
     sortedColumns.unshift(checkboxColumn);
 
-    // Always add the "Last Updated" column at the end
     sortedColumns.push({
       header: 'Last Updated',
       key: 'updated',
@@ -879,15 +838,12 @@ export const CRMLeads: React.FC = () => {
     });
 
     return sortedColumns;
-  }, [configurationsData?.results, statusesData?.results, selectedLeadIds, toggleLeadSelection, filteredLeads, toggleAllLeads]);
+  }, [configurationsData?.results, statusesData?.results, selectedLeadIds, toggleLeadSelection, filteredLeads, toggleAllLeads, handleUpdateNotes]);
 
-  // Desktop table columns
   const columns: DataTableColumn<Lead>[] = dynamicColumns;
 
-  // Mobile card renderer
   const renderMobileCard = (lead: Lead, actions: RowActions<Lead>) => (
     <>
-      {/* Header */}
       {isFieldVisible('name') && (
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
@@ -902,7 +858,6 @@ export const CRMLeads: React.FC = () => {
         </div>
       )}
 
-      {/* Company & Status */}
       {(isFieldVisible('company') || isFieldVisible('status')) && (
         <div className="flex flex-wrap items-center gap-2">
           {lead.company && isFieldVisible('company') && (
@@ -915,7 +870,6 @@ export const CRMLeads: React.FC = () => {
         </div>
       )}
 
-      {/* Contact Info */}
       {(isFieldVisible('phone') || isFieldVisible('email')) && (
         <div className="space-y-2">
           {isFieldVisible('phone') && (
@@ -930,7 +884,6 @@ export const CRMLeads: React.FC = () => {
               <span className="truncate">{lead.email}</span>
             </div>
           )}
-          {/* Call and WhatsApp Buttons */}
           {isFieldVisible('phone') && (
             <div className="flex items-center gap-2">
               <Button
@@ -962,7 +915,6 @@ export const CRMLeads: React.FC = () => {
         </div>
       )}
 
-      {/* Value */}
       {lead.value_amount && isFieldVisible('value_amount') && (
         <div className="flex items-center gap-1.5 text-sm font-medium">
           <IndianRupee className="h-4 w-4 text-muted-foreground" />
@@ -970,7 +922,17 @@ export const CRMLeads: React.FC = () => {
         </div>
       )}
 
-      {/* Actions */}
+      {isFieldVisible('notes') && (
+        <div onClick={(e) => e.stopPropagation()}>
+          <EditableNotesCell
+            notes={lead.notes}
+            onSave={async (notes) => {
+              await handleUpdateNotes(lead.id, notes);
+            }}
+          />
+        </div>
+      )}
+
       <div className="flex items-center justify-between pt-2 border-t">
         <span className="text-xs text-muted-foreground">
           Updated {formatDistanceToNow(new Date(lead.updated_at), { addSuffix: true })}
@@ -993,7 +955,6 @@ export const CRMLeads: React.FC = () => {
 
   return (
     <div className="p-6 max-w-8xl mx-auto space-y-6">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold">CRM Leads</h1>
@@ -1030,14 +991,6 @@ export const CRMLeads: React.FC = () => {
             <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
-          {/* <Button
-            variant="outline"
-            size="sm"
-            onClick={handleDownloadTemplate}
-          >
-            <FileSpreadsheet className="h-4 w-4 mr-2" />
-            Template
-          </Button> */}
           <Button
             variant="outline"
             size="sm"
@@ -1076,7 +1029,6 @@ export const CRMLeads: React.FC = () => {
         </div>
       </div>
 
-      {/* Hidden file input for import */}
       <input
         ref={fileInputRef}
         type="file"
@@ -1085,7 +1037,6 @@ export const CRMLeads: React.FC = () => {
         className="hidden"
       />
 
-      {/* Stats Cards */}
       {leadsData && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <Card>
@@ -1148,7 +1099,6 @@ export const CRMLeads: React.FC = () => {
         </div>
       )}
 
-      {/* View Toggle */}
       <Card>
         <CardContent className="p-4">
           <Tabs value={viewMode} onValueChange={(value) => handleViewModeChange(value as ViewMode)}>
@@ -1166,7 +1116,6 @@ export const CRMLeads: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Main Content */}
       {viewMode === 'list' ? (
         <Card>
           <CardContent className="p-0">
@@ -1184,7 +1133,6 @@ export const CRMLeads: React.FC = () => {
               emptySubtitle="Get started by creating your first lead"
             />
 
-            {/* Pagination */}
             {!isLoading && leadsData && leadsData.count > 0 && (
               <div className="flex items-center justify-between px-6 py-4 border-t">
                 <p className="text-sm text-muted-foreground">
@@ -1237,33 +1185,26 @@ export const CRMLeads: React.FC = () => {
         </Card>
       )}
 
-      {/* Form Drawer */}
       <LeadsFormDrawer
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
         leadId={selectedLeadId}
         mode={drawerMode}
         onSuccess={handleDrawerSuccess}
-        onDelete={(id) => {
-          // Already handled in handleDeleteLead
-        }}
+        onDelete={(id) => {}}
         onModeChange={handleModeChange}
       />
 
-      {/* Status Form Drawer */}
       <LeadStatusFormDrawer
         open={statusDrawerOpen}
         onOpenChange={setStatusDrawerOpen}
         statusId={selectedStatusId}
         mode={statusDrawerMode}
         onSuccess={handleStatusDrawerSuccess}
-        onDelete={(id) => {
-          // Already handled in handleDeleteStatus
-        }}
+        onDelete={(id) => {}}
         onModeChange={handleStatusModeChange}
       />
 
-      {/* Import Mapping Dialog */}
       <LeadImportMappingDialog
         open={importMappingOpen}
         onClose={() => setImportMappingOpen(false)}

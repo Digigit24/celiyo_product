@@ -14,16 +14,29 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
-import { LayoutGrid, FileText, Plus } from 'lucide-react';
+import { LayoutGrid, FileText, Plus, Paperclip } from 'lucide-react';
 
 import { OpdVisit } from '@/types/opdVisit.types';
 import { TemplateResponse, Template, ResponseTemplate } from '@/types/opdTemplate.types';
 
 import { ResponseCard } from './ResponseCard';
 import { TemplateSelectionDrawer } from './TemplateSelectionDrawer';
+import { FileAttachmentCard } from './FileAttachmentCard';
+import { FileUploadDialog } from './FileUploadDialog';
 import { useOPDTemplate } from '@/hooks/useOPDTemplate';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
+
+interface FileAttachment {
+  id: number;
+  file_url: string;
+  file_name: string;
+  file_type: string;
+  file_size: number;
+  uploaded_by?: string;
+  created_at: string;
+  description?: string;
+}
 
 interface ConsultationBoardProps {
   encounterType: 'visit' | 'admission';
@@ -31,12 +44,18 @@ interface ConsultationBoardProps {
   visit: OpdVisit;
   responses: TemplateResponse[];
   templates: Template[];
+  fileAttachments?: FileAttachment[];
   isLoadingResponses: boolean;
   isLoadingTemplates: boolean;
+  isLoadingFiles?: boolean;
   onViewResponse: (response: TemplateResponse) => void;
   onRefresh: () => void;
+  onRefreshFiles?: () => void;
   templateDrawerOpen: boolean;
   onTemplateDrawerChange: (open: boolean) => void;
+  onUploadFile?: (file: File, description: string) => Promise<void>;
+  onDeleteFile?: (fileId: number) => Promise<void>;
+  onDownloadFile?: (file: FileAttachment) => void;
 }
 
 export const ConsultationBoard: React.FC<ConsultationBoardProps> = ({
@@ -45,17 +64,24 @@ export const ConsultationBoard: React.FC<ConsultationBoardProps> = ({
   visit,
   responses,
   templates,
+  fileAttachments = [],
   isLoadingResponses,
   isLoadingTemplates,
+  isLoadingFiles = false,
   onViewResponse,
   onRefresh,
+  onRefreshFiles,
   templateDrawerOpen,
   onTemplateDrawerChange,
+  onUploadFile,
+  onDeleteFile,
+  onDownloadFile,
 }) => {
   const navigate = useNavigate();
 
   const [saveAsTemplateDialog, setSaveAsTemplateDialog] = useState(false);
   const [copyFromTemplateDialog, setCopyFromTemplateDialog] = useState(false);
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
 
   const [selectedResponseForAction, setSelectedResponseForAction] = useState<TemplateResponse | null>(null);
   const [templateName, setTemplateName] = useState('');
@@ -69,16 +95,12 @@ export const ConsultationBoard: React.FC<ConsultationBoardProps> = ({
     useResponseTemplates,
   } = useOPDTemplate();
 
-  // Fetch response templates for the current template type
   const { data: responseTemplatesData } = useResponseTemplates({
     template: selectedResponseForAction?.template,
   });
 
-  // NEW: navigate to canvas route
   const onOpenCanvasResponse = useCallback(
     (response: TemplateResponse) => {
-      // Canvas route expects visitId and responseId
-      // For OPD board, visit.id is always available
       navigate(`/opd/consultation/${visit.id}/canvas/${response.id}`);
     },
     [navigate, visit.id]
@@ -170,7 +192,40 @@ export const ConsultationBoard: React.FC<ConsultationBoardProps> = ({
     [selectedResponseForAction, applyResponseTemplate, onRefresh]
   );
 
-  // Group responses by template
+  const handleDeleteFile = useCallback(
+    async (fileId: number) => {
+      const confirmed = window.confirm('Are you sure you want to delete this file?');
+      if (!confirmed) return;
+
+      try {
+        if (onDeleteFile) {
+          await onDeleteFile(fileId);
+          toast.success('File deleted successfully');
+          onRefreshFiles?.();
+        }
+      } catch (error: any) {
+        toast.error(error.message || 'Failed to delete file');
+      }
+    },
+    [onDeleteFile, onRefreshFiles]
+  );
+
+  const handleDownloadFile = useCallback(
+    (file: FileAttachment) => {
+      if (onDownloadFile) {
+        onDownloadFile(file);
+      } else {
+        const link = document.createElement('a');
+        link.href = file.file_url;
+        link.download = file.file_name;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+    },
+    [onDownloadFile]
+  );
+
   const responsesByTemplate = useMemo(() => {
     return responses.reduce((acc, response) => {
       const templateId = response.template;
@@ -183,7 +238,7 @@ export const ConsultationBoard: React.FC<ConsultationBoardProps> = ({
   return (
     <div className="h-full flex flex-col">
       {/* Compact Header */}
-      <div className="flex items-center px-4 py-3 mb-4">
+      <div className="flex items-center justify-between px-4 py-3 mb-4">
         <div className="flex items-center gap-2 sm:gap-3">
           <div className="p-1.5 sm:p-2 bg-primary/10 rounded-lg">
             <LayoutGrid className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
@@ -194,15 +249,29 @@ export const ConsultationBoard: React.FC<ConsultationBoardProps> = ({
               {responses.length} {responses.length === 1 ? 'note' : 'notes'} •{' '}
               {Object.keys(responsesByTemplate).length}{' '}
               {Object.keys(responsesByTemplate).length === 1 ? 'template' : 'templates'}
+              {fileAttachments.length > 0 && ` • ${fileAttachments.length} ${fileAttachments.length === 1 ? 'file' : 'files'}`}
             </p>
           </div>
         </div>
+        
+        {/* Upload Button - Always visible */}
+        {onUploadFile && (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setUploadDialogOpen(true)}
+            className="gap-2"
+            disabled={!objectId}
+          >
+            <Paperclip className="h-4 w-4" />
+            <span className="hidden sm:inline">Upload File</span>
+          </Button>
+        )}
       </div>
 
       {/* Board Content */}
       <div className="flex-1 overflow-auto px-4">
         {isLoadingResponses ? (
-          // Loading State
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
             {Array.from({ length: 4 }).map((_, i) => (
               <div key={i} className="space-y-2 p-3 border rounded-lg">
@@ -213,8 +282,7 @@ export const ConsultationBoard: React.FC<ConsultationBoardProps> = ({
               </div>
             ))}
           </div>
-        ) : responses.length === 0 ? (
-          // Empty State
+        ) : responses.length === 0 && fileAttachments.length === 0 ? (
           <div className="flex items-center justify-center h-full min-h-[300px] sm:min-h-[400px]">
             <div className="text-center space-y-4 sm:space-y-6 max-w-md px-4">
               <div className="flex justify-center">
@@ -229,62 +297,144 @@ export const ConsultationBoard: React.FC<ConsultationBoardProps> = ({
                 <h3 className="text-xl sm:text-2xl font-bold">No Clinical Notes Yet</h3>
                 <p className="text-sm sm:text-base text-muted-foreground">
                   {objectId
-                    ? 'Start documenting by adding your first note'
+                    ? 'Start documenting by adding your first note or upload files'
                     : 'No active encounter found'}
                 </p>
               </div>
-              <Button
-                onClick={() => onTemplateDrawerChange(true)}
-                size="default"
-                className="bg-primary hover:bg-primary/90"
-                disabled={!objectId}
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Add First Note
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                <Button
+                  onClick={() => onTemplateDrawerChange(true)}
+                  size="default"
+                  className="bg-primary hover:bg-primary/90"
+                  disabled={!objectId}
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Note
+                </Button>
+                {onUploadFile && (
+                  <Button
+                    onClick={() => setUploadDialogOpen(true)}
+                    variant="outline"
+                    size="default"
+                    disabled={!objectId}
+                  >
+                    <Paperclip className="mr-2 h-4 w-4" />
+                    Upload File
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         ) : (
-          // Grid View of Response Cards
           <div className="space-y-6 sm:space-y-8 pb-4">
-            {Object.entries(responsesByTemplate).map(([templateId, templateResponses]) => {
-              const template = templates.find((t) => t.id === Number(templateId));
-              const sortedResponses = [...templateResponses].sort(
-                (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-              );
-
-              return (
-                <div key={templateId} className="space-y-3 sm:space-y-4">
-                  {/* Template Header */}
+            {/* File Attachments Section */}
+            {fileAttachments.length > 0 && (
+              <div className="space-y-3 sm:space-y-4">
+                <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 sm:gap-3">
-                    <div className="h-px flex-1 bg-border"></div>
+                    <div className="h-px flex-1 bg-border w-12"></div>
                     <div className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 bg-muted/50 rounded-full">
-                      <FileText className="h-3 w-3 sm:h-4 sm:w-4 text-primary" />
-                      <span className="font-semibold text-xs sm:text-sm">{template?.name || `Template ${templateId}`}</span>
-                      <span className="text-xs text-muted-foreground">({sortedResponses.length})</span>
+                      <Paperclip className="h-3 w-3 sm:h-4 sm:w-4 text-primary" />
+                      <span className="font-semibold text-xs sm:text-sm">File Attachments</span>
+                      <span className="text-xs text-muted-foreground">({fileAttachments.length})</span>
                     </div>
                     <div className="h-px flex-1 bg-border"></div>
                   </div>
-
-                  {/* Response Cards Grid */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
-                    {sortedResponses.map((response) => (
-                      <ResponseCard
-                        key={response.id}
-                        response={response}
-                        templateName={template?.name}
-                        onView={() => onViewResponse(response)}
-                        onOpenForm={() => onViewResponse(response)}
-                        onOpenCanvas={() => onOpenCanvasResponse(response)}
-                        onSaveAsTemplate={() => handleSaveAsTemplate(response)}
-                        onCopyFromTemplate={() => handleCopyFromTemplate(response)}
-                        onDelete={() => handleDeleteResponse(response.id)}
-                      />
-                    ))}
-                  </div>
+                  {onUploadFile && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setUploadDialogOpen(true)}
+                      disabled={!objectId}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Upload
+                    </Button>
+                  )}
                 </div>
-              );
-            })}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
+                  {isLoadingFiles ? (
+                    Array.from({ length: 2 }).map((_, i) => (
+                      <div key={i} className="space-y-2 p-3 border rounded-lg">
+                        <Skeleton className="h-32 w-full" />
+                        <Skeleton className="h-4 w-3/4" />
+                        <Skeleton className="h-3 w-1/2" />
+                      </div>
+                    ))
+                  ) : (
+                    fileAttachments.map((file) => (
+                      <FileAttachmentCard
+                        key={file.id}
+                        file={file}
+                        onDelete={handleDeleteFile}
+                        onDownload={handleDownloadFile}
+                      />
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Clinical Notes Section */}
+            {responses.length > 0 && (
+              <>
+                {Object.entries(responsesByTemplate).map(([templateId, templateResponses]) => {
+                  const template = templates.find((t) => t.id === Number(templateId));
+                  const sortedResponses = [...templateResponses].sort(
+                    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+                  );
+
+                  return (
+                    <div key={templateId} className="space-y-3 sm:space-y-4">
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="h-px flex-1 bg-border"></div>
+                        <div className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 bg-muted/50 rounded-full">
+                          <FileText className="h-3 w-3 sm:h-4 sm:w-4 text-primary" />
+                          <span className="font-semibold text-xs sm:text-sm">{template?.name || `Template ${templateId}`}</span>
+                          <span className="text-xs text-muted-foreground">({sortedResponses.length})</span>
+                        </div>
+                        <div className="h-px flex-1 bg-border"></div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
+                        {sortedResponses.map((response) => (
+                          <ResponseCard
+                            key={response.id}
+                            response={response}
+                            templateName={template?.name}
+                            onView={() => onViewResponse(response)}
+                            onOpenForm={() => onViewResponse(response)}
+                            onOpenCanvas={() => onOpenCanvasResponse(response)}
+                            onSaveAsTemplate={() => handleSaveAsTemplate(response)}
+                            onCopyFromTemplate={() => handleCopyFromTemplate(response)}
+                            onDelete={() => handleDeleteResponse(response.id)}
+                          />
+                        ))}
+                        
+                        {/* Upload Card - Always visible */}
+                        {onUploadFile && (
+                          <div
+                            onClick={() => setUploadDialogOpen(true)}
+                            className="border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center gap-3 cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors min-h-[200px] group"
+                          >
+                            <div className="p-3 rounded-full bg-primary/10 group-hover:bg-primary/20 transition-colors">
+                              <Paperclip className="h-6 w-6 text-primary" />
+                            </div>
+                            <div className="text-center">
+                              <p className="font-medium text-sm">Upload File</p>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Images or PDF
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </>
+            )}
           </div>
         )}
       </div>
@@ -297,6 +447,15 @@ export const ConsultationBoard: React.FC<ConsultationBoardProps> = ({
         isLoading={isLoadingTemplates}
         onSelectTemplate={handleSelectTemplate}
       />
+
+      {/* File Upload Dialog */}
+      {onUploadFile && (
+        <FileUploadDialog
+          open={uploadDialogOpen}
+          onOpenChange={setUploadDialogOpen}
+          onUpload={onUploadFile}
+        />
+      )}
 
       {/* Save as Template Dialog */}
       <Dialog open={saveAsTemplateDialog} onOpenChange={setSaveAsTemplateDialog}>

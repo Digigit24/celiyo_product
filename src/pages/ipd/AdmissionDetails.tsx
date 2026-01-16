@@ -81,7 +81,7 @@ export default function AdmissionDetails() {
           <div>
             <h1 className="text-2xl font-bold">{admission.admission_id}</h1>
             <p className="text-muted-foreground mt-1">
-              Patient: <span className="font-medium text-foreground">{admission.patient_name}</span>
+              Patient: <span className="font-medium text-foreground">{admission.patient_name?.replace(/ None$/, '') || ''}</span>
             </p>
           </div>
 

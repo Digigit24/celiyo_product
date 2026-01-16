@@ -401,7 +401,7 @@ export const IPDConsultationTab: React.FC<IPDConsultationTabProps> = ({ admissio
                   <div>
                     <CardTitle>{selectedTemplateData?.name || 'Consultation'}</CardTitle>
                     <p className="text-sm text-muted-foreground mt-1">
-                      Admission: {admission.admission_id} • Patient: {admission.patient_name}
+                      Admission: {admission.admission_id} • Patient: {admission.patient_name?.replace(/ None$/, '') || ''}
                     </p>
                     {filledByUser && (
                       <p className="text-xs text-muted-foreground mt-1">
@@ -452,7 +452,7 @@ export const IPDConsultationTab: React.FC<IPDConsultationTabProps> = ({ admissio
                   <div ref={previewRef} className="prose max-w-none">
                     <h1>Consultation - {admission.admission_id}</h1>
                     <p>
-                      <strong>Patient:</strong> {admission.patient_name}
+                      <strong>Patient:</strong> {admission.patient_name?.replace(/ None$/, '') || ''}
                     </p>
                     <p>
                       <strong>Admission Date:</strong> {admission.admission_date}

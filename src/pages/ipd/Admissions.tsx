@@ -134,9 +134,11 @@ export default function Admissions() {
       sortable: true,
       filterable: true,
       accessor: (row) => row.patient_name || '',
-      cell: (row) => (
-        <span className="font-medium">{row.patient_name}</span>
-      ),
+      cell: (row) => {
+        // Clean up patient name by removing " None" suffix
+        const cleanName = row.patient_name?.replace(/ None$/, '') || '';
+        return <span className="font-medium">{cleanName}</span>;
+      },
     },
     {
       header: 'Ward',
@@ -369,7 +371,7 @@ export default function Admissions() {
               <div className="space-y-1 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Patient:</span>
-                  <span className="font-medium">{row.patient_name}</span>
+                  <span className="font-medium">{row.patient_name?.replace(/ None$/, '') || ''}</span>
                 </div>
 
                 <div className="flex justify-between">

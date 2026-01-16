@@ -5,6 +5,8 @@ import { DataTable, DataTableColumn } from '@/components/DataTable';
 import { useIPD } from '@/hooks/useIPD';
 import { Admission, ADMISSION_STATUS_LABELS } from '@/types/ipd.types';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
   DialogContent,
@@ -17,7 +19,18 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Eye, FileText } from 'lucide-react';
+import {
+  Plus,
+  Eye,
+  FileText,
+  Bed as BedIcon,
+  IndianRupee,
+  Calendar,
+  Clock,
+  CheckCircle2,
+  Stethoscope,
+  Search,
+} from 'lucide-react';
 import { format } from 'date-fns';
 import { AdmissionFormDrawer } from '@/components/ipd/AdmissionFormDrawer';
 
@@ -91,6 +104,16 @@ export default function Admissions() {
   // View Details
   const viewDetails = (admission: Admission) => {
     navigate(`/ipd/admissions/${admission.id}`);
+  };
+
+  // Handle Billing
+  const handleBilling = (admission: Admission) => {
+    navigate(`/ipd/admissions/${admission.id}?tab=billing`);
+  };
+
+  // Handle Consultation
+  const handleConsultation = (admission: Admission) => {
+    navigate(`/ipd/admissions/${admission.id}?tab=consultation`);
   };
 
   // DataTable columns
@@ -184,37 +207,126 @@ export default function Admissions() {
     },
   ];
 
-  return (
-    <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="p-6 border-b">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">IPD Admissions</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Manage patient admissions and discharges
-            </p>
-          </div>
-          <Button onClick={() => setIsCreateDrawerOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            New Admission
-          </Button>
-        </div>
+  // Calculate statistics from admissions data
+  const totalAdmissions = admissionsData?.count || 0;
+  const activeAdmissions = admissions.filter(a => a.status === 'admitted').length;
+  const dischargedToday = admissions.filter(a => {
+    if (a.status === 'discharged' && a.discharge_date) {
+      try {
+        const dischargeDate = new Date(a.discharge_date);
+        const today = new Date();
+        return dischargeDate.toDateString() === today.toDateString();
+      } catch {
+        return false;
+      }
+    }
+    return false;
+  }).length;
 
-        {/* Search */}
-        <div className="mt-4">
-          <Input
-            placeholder="Search admissions..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="max-w-sm"
-          />
+  return (
+    <div className="p-6 max-w-8xl mx-auto space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold">IPD Admissions</h1>
+          <p className="text-muted-foreground text-sm sm:text-base">
+            Manage inpatient department admissions
+          </p>
         </div>
+        <Button onClick={() => setIsCreateDrawerOpen(true)} size="default" className="w-full sm:w-auto">
+          <Plus className="h-4 w-4 mr-2" />
+          New Admission
+        </Button>
       </div>
 
-      {/* Data Table */}
-      <div className="flex-1 overflow-auto">
-        <DataTable
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <Calendar className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-xs sm:text-sm text-muted-foreground">Total Admissions</p>
+                <p className="text-xl sm:text-2xl font-bold">{totalAdmissions}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <BedIcon className="h-5 w-5 text-green-600" />
+              </div>
+              <div>
+                <p className="text-xs sm:text-sm text-muted-foreground">Active</p>
+                <p className="text-xl sm:text-2xl font-bold">{activeAdmissions}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-orange-100 rounded-lg">
+                <CheckCircle2 className="h-5 w-5 text-orange-600" />
+              </div>
+              <div>
+                <p className="text-xs sm:text-sm text-muted-foreground">Discharged Today</p>
+                <p className="text-xl sm:text-2xl font-bold">{dischargedToday}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <Clock className="h-5 w-5 text-purple-600" />
+              </div>
+              <div>
+                <p className="text-xs sm:text-sm text-muted-foreground">Avg. Stay</p>
+                <p className="text-xl sm:text-2xl font-bold">
+                  {admissions.length > 0
+                    ? Math.round(admissions.reduce((sum, a) => sum + (a.length_of_stay || 0), 0) / admissions.length)
+                    : 0} days
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Filters & Search */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Search Admissions</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by admission ID, patient name, ward..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Admissions Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Admissions List</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <DataTable
           rows={admissions}
           isLoading={isLoading}
           columns={columns}
@@ -238,7 +350,20 @@ export default function Admissions() {
             <div>
               <div className="flex items-center justify-between mb-2">
                 <span className="font-mono font-semibold text-sm">{row.admission_id}</span>
-                {actions.dropdown}
+                <Badge
+                  variant="default"
+                  className={
+                    row.status === 'admitted'
+                      ? 'bg-blue-600'
+                      : row.status === 'discharged'
+                      ? 'bg-green-600'
+                      : row.status === 'transferred'
+                      ? 'bg-yellow-600'
+                      : 'bg-gray-600'
+                  }
+                >
+                  {ADMISSION_STATUS_LABELS[row.status]}
+                </Badge>
               </div>
 
               <div className="space-y-1 text-sm">
@@ -268,21 +393,34 @@ export default function Admissions() {
                   <span className="text-muted-foreground">Length of Stay:</span>
                   <span>{row.length_of_stay} days</span>
                 </div>
+              </div>
 
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Status:</span>
-                  <span
-                    className={`px-2 py-0.5 rounded text-xs ${
-                      row.status === 'admitted'
-                        ? 'bg-blue-100 text-blue-700'
-                        : row.status === 'discharged'
-                        ? 'bg-green-100 text-green-700'
-                        : 'bg-gray-100 text-gray-700'
-                    }`}
-                  >
-                    {ADMISSION_STATUS_LABELS[row.status]}
-                  </span>
-                </div>
+              {/* Quick Action Buttons */}
+              <div className="flex gap-2 pt-2 mt-2 border-t">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleBilling(row);
+                  }}
+                  className="flex-1"
+                >
+                  <IndianRupee className="h-3.5 w-3.5 mr-1.5" />
+                  Billing
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleConsultation(row);
+                  }}
+                  className="flex-1"
+                >
+                  <Stethoscope className="h-3.5 w-3.5 mr-1.5" />
+                  Consult
+                </Button>
               </div>
 
               <div className="mt-2 flex gap-2">
@@ -299,10 +437,13 @@ export default function Admissions() {
               </div>
             </div>
           )}
+          onBilling={handleBilling}
+          onConsultation={handleConsultation}
           emptyTitle="No admissions found"
           emptySubtitle="Create a new admission to get started"
         />
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Create Admission Drawer */}
       <AdmissionFormDrawer

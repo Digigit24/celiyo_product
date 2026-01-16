@@ -1,26 +1,36 @@
 // src/pages/ipd/AdmissionDetails.tsx
-import { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useIPD } from '@/hooks/useIPD';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, FileText, Bed as BedIcon, IndianRupee, Activity } from 'lucide-react';
+import { ArrowLeft, FileText, Bed as BedIcon, IndianRupee, Activity, Stethoscope } from 'lucide-react';
 import { format } from 'date-fns';
 import { ADMISSION_STATUS_LABELS } from '@/types/ipd.types';
 import AdmissionInfo from '@/components/ipd/AdmissionInfo';
 import BedTransfersTab from '@/components/ipd/BedTransfersTab';
 import BillingTab from '@/components/ipd/BillingTab';
+import { IPDConsultationTab } from '@/components/ipd/IPDConsultationTab';
 
 export default function AdmissionDetails() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('info');
+  const [searchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab');
+  const [activeTab, setActiveTab] = useState(tabParam || 'info');
 
   const { useAdmissionById } = useIPD();
   const { data: admission, isLoading, error: fetchError, mutate } = useAdmissionById(id ? parseInt(id) : null);
+
+  // Update active tab when tab query parameter changes
+  useEffect(() => {
+    if (tabParam) {
+      setActiveTab(tabParam);
+    }
+  }, [tabParam]);
 
   if (isLoading) {
     return (
@@ -143,32 +153,40 @@ export default function AdmissionDetails() {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
           <div className="border-b px-6">
             <TabsList className="bg-transparent">
-              <TabsTrigger value="info" className="gap-2">
-                <FileText className="h-4 w-4" />
-                Admission Info
-              </TabsTrigger>
-              <TabsTrigger value="transfers" className="gap-2">
-                <BedIcon className="h-4 w-4" />
-                Bed Transfers
+              <TabsTrigger value="consultation" className="gap-2">
+                <Stethoscope className="h-4 w-4" />
+                Consultation
               </TabsTrigger>
               <TabsTrigger value="billing" className="gap-2">
                 <IndianRupee className="h-4 w-4" />
                 Billing
               </TabsTrigger>
+              <TabsTrigger value="transfers" className="gap-2">
+                <BedIcon className="h-4 w-4" />
+                Bed Transfers
+              </TabsTrigger>
+              <TabsTrigger value="info" className="gap-2">
+                <FileText className="h-4 w-4" />
+                Admission Info
+              </TabsTrigger>
             </TabsList>
           </div>
 
           <div className="flex-1 overflow-auto">
-            <TabsContent value="info" className="mt-0 h-full">
-              <AdmissionInfo admission={admission} onUpdate={mutate} />
+            <TabsContent value="consultation" className="mt-0 h-full">
+              <IPDConsultationTab admission={admission} />
+            </TabsContent>
+
+            <TabsContent value="billing" className="mt-0 h-full">
+              <BillingTab admissionId={admission.id} />
             </TabsContent>
 
             <TabsContent value="transfers" className="mt-0 h-full">
               <BedTransfersTab admissionId={admission.id} />
             </TabsContent>
 
-            <TabsContent value="billing" className="mt-0 h-full">
-              <BillingTab admissionId={admission.id} />
+            <TabsContent value="info" className="mt-0 h-full">
+              <AdmissionInfo admission={admission} onUpdate={mutate} />
             </TabsContent>
           </div>
         </Tabs>

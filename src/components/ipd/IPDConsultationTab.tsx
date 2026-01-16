@@ -167,9 +167,8 @@ export const IPDConsultationTab: React.FC<IPDConsultationTabProps> = ({ admissio
             </body>
           </html>
         `);
-        printWindow.document.close();
-        printWindow.print();
-      }
+      printWindow.document.close();
+      printWindow.print();
     }
   }, [admission]);
 

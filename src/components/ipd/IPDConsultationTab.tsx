@@ -14,21 +14,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Loader2, Save, Download, Printer, Building2, Stethoscope } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Loader2, Save, Printer, Plus, FileText } from 'lucide-react';
 import { Admission } from '@/types/ipd.types';
 import { toast } from 'sonner';
 import { useOPDTemplate } from '@/hooks/useOPDTemplate';
-import { useTenant } from '@/hooks/useTenant';
 import { useUsers } from '@/hooks/useUsers';
 import {
   TemplateField,
   TemplateResponse,
   FieldResponsePayload,
 } from '@/types/opdTemplate.types';
-import { ConsultationBoard } from '../consultation/ConsultationBoard';
 import { DiagnosticRequisitionSidebar } from '../consultation/DiagnosticRequisitionSidebar';
 import { FloatingActionPanel } from '../consultation/FloatingActionPanel';
-import { SideDrawer } from '@/components/SideDrawer';
+import { format } from 'date-fns';
 
 interface IPDConsultationTabProps {
   admission?: Admission;
@@ -40,20 +40,17 @@ export const IPDConsultationTab: React.FC<IPDConsultationTabProps> = ({ admissio
     useTemplate,
     useTemplateResponses,
     useTemplateResponse,
+    createTemplateResponse,
     updateTemplateResponse,
   } = useOPDTemplate();
-
-  const { useCurrentTenant } = useTenant();
-  const { data: tenantData } = useCurrentTenant();
-  const tenantSettings = tenantData?.settings || {};
 
   const [selectedResponse, setSelectedResponse] = useState<TemplateResponse | null>(null);
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [activeSubTab, setActiveSubTab] = useState<'fields' | 'preview'>('fields');
   const [isSaving, setIsSaving] = useState(false);
-  const [responseDrawerOpen, setResponseDrawerOpen] = useState(false);
   const [requisitionSidebarOpen, setRequisitionSidebarOpen] = useState(false);
   const [templateDrawerOpen, setTemplateDrawerOpen] = useState(false);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
   const previewRef = useRef<HTMLDivElement>(null);
 
   // Encounter type is always 'admission' for IPD
@@ -114,6 +111,29 @@ export const IPDConsultationTab: React.FC<IPDConsultationTabProps> = ({ admissio
     }));
   }, []);
 
+  // Handle create new response from template
+  const handleCreateResponse = useCallback(async (templateId: number) => {
+    if (!currentObjectId) {
+      toast.error('Admission not loaded');
+      return;
+    }
+
+    try {
+      await createTemplateResponse({
+        template: templateId,
+        encounter_type: encounterType,
+        object_id: currentObjectId,
+        field_responses: [],
+      });
+      toast.success('Consultation note created');
+      mutateResponses();
+      setTemplateDrawerOpen(false);
+    } catch (error: any) {
+      console.error('Failed to create response:', error);
+      toast.error(error.message || 'Failed to create consultation note');
+    }
+  }, [currentObjectId, encounterType, createTemplateResponse, mutateResponses]);
+
   // Handle save response
   const handleSaveResponse = useCallback(async () => {
     if (!selectedResponse) {
@@ -153,20 +173,20 @@ export const IPDConsultationTab: React.FC<IPDConsultationTabProps> = ({ admissio
         <html>
           <head>
             <title>Consultation - ${admission.admission_id}</title>
-              <style>
-                body { font-family: Arial, sans-serif; padding: 20px; }
-                h1 { font-size: 24px; margin-bottom: 10px; }
-                h2 { font-size: 18px; margin-top: 20px; margin-bottom: 10px; }
-                .field { margin-bottom: 15px; }
-                .field-label { font-weight: bold; margin-bottom: 5px; }
-                .field-value { margin-left: 10px; }
-              </style>
-            </head>
-            <body>
-              ${previewRef.current.innerHTML}
-            </body>
-          </html>
-        `);
+            <style>
+              body { font-family: Arial, sans-serif; padding: 20px; }
+              h1 { font-size: 24px; margin-bottom: 10px; }
+              h2 { font-size: 18px; margin-top: 20px; margin-bottom: 10px; }
+              .field { margin-bottom: 15px; }
+              .field-label { font-weight: bold; margin-bottom: 5px; }
+              .field-value { margin-left: 10px; }
+            </style>
+          </head>
+          <body>
+            ${previewRef.current.innerHTML}
+          </body>
+        </html>
+      `);
       printWindow.document.close();
       printWindow.print();
     }
@@ -317,100 +337,198 @@ export const IPDConsultationTab: React.FC<IPDConsultationTabProps> = ({ admissio
   }
 
   return (
-    <div className="h-full flex flex-col">
-      <ConsultationBoard
-        templates={templates}
-        responses={responses}
-        selectedResponse={selectedResponse}
-        onSelectResponse={setSelectedResponse}
-        onCreateResponse={mutateResponses}
-        encounterType={encounterType}
-        objectId={currentObjectId}
-        isLoadingTemplates={isLoadingTemplates}
-        isLoadingResponses={isLoadingResponses}
-        onOpenRequisitionSidebar={() => setRequisitionSidebarOpen(true)}
-      />
+    <div className="h-full flex flex-col p-6">
+      {/* Header with Template Selection */}
+      <div className="mb-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-bold">Consultation Notes</h2>
+          <Button onClick={() => setTemplateDrawerOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            New Note
+          </Button>
+        </div>
+      </div>
 
-      {selectedResponse && (
-        <div className="flex-1 p-6 overflow-auto">
-          <div className="max-w-4xl mx-auto">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h2 className="text-xl font-bold">{selectedTemplateData?.name || 'Consultation'}</h2>
-                <p className="text-sm text-muted-foreground">
-                  Admission: {admission.admission_id} • Patient: {admission.patient_name}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 overflow-hidden">
+        {/* Left: Notes List */}
+        <div className="lg:col-span-1 overflow-auto">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Consultation Notes</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {isLoadingResponses ? (
+                <div className="flex justify-center p-4">
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                </div>
+              ) : responses.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center p-4">
+                  No consultation notes yet. Create one to get started.
                 </p>
-                {filledByUser && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Filled by: {filledByName}
-                  </p>
+              ) : (
+                responses.map((response) => (
+                  <Card
+                    key={response.id}
+                    className={`cursor-pointer hover:bg-accent transition-colors ${
+                      selectedResponse?.id === response.id ? 'border-primary' : ''
+                    }`}
+                    onClick={() => setSelectedResponse(response)}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <h4 className="font-medium text-sm">{response.template_name}</h4>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {format(new Date(response.created_at), 'MMM dd, yyyy • hh:mm a')}
+                          </p>
+                        </div>
+                        <FileText className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Right: Note Details */}
+        <div className="lg:col-span-2 overflow-auto">
+          {selectedResponse ? (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>{selectedTemplateData?.name || 'Consultation'}</CardTitle>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Admission: {admission.admission_id} • Patient: {admission.patient_name}
+                    </p>
+                    {filledByUser && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Filled by: {filledByName}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setActiveSubTab(activeSubTab === 'fields' ? 'preview' : 'fields')}
+                    >
+                      {activeSubTab === 'fields' ? 'Preview' : 'Edit'}
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={handlePrint}>
+                      <Printer className="h-4 w-4 mr-2" />
+                      Print
+                    </Button>
+                    <Button size="sm" onClick={handleSaveResponse} disabled={isSaving}>
+                      {isSaving ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Save className="h-4 w-4 mr-2" />
+                      )}
+                      Save
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {activeSubTab === 'fields' ? (
+                  <div className="space-y-6">
+                    {templateFields.map((field) => (
+                      <div key={field.id} className="space-y-2">
+                        <Label htmlFor={field.id.toString()}>
+                          {field.label}
+                          {field.is_required && <span className="text-destructive ml-1">*</span>}
+                        </Label>
+                        {field.description && (
+                          <p className="text-sm text-muted-foreground">{field.description}</p>
+                        )}
+                        {renderField(field)}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div ref={previewRef} className="prose max-w-none">
+                    <h1>Consultation - {admission.admission_id}</h1>
+                    <p>
+                      <strong>Patient:</strong> {admission.patient_name}
+                    </p>
+                    <p>
+                      <strong>Admission Date:</strong> {admission.admission_date}
+                    </p>
+                    <p>
+                      <strong>Ward:</strong> {admission.ward_name}
+                    </p>
+                    <p>
+                      <strong>Bed:</strong> {admission.bed_number || 'N/A'}
+                    </p>
+                    <hr />
+                    {templateFields.map((field) => (
+                      <div key={field.id} className="field">
+                        <div className="field-label">{field.label}</div>
+                        <div className="field-value">
+                          {formData[field.id.toString()] || <em>Not filled</em>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardContent className="p-12 text-center">
+                <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-medium mb-2">No note selected</h3>
+                <p className="text-sm text-muted-foreground">
+                  Select a consultation note from the list or create a new one
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </div>
+
+      {/* Template Selection Dialog */}
+      {templateDrawerOpen && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <Card className="max-w-2xl w-full max-h-[80vh] overflow-auto">
+            <CardHeader>
+              <CardTitle>Select Template</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 gap-3">
+                {isLoadingTemplates ? (
+                  <div className="flex justify-center p-8">
+                    <Loader2 className="h-8 w-8 animate-spin" />
+                  </div>
+                ) : templates.length === 0 ? (
+                  <p className="text-center text-muted-foreground p-8">No templates available</p>
+                ) : (
+                  templates.map((template) => (
+                    <Card
+                      key={template.id}
+                      className="cursor-pointer hover:bg-accent transition-colors"
+                      onClick={() => handleCreateResponse(template.id)}
+                    >
+                      <CardContent className="p-4">
+                        <h4 className="font-medium">{template.name}</h4>
+                        {template.description && (
+                          <p className="text-sm text-muted-foreground mt-1">{template.description}</p>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))
                 )}
               </div>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setActiveSubTab(activeSubTab === 'fields' ? 'preview' : 'fields')}
-                >
-                  {activeSubTab === 'fields' ? 'Preview' : 'Edit'}
-                </Button>
-                <Button variant="outline" size="sm" onClick={handlePrint}>
-                  <Printer className="h-4 w-4 mr-2" />
-                  Print
-                </Button>
-                <Button size="sm" onClick={handleSaveResponse} disabled={isSaving}>
-                  {isSaving ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <Save className="h-4 w-4 mr-2" />
-                  )}
-                  Save
+              <div className="mt-4">
+                <Button variant="outline" onClick={() => setTemplateDrawerOpen(false)} className="w-full">
+                  Cancel
                 </Button>
               </div>
-            </div>
-
-            {activeSubTab === 'fields' ? (
-              <div className="space-y-6">
-                {templateFields.map((field) => (
-                  <div key={field.id} className="space-y-2">
-                    <Label htmlFor={field.id.toString()}>
-                      {field.label}
-                      {field.is_required && <span className="text-destructive ml-1">*</span>}
-                    </Label>
-                    {field.description && (
-                      <p className="text-sm text-muted-foreground">{field.description}</p>
-                    )}
-                    {renderField(field)}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div ref={previewRef} className="prose max-w-none">
-                <h1>Consultation - {admission.admission_id}</h1>
-                <p>
-                  <strong>Patient:</strong> {admission.patient_name}
-                </p>
-                <p>
-                  <strong>Admission Date:</strong> {admission.admission_date}
-                </p>
-                <p>
-                  <strong>Ward:</strong> {admission.ward_name}
-                </p>
-                <p>
-                  <strong>Bed:</strong> {admission.bed_number || 'N/A'}
-                </p>
-                <hr />
-                {templateFields.map((field) => (
-                  <div key={field.id} className="field">
-                    <div className="field-label">{field.label}</div>
-                    <div className="field-value">
-                      {formData[field.id.toString()] || <em>Not filled</em>}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+            </CardContent>
+          </Card>
         </div>
       )}
 

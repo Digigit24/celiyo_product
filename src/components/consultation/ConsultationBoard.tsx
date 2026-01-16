@@ -192,6 +192,18 @@ export const ConsultationBoard: React.FC<ConsultationBoardProps> = ({
     [selectedResponseForAction, applyResponseTemplate, onRefresh]
   );
 
+  const handleUploadClick = useCallback(() => {
+    if (!objectId) {
+      toast.error('No active encounter found. Please select a visit or admission first.');
+      return;
+    }
+    if (!onUploadFile) {
+      toast.error('Upload functionality is not available');
+      return;
+    }
+    setUploadDialogOpen(true);
+  }, [objectId, onUploadFile]);
+
   const handleDeleteFile = useCallback(
     async (fileId: number) => {
       const confirmed = window.confirm('Are you sure you want to delete this file?');
@@ -254,19 +266,16 @@ export const ConsultationBoard: React.FC<ConsultationBoardProps> = ({
           </div>
         </div>
         
-        {/* Upload Button - Always visible */}
-        {onUploadFile && (
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => setUploadDialogOpen(true)}
-            className="gap-2"
-            disabled={!objectId}
-          >
-            <Paperclip className="h-4 w-4" />
-            <span className="hidden sm:inline">Upload File</span>
-          </Button>
-        )}
+        {/* Upload Button - Always visible and enabled */}
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={handleUploadClick}
+          className="gap-2"
+        >
+          <Paperclip className="h-4 w-4" />
+          <span className="hidden sm:inline">Upload File</span>
+        </Button>
       </div>
 
       {/* Board Content */}
@@ -311,17 +320,14 @@ export const ConsultationBoard: React.FC<ConsultationBoardProps> = ({
                   <Plus className="mr-2 h-4 w-4" />
                   Add Note
                 </Button>
-                {onUploadFile && (
-                  <Button
-                    onClick={() => setUploadDialogOpen(true)}
-                    variant="outline"
-                    size="default"
-                    disabled={!objectId}
-                  >
-                    <Paperclip className="mr-2 h-4 w-4" />
-                    Upload File
-                  </Button>
-                )}
+                <Button
+                  onClick={handleUploadClick}
+                  variant="outline"
+                  size="default"
+                >
+                  <Paperclip className="mr-2 h-4 w-4" />
+                  Upload File
+                </Button>
               </div>
             </div>
           </div>
@@ -340,17 +346,14 @@ export const ConsultationBoard: React.FC<ConsultationBoardProps> = ({
                     </div>
                     <div className="h-px flex-1 bg-border"></div>
                   </div>
-                  {onUploadFile && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setUploadDialogOpen(true)}
-                      disabled={!objectId}
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Upload
-                    </Button>
-                  )}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleUploadClick}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Upload
+                  </Button>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
@@ -412,23 +415,21 @@ export const ConsultationBoard: React.FC<ConsultationBoardProps> = ({
                           />
                         ))}
                         
-                        {/* Upload Card - Always visible */}
-                        {onUploadFile && (
-                          <div
-                            onClick={() => setUploadDialogOpen(true)}
-                            className="border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center gap-3 cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors min-h-[200px] group"
-                          >
-                            <div className="p-3 rounded-full bg-primary/10 group-hover:bg-primary/20 transition-colors">
-                              <Paperclip className="h-6 w-6 text-primary" />
-                            </div>
-                            <div className="text-center">
-                              <p className="font-medium text-sm">Upload File</p>
-                              <p className="text-xs text-muted-foreground mt-1">
-                                Images or PDF
-                              </p>
-                            </div>
+                        {/* Upload Card - Always visible and clickable */}
+                        <div
+                          onClick={handleUploadClick}
+                          className="border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center gap-3 cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors min-h-[200px] group"
+                        >
+                          <div className="p-3 rounded-full bg-primary/10 group-hover:bg-primary/20 transition-colors">
+                            <Paperclip className="h-6 w-6 text-primary" />
                           </div>
-                        )}
+                          <div className="text-center">
+                            <p className="font-medium text-sm">Upload File</p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Images or PDF
+                            </p>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   );
@@ -449,13 +450,11 @@ export const ConsultationBoard: React.FC<ConsultationBoardProps> = ({
       />
 
       {/* File Upload Dialog */}
-      {onUploadFile && (
-        <FileUploadDialog
-          open={uploadDialogOpen}
-          onOpenChange={setUploadDialogOpen}
-          onUpload={onUploadFile}
-        />
-      )}
+      <FileUploadDialog
+        open={uploadDialogOpen}
+        onOpenChange={setUploadDialogOpen}
+        onUpload={onUploadFile!}
+      />
 
       {/* Save as Template Dialog */}
       <Dialog open={saveAsTemplateDialog} onOpenChange={setSaveAsTemplateDialog}>

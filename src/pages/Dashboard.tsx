@@ -574,9 +574,6 @@ const Dashboard = () => {
 
         {/* Quick Navigation Tabs */}
         <div className="mb-8">
-          <h2 className={`text-lg font-semibold mb-4 ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>
-            Quick Access
-          </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Patients Card */}
             <Card
@@ -764,6 +761,9 @@ const Dashboard = () => {
           </div>
         </div>
 
+        {/* Recent Activities Section */}
+        <RecentActivitiesTable isDark={isDark} />
+
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
           <StatCard
@@ -819,9 +819,6 @@ const Dashboard = () => {
             isDark={isDark}
           />
         </div>
-
-        {/* Recent Activities Section */}
-        <RecentActivitiesTable isDark={isDark} />
 
         {/* Charts removed to avoid ApexCharts runtime issues for now */}
       </div>
@@ -940,10 +937,6 @@ const RecentActivitiesTable = ({ isDark }: { isDark: boolean }) => {
 
   return (
     <div className="mt-4 mb-8">
-      <h2 className={`text-lg font-semibold mb-4 ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>
-        Recent Activity
-      </h2>
-      
       {/* Desktop View: Side-by-Side */}
       <div className="hidden xl:grid grid-cols-2 gap-6">
         {/* OPD Visits Table */}

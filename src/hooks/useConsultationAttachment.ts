@@ -17,8 +17,10 @@ export const useConsultationAttachment = () => {
    */
   const useAttachments = (params?: ConsultationAttachmentListParams) => {
     const key = params
-      ? [`/hms/consultation-attachments`, params]
+      ? [`/opd/visit-attachments`, params]
       : null;
+
+    console.log('[useConsultationAttachment] useAttachments called with key:', key);
 
     return useSWR<ConsultationAttachmentListResponse, Error>(
       key,
@@ -50,13 +52,19 @@ export const useConsultationAttachment = () => {
    * Upload a new consultation attachment
    */
   const uploadAttachment = async (data: ConsultationAttachmentCreate): Promise<ConsultationAttachment> => {
+    console.log('[useConsultationAttachment] uploadAttachment called with:', data);
     const result = await consultationAttachmentService.uploadAttachment(data);
+    console.log('[useConsultationAttachment] Upload result:', result);
 
     // Revalidate the list for this specific encounter
+    console.log('[useConsultationAttachment] Revalidating cache for:', {
+      encounter_type: data.encounter_type,
+      object_id: data.object_id,
+    });
     mutate(
       (key: any) =>
         Array.isArray(key) &&
-        key[0] === '/hms/consultation-attachments' &&
+        key[0] === '/opd/visit-attachments' &&
         key[1]?.encounter_type === data.encounter_type &&
         key[1]?.object_id === data.object_id
     );

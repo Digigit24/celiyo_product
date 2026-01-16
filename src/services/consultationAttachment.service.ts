@@ -39,19 +39,22 @@ export interface ConsultationAttachmentListResponse {
 }
 
 class ConsultationAttachmentService {
-  private baseURL = '/hms/consultation-attachments';
+  private baseURL = '/opd/visit-attachments';
 
   /**
    * Get list of consultation attachments with optional filters
    */
   async getAttachments(params?: ConsultationAttachmentListParams): Promise<ConsultationAttachmentListResponse> {
+    console.log('[ConsultationAttachment] Fetching attachments with params:', params);
     try {
       const response = await hmsClient.get<ConsultationAttachmentListResponse>(
         `${this.baseURL}/`,
         { params }
       );
+      console.log('[ConsultationAttachment] Fetched attachments:', response.data);
       return response.data;
     } catch (error: any) {
+      console.error('[ConsultationAttachment] Error fetching attachments:', error);
       const message =
         error.response?.data?.error ||
         error.response?.data?.message ||
@@ -82,6 +85,14 @@ class ConsultationAttachmentService {
    * Upload a new consultation attachment
    */
   async uploadAttachment(data: ConsultationAttachmentCreate): Promise<ConsultationAttachment> {
+    console.log('[ConsultationAttachment] Uploading attachment:', {
+      encounter_type: data.encounter_type,
+      object_id: data.object_id,
+      fileName: data.file.name,
+      fileSize: data.file.size,
+      description: data.description,
+    });
+
     const formData = new FormData();
     formData.append('encounter_type', data.encounter_type);
     formData.append('object_id', data.object_id.toString());
@@ -91,6 +102,7 @@ class ConsultationAttachmentService {
     }
 
     try {
+      console.log('[ConsultationAttachment] Making POST request to:', `${this.baseURL}/`);
       const response = await hmsClient.post<ConsultationAttachment>(
         `${this.baseURL}/`,
         formData,
@@ -100,8 +112,11 @@ class ConsultationAttachmentService {
           },
         }
       );
+      console.log('[ConsultationAttachment] Upload successful:', response.data);
       return response.data;
     } catch (error: any) {
+      console.error('[ConsultationAttachment] Upload failed:', error);
+      console.error('[ConsultationAttachment] Error response:', error.response?.data);
       const message =
         error.response?.data?.error ||
         error.response?.data?.message ||

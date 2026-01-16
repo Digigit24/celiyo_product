@@ -317,6 +317,7 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
 
   // Handle file upload
   const handleUploadFile = useCallback(async (file: File, description: string) => {
+    console.log("[ConsultationTab] handleUploadFile called:", { fileName: file.name, fileSize: file.size, description, currentObjectId, encounterType });
     if (!currentObjectId) {
       toast.error('No valid visit or admission context');
       return;

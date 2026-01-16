@@ -31,7 +31,7 @@ import { FloatingActionPanel } from '../consultation/FloatingActionPanel';
 import { SideDrawer } from '@/components/SideDrawer';
 
 interface IPDConsultationTabProps {
-  admission: Admission;
+  admission?: Admission;
 }
 
 export const IPDConsultationTab: React.FC<IPDConsultationTabProps> = ({ admission }) => {
@@ -58,7 +58,7 @@ export const IPDConsultationTab: React.FC<IPDConsultationTabProps> = ({ admissio
 
   // Encounter type is always 'admission' for IPD
   const encounterType = 'admission';
-  const currentObjectId = admission.id;
+  const currentObjectId = admission?.id;
 
   // Fetch user for filled_by display
   const { useUser } = useUsers();
@@ -144,14 +144,15 @@ export const IPDConsultationTab: React.FC<IPDConsultationTabProps> = ({ admissio
 
   // Handle print
   const handlePrint = useCallback(() => {
-    if (previewRef.current) {
-      const printWindow = window.open('', '_blank');
-      if (printWindow) {
-        printWindow.document.write(`
-          <!DOCTYPE html>
-          <html>
-            <head>
-              <title>Consultation - ${admission.admission_id}</title>
+    if (!admission || !previewRef.current) return;
+
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Consultation - ${admission.admission_id}</title>
               <style>
                 body { font-family: Arial, sans-serif; padding: 20px; }
                 h1 { font-size: 24px; margin-bottom: 10px; }
@@ -170,7 +171,19 @@ export const IPDConsultationTab: React.FC<IPDConsultationTabProps> = ({ admissio
         printWindow.print();
       }
     }
-  }, [admission.admission_id]);
+  }, [admission]);
+
+  // Safety check for admission after all hooks are called
+  if (!admission) {
+    return (
+      <div className="flex items-center justify-center h-full p-6">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">Loading admission details...</p>
+        </div>
+      </div>
+    );
+  }
 
   // Render field based on type
   const renderField = (field: TemplateField) => {

@@ -173,20 +173,8 @@ export const IPDConsultationTab: React.FC<IPDConsultationTabProps> = ({ admissio
     }
   }, [admission]);
 
-  // Safety check for admission after all hooks are called
-  if (!admission) {
-    return (
-      <div className="flex items-center justify-center h-full p-6">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">Loading admission details...</p>
-        </div>
-      </div>
-    );
-  }
-
   // Render field based on type
-  const renderField = (field: TemplateField) => {
+  const renderField = useCallback((field: TemplateField) => {
     const fieldValue = formData[field.id.toString()] || '';
 
     switch (field.field_type) {
@@ -315,7 +303,19 @@ export const IPDConsultationTab: React.FC<IPDConsultationTabProps> = ({ admissio
           />
         );
     }
-  };
+  }, [formData, handleFieldChange]);
+
+  // Safety check for admission after all hooks are called
+  if (!admission) {
+    return (
+      <div className="flex items-center justify-center h-full p-6">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">Loading admission details...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-full flex flex-col">

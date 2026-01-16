@@ -21,6 +21,7 @@ import { useOPDTemplate } from '@/hooks/useOPDTemplate';
 import { useIPD } from '@/hooks/useIPD';
 import { useTenant } from '@/hooks/useTenant';
 import { useUsers } from '@/hooks/useUsers';
+import { useConsultationAttachment } from '@/hooks/useConsultationAttachment';
 import {
   TemplateField,
   TemplateResponse,
@@ -49,6 +50,14 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
   const { useCurrentTenant } = useTenant();
   const { data: tenantData } = useCurrentTenant();
   const tenantSettings = tenantData?.settings || {};
+
+  // File attachment hooks
+  const {
+    useAttachments,
+    uploadAttachment,
+    deleteAttachment,
+    downloadAttachment,
+  } = useConsultationAttachment();
 
   const [selectedResponse, setSelectedResponse] = useState<TemplateResponse | null>(null);
   const [formData, setFormData] = useState<Record<string, any>>({});
@@ -93,6 +102,17 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
       : undefined
   );
   const responses = useMemo(() => responsesData?.results || [], [responsesData]);
+
+  // Fetch file attachments for the current encounter context
+  const { data: attachmentsData, isLoading: isLoadingAttachments, mutate: mutateAttachments } = useAttachments(
+    currentObjectId
+      ? {
+          encounter_type: encounterType,
+          object_id: currentObjectId,
+        }
+      : undefined
+  );
+  const fileAttachments = useMemo(() => attachmentsData?.results || [], [attachmentsData]);
 
   // Fetch detailed response when one is selected
   const { data: detailedResponse } = useTemplateResponse(selectedResponse?.id || null);
@@ -202,6 +222,45 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
     if (optionCount <= 6) return 'grid-cols-3';
     return 'grid-cols-4';
   };
+
+  // Handle file upload
+  const handleUploadFile = useCallback(async (file: File, description: string) => {
+    if (!currentObjectId) {
+      toast.error('No valid visit or admission context');
+      return;
+    }
+
+    try {
+      await uploadAttachment({
+        encounter_type: encounterType,
+        object_id: currentObjectId,
+        file,
+        description,
+      });
+      toast.success('File uploaded successfully');
+      mutateAttachments();
+    } catch (error: any) {
+      console.error('Failed to upload file:', error);
+      throw error; // Re-throw to let FileUploadDialog handle it
+    }
+  }, [currentObjectId, encounterType, uploadAttachment, mutateAttachments]);
+
+  // Handle file delete
+  const handleDeleteFile = useCallback(async (fileId: number) => {
+    try {
+      await deleteAttachment(fileId);
+      toast.success('File deleted successfully');
+      mutateAttachments();
+    } catch (error: any) {
+      console.error('Failed to delete file:', error);
+      toast.error(error.message || 'Failed to delete file');
+    }
+  }, [deleteAttachment, mutateAttachments]);
+
+  // Handle file download
+  const handleDownloadFile = useCallback((file: any) => {
+    downloadAttachment(file);
+  }, [downloadAttachment]);
 
   const handlePrint = useCallback(() => {
     if (!previewRef.current) return;
@@ -596,12 +655,18 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
           visit={visit}
           responses={responses}
           templates={templates}
+          fileAttachments={fileAttachments}
           isLoadingResponses={isLoadingResponses}
           isLoadingTemplates={isLoadingTemplates}
+          isLoadingFiles={isLoadingAttachments}
           onViewResponse={handleViewResponse}
           onRefresh={mutateResponses}
+          onRefreshFiles={mutateAttachments}
           templateDrawerOpen={templateDrawerOpen}
           onTemplateDrawerChange={setTemplateDrawerOpen}
+          onUploadFile={handleUploadFile}
+          onDeleteFile={handleDeleteFile}
+          onDownloadFile={handleDownloadFile}
         />
       </div>
 

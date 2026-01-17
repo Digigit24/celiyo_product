@@ -610,33 +610,39 @@ export const OPDBillingContent: React.FC<OPDBillingContentProps> = ({ visit }) =
 
     // If changing opdAmount for existing bill, update consultation item in backend
     if (field === 'opdAmount' && existingBill) {
-      const consultationItem = existingBill.items?.find(
+      const consultationItemIndex = billItems.findIndex(
         item => item.source === 'Consultation' || item.item_name === 'Consultation Fee'
       );
 
-      if (consultationItem && consultationItem.id) {
+      if (consultationItemIndex >= 0) {
+        const consultationItem = billItems[consultationItemIndex];
         const newAmount = parseFloat(value) || 0;
 
-        // Debounce the API call - only update after user stops typing
-        const timeoutId = setTimeout(async () => {
-          try {
-            await opdBillService.updateBillItem(consultationItem.id!, {
-              quantity: 1,
-              unit_price: newAmount.toFixed(2),
-              is_price_overridden: newAmount.toFixed(2) !== consultationItem.system_calculated_price,
-            });
+        if (consultationItem.id) {
+          // Debounce the API call - only update after user stops typing
+          const timeoutId = setTimeout(async () => {
+            try {
+              const updatedItem = await opdBillService.updateBillItem(consultationItem.id!, {
+                quantity: 1,
+                unit_price: newAmount.toFixed(2),
+                is_price_overridden: newAmount.toFixed(2) !== consultationItem.system_calculated_price,
+              });
 
-            // Refresh bills to get updated totals
-            await mutateBills();
-            await mutateVisitBills();
-          } catch (error) {
-            console.error('Failed to update consultation fee:', error);
-            toast.error('Failed to update consultation fee');
-          }
-        }, 1000);
+              // Update item in state with response from API
+              setBillItems((prev) => {
+                const updated = [...prev];
+                updated[consultationItemIndex] = updatedItem;
+                return updated;
+              });
+            } catch (error) {
+              console.error('Failed to update consultation fee:', error);
+              toast.error('Failed to update consultation fee');
+            }
+          }, 1000);
 
-        // Store timeout ID for cleanup
-        return () => clearTimeout(timeoutId);
+          // Store timeout ID for cleanup
+          return () => clearTimeout(timeoutId);
+        }
       }
     }
   };
@@ -735,11 +741,12 @@ export const OPDBillingContent: React.FC<OPDBillingContentProps> = ({ visit }) =
           notes: newItem.notes || '',
         };
 
-        await opdBillService.createBillItem(itemData);
+        const createdItem = await opdBillService.createBillItem(itemData);
 
-        // Refresh bills to get real item with actual ID
-        await mutateBills();
-        await mutateVisitBills();
+        // Replace temp item with real item from API
+        setBillItems((prev) => prev.map(item =>
+          item.id === tempItem.id ? createdItem : item
+        ));
       } catch (error) {
         console.error('Failed to add investigation:', error);
         // ROLLBACK: Remove the temp item
@@ -784,11 +791,12 @@ export const OPDBillingContent: React.FC<OPDBillingContentProps> = ({ visit }) =
           notes: newItem.notes || '',
         };
 
-        await opdBillService.createBillItem(itemData);
+        const createdItem = await opdBillService.createBillItem(itemData);
 
-        // Refresh bills to get real item with actual ID
-        await mutateBills();
-        await mutateVisitBills();
+        // Replace temp item with real item from API
+        setBillItems((prev) => prev.map(item =>
+          item.id === tempItem.id ? createdItem : item
+        ));
       } catch (error) {
         console.error('Failed to add procedure:', error);
         // ROLLBACK: Remove the temp item
@@ -852,11 +860,12 @@ export const OPDBillingContent: React.FC<OPDBillingContentProps> = ({ visit }) =
           const createdItem = await opdBillService.createBillItem(itemData);
           console.log('[Package Addition] Created item from API:', createdItem);
 
-          // Refresh bills to get real item with actual ID
-          await mutateBills();
-          await mutateVisitBills();
+          // Replace temp item with real item from API (don't refresh from backend to avoid expansion)
+          setBillItems((prev) => prev.map(item =>
+            item.id === tempItem.id ? createdItem : item
+          ));
 
-          console.log('[Package Addition] Bills refreshed successfully');
+          console.log('[Package Addition] Package added successfully');
         } catch (error) {
           console.error('Failed to add package:', error);
           // ROLLBACK: Remove the temp item
@@ -901,15 +910,18 @@ export const OPDBillingContent: React.FC<OPDBillingContentProps> = ({ visit }) =
     // If bill exists and item has ID, update in backend
     if (existingBill && item.id) {
       try {
-        await opdBillService.updateBillItem(item.id, {
+        const updatedFromApi = await opdBillService.updateBillItem(item.id, {
           quantity: updatedItem.quantity,
           unit_price: updatedItem.unit_price,
           is_price_overridden: updatedItem.is_price_overridden,
         });
 
-        // Refresh bills to get accurate server-calculated totals
-        await mutateBills();
-        await mutateVisitBills();
+        // Update with response from API to ensure consistency
+        setBillItems((prev) => {
+          const updated = [...prev];
+          updated[index] = updatedFromApi;
+          return updated;
+        });
       } catch (error) {
         console.error('Failed to update bill item:', error);
         toast.error('Failed to update item');
@@ -920,10 +932,6 @@ export const OPDBillingContent: React.FC<OPDBillingContentProps> = ({ visit }) =
           reverted[index] = item;
           return reverted;
         });
-
-        // Refresh from backend to ensure consistency
-        await mutateBills();
-        await mutateVisitBills();
       }
     }
   };
@@ -941,10 +949,6 @@ export const OPDBillingContent: React.FC<OPDBillingContentProps> = ({ visit }) =
     if (existingBill && item.id) {
       try {
         await opdBillService.deleteBillItem(item.id);
-
-        // Refresh bills to get updated totals
-        await mutateBills();
-        await mutateVisitBills();
       } catch (error) {
         console.error('Failed to remove bill item:', error);
         // ROLLBACK: Restore the item

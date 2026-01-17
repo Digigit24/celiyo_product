@@ -868,27 +868,6 @@ export const OPDBillingContent: React.FC<OPDBillingContentProps> = ({ visit }) =
     }
   };
 
-  // Update procedure (for backward compatibility with ProcedureBillingTab)
-  const updateProcedure = (id: string, field: keyof ProcedureItem, value: any) => {
-    setProcedureFormData((prev) => ({
-      ...prev,
-      procedures: prev.procedures.map((p) => {
-        if (p.id !== id) return p;
-        const updated = { ...p, [field]: value };
-        if (field === 'quantity' || field === 'unit_price') {
-          const qty = field === 'quantity' ? parseInt(value) : updated.quantity;
-          const price = field === 'unit_price' ? parseFloat(value) : parseFloat(updated.unit_price);
-          updated.total_price = ((qty || 0) * (price || 0)).toFixed(2);
-        }
-        return updated;
-      }),
-    }));
-  };
-
-  // Remove procedure (for backward compatibility with ProcedureBillingTab)
-  const removeProcedure = (id: string) => {
-    setProcedureFormData((prev) => ({ ...prev, procedures: prev.procedures.filter((p) => p.id !== id) }));
-  };
 
   // Update bill item (for existing bills, update in backend with optimistic updates)
   const handleUpdateBillItem = async (index: number, field: 'quantity' | 'unit_price', value: string) => {
@@ -1596,15 +1575,15 @@ export const OPDBillingContent: React.FC<OPDBillingContentProps> = ({ visit }) =
                       <DialogTitle>Procedures & Packages</DialogTitle>
                     </DialogHeader>
                     <ProcedureBillingTab
-                      procedures={procedureFormData.procedures}
+                      billItems={billItems}
                       proceduresData={proceduresData}
                       packagesData={packagesData}
                       proceduresLoading={proceduresLoading}
                       packagesLoading={packagesLoading}
                       onAddProcedure={handleAddProcedure}
                       onAddPackage={handleAddPackage}
-                      onUpdateProcedure={updateProcedure}
-                      onRemoveProcedure={removeProcedure}
+                      onUpdateBillItem={handleUpdateBillItem}
+                      onRemoveBillItem={handleRemoveBillItem}
                     />
                   </DialogContent>
                 </Dialog>

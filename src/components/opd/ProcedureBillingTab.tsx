@@ -1,5 +1,5 @@
 // src/components/opd/ProcedureBillingTab.tsx
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,32 +35,38 @@ export interface ProcedureItem {
 }
 
 interface ProcedureBillingTabProps {
-  procedures: ProcedureItem[];
+  billItems: OPDBillItem[];
   proceduresData: any;
   packagesData: any;
   proceduresLoading: boolean;
   packagesLoading: boolean;
   onAddProcedure: (procedure: ProcedureMaster) => void;
   onAddPackage: (packageId: number, packageName: string) => Promise<void>;
-  onUpdateProcedure: (id: string, field: keyof ProcedureItem, value: any) => void;
-  onRemoveProcedure: (id: string) => void;
+  onUpdateBillItem: (index: number, field: 'quantity' | 'unit_price', value: string) => void;
+  onRemoveBillItem: (index: number) => void;
 }
 
 export const ProcedureBillingTab: React.FC<ProcedureBillingTabProps> = ({
-  procedures,
+  billItems,
   proceduresData,
   packagesData,
   proceduresLoading,
   packagesLoading,
   onAddProcedure,
   onAddPackage,
-  onUpdateProcedure,
-  onRemoveProcedure,
+  onUpdateBillItem,
+  onRemoveBillItem,
 }) => {
   const [isProcedureDialogOpen, setIsProcedureDialogOpen] = useState(false);
   const [isPackageDialogOpen, setIsPackageDialogOpen] = useState(false);
   const [procedureSearch, setProcedureSearch] = useState('');
   const [loadingPackageId, setLoadingPackageId] = useState<number | null>(null);
+
+  // Filter bill items to show only procedures and packages
+  const procedureAndPackageItems = useMemo(() =>
+    billItems.filter(item => item.source === 'Procedure' || item.source === 'Package'),
+    [billItems]
+  );
 
   const handleAddProcedure = (procedure: ProcedureMaster) => {
     onAddProcedure(procedure);
@@ -83,7 +89,7 @@ export const ProcedureBillingTab: React.FC<ProcedureBillingTabProps> = ({
     }
   };
 
-  const procedureTotal = procedures.reduce((sum, p) => sum + parseFloat(p.total_price || '0'), 0);
+  const procedureTotal = procedureAndPackageItems.reduce((sum, item) => sum + parseFloat(item.total_price || '0'), 0);
 
   return (
     <Card>
@@ -233,51 +239,56 @@ export const ProcedureBillingTab: React.FC<ProcedureBillingTabProps> = ({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {procedures.length > 0 ? (
-                procedures.map((procedure) => (
-                  <TableRow key={procedure.id}>
-                    <TableCell className="font-medium">
-                      <div>
-                        <div>{procedure.procedure_name}</div>
-                        {procedure.procedure_code && (
-                          <div className="text-xs text-muted-foreground">{procedure.procedure_code}</div>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Input
-                        type="number"
-                        value={procedure.quantity}
-                        onChange={(e) => onUpdateProcedure(procedure.id, 'quantity', e.target.value)}
-                        className="w-16 mx-auto text-center"
-                        min="1"
-                      />
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Input
-                        type="number"
-                        value={procedure.unit_price}
-                        onChange={(e) => onUpdateProcedure(procedure.id, 'unit_price', e.target.value)}
-                        className="w-24 ml-auto text-right"
-                        min="0"
-                        step="0.01"
-                      />
-                    </TableCell>
-                    <TableCell className="text-right font-semibold">
-                      ₹{parseFloat(procedure.total_price).toFixed(2)}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                        onClick={() => onRemoveProcedure(procedure.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
+              {procedureAndPackageItems.length > 0 ? (
+                procedureAndPackageItems.map((item) => {
+                  // Find the index in the original billItems array
+                  const billItemIndex = billItems.findIndex(bi => bi.id === item.id || (bi.item_name === item.item_name && bi.source === item.source));
+
+                  return (
+                    <TableRow key={item.id || `${item.item_name}-${item.source}`}>
+                      <TableCell className="font-medium">
+                        <div>
+                          <div>{item.item_name}</div>
+                          {item.notes && (
+                            <div className="text-xs text-muted-foreground">{item.notes}</div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Input
+                          type="number"
+                          value={item.quantity}
+                          onChange={(e) => billItemIndex >= 0 && onUpdateBillItem(billItemIndex, 'quantity', e.target.value)}
+                          className="w-16 mx-auto text-center"
+                          min="1"
+                        />
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Input
+                          type="number"
+                          value={item.unit_price}
+                          onChange={(e) => billItemIndex >= 0 && onUpdateBillItem(billItemIndex, 'unit_price', e.target.value)}
+                          className="w-24 ml-auto text-right"
+                          min="0"
+                          step="0.01"
+                        />
+                      </TableCell>
+                      <TableCell className="text-right font-semibold">
+                        ₹{parseFloat(item.total_price || '0').toFixed(2)}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                          onClick={() => billItemIndex >= 0 && onRemoveBillItem(billItemIndex)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               ) : (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
@@ -289,7 +300,7 @@ export const ProcedureBillingTab: React.FC<ProcedureBillingTabProps> = ({
           </Table>
         </div>
 
-        {procedures.length > 0 && (
+        {procedureAndPackageItems.length > 0 && (
           <div className="bg-amber-50 dark:bg-amber-950/20 p-4 rounded-lg border border-amber-200 dark:border-amber-900">
             <div className="flex justify-between items-center">
               <span className="text-lg font-semibold">Procedure Total</span>

@@ -1003,19 +1003,25 @@ export const OPDBillingContent: React.FC<OPDBillingContentProps> = ({ visit }) =
   const handleCreateInitialBill = async () => {
     if (!visit) return;
 
+    // Validate doctor is set
+    const doctorId = parseInt(opdFormData.doctor || visit.doctor?.toString() || '0');
+    if (!doctorId || doctorId === 0) {
+      toast.error('Doctor is required to create a bill');
+      return;
+    }
+
     // OPTIMISTIC: Show form immediately
     setShowBillingForm(true);
 
     // Create initial bill data
     const initialBillData = {
       visit: visit.id,
-      doctor: parseInt(opdFormData.doctor || visit.doctor?.toString() || '0'),
+      doctor: doctorId,
       opd_type: 'consultation' as OPDType,
       charge_type: (opdFormData.chargeType as ChargeType) || 'first_visit',
       diagnosis: '',
       remarks: '',
       discount_percent: '0',
-      total_amount: '0',
       discount_amount: '0',
       payment_mode: 'cash' as const,
       received_amount: '0',
@@ -1081,7 +1087,9 @@ export const OPDBillingContent: React.FC<OPDBillingContentProps> = ({ visit }) =
 
     // API call in background
     try {
+      console.log('[Bill Creation] Creating bill with data:', initialBillData);
       const newBill = await createBill(initialBillData);
+      console.log('[Bill Creation] Bill created successfully:', newBill);
 
       // Replace temp bill with real bill
       mutateVisitBills(
@@ -1118,8 +1126,9 @@ export const OPDBillingContent: React.FC<OPDBillingContentProps> = ({ visit }) =
       // Revalidate to ensure consistency
       mutateVisitBills();
       mutatePatientBills();
-    } catch (error) {
-      console.error('Failed to create initial bill:', error);
+    } catch (error: any) {
+      console.error('[Bill Creation] Failed to create initial bill:', error);
+      console.error('[Bill Creation] Error details:', error?.response?.data || error?.message);
 
       // ROLLBACK: Remove temp bill
       mutateVisitBills(
@@ -1150,8 +1159,9 @@ export const OPDBillingContent: React.FC<OPDBillingContentProps> = ({ visit }) =
       setSelectedBillId(null);
       setShowBillingForm(false);
 
+      const errorMessage = error?.response?.data?.error || error?.response?.data?.message || error?.message || 'Unknown error';
       toast.error('Failed to create bill', {
-        description: 'Please try again.',
+        description: errorMessage,
       });
     }
   };

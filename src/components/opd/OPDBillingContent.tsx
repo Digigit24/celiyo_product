@@ -1003,6 +1003,14 @@ export const OPDBillingContent: React.FC<OPDBillingContentProps> = ({ visit }) =
   const handleCreateInitialBill = async () => {
     if (!visit) return;
 
+    // Check if this is a follow-up visit
+    if (visit.visit_type === 'follow_up') {
+      toast.info('Billing Not Available', {
+        description: 'Billing is not available for follow-up visits. Only new visits and revisits can be billed.',
+      });
+      return;
+    }
+
     // Validate doctor is set
     const doctorId = parseInt(opdFormData.doctor || visit.doctor?.toString() || '0');
     if (!doctorId || doctorId === 0) {
@@ -1013,12 +1021,22 @@ export const OPDBillingContent: React.FC<OPDBillingContentProps> = ({ visit }) =
     // OPTIMISTIC: Show form immediately
     setShowBillingForm(true);
 
+    // Determine charge_type based on visit_type
+    let chargeType: ChargeType;
+    if (visit.visit_type === 'new') {
+      chargeType = 'first_visit';
+    } else if (visit.visit_type === 'emergency') {
+      chargeType = 'emergency';
+    } else {
+      chargeType = 'revisit';
+    }
+
     // Create initial bill data
     const initialBillData = {
       visit: visit.id,
       doctor: doctorId,
       opd_type: 'consultation' as OPDType,
-      charge_type: (opdFormData.chargeType as ChargeType) || 'first_visit',
+      charge_type: chargeType,
       diagnosis: '',
       remarks: '',
       discount_percent: '0',
@@ -1392,10 +1410,12 @@ export const OPDBillingContent: React.FC<OPDBillingContentProps> = ({ visit }) =
                   {visitBills.length} bill(s) • Select a bill to view/edit
                 </CardDescription>
               </div>
-              <Button onClick={handleCreateInitialBill} size="sm">
-                <Plus className="h-4 w-4 mr-2" />
-                Create New Bill
-              </Button>
+              {visit?.visit_type !== 'follow_up' && (
+                <Button onClick={handleCreateInitialBill} size="sm">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create New Bill
+                </Button>
+              )}
             </div>
           </CardHeader>
           <CardContent>
@@ -1471,18 +1491,29 @@ export const OPDBillingContent: React.FC<OPDBillingContentProps> = ({ visit }) =
             <div className="rounded-full bg-primary/10 p-6 mb-4">
               <Receipt className="h-12 w-12 text-primary" />
             </div>
-            <h3 className="text-xl font-semibold mb-2">No Bill Created Yet</h3>
-            <p className="text-muted-foreground mb-6 text-center max-w-md">
-              This visit doesn't have a bill yet. Click the button below to create a new bill for this patient.
-            </p>
-            <Button
-              size="lg"
-              onClick={handleCreateInitialBill}
-              className="px-8"
-            >
-              <Plus className="h-5 w-5 mr-2" />
-              Create New Bill
-            </Button>
+            {visit?.visit_type === 'follow_up' ? (
+              <>
+                <h3 className="text-xl font-semibold mb-2">Billing Not Available</h3>
+                <p className="text-muted-foreground mb-6 text-center max-w-md">
+                  Billing is not available for follow-up visits. Only new visits and revisits can be billed.
+                </p>
+              </>
+            ) : (
+              <>
+                <h3 className="text-xl font-semibold mb-2">No Bill Created Yet</h3>
+                <p className="text-muted-foreground mb-6 text-center max-w-md">
+                  This visit doesn't have a bill yet. Click the button below to create a new bill for this patient.
+                </p>
+                <Button
+                  size="lg"
+                  onClick={handleCreateInitialBill}
+                  className="px-8"
+                >
+                  <Plus className="h-5 w-5 mr-2" />
+                  Create New Bill
+                </Button>
+              </>
+            )}
           </CardContent>
         </Card>
       )}

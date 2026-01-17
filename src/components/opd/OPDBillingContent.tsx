@@ -804,8 +804,11 @@ export const OPDBillingContent: React.FC<OPDBillingContentProps> = ({ visit }) =
 
   // Handle package addition
   const handleAddPackage = async (packageId: number, packageName: string) => {
+    console.log('[Package Addition] Starting - ID:', packageId, 'Name:', packageName);
+
     try {
       const packageData = await procedurePackageService.getProcedurePackageById(packageId);
+      console.log('[Package Addition] Package data received:', packageData);
 
       if (!packageData.procedures || packageData.procedures.length === 0) {
         toast.error('This package has no procedures associated with it.');
@@ -823,6 +826,8 @@ export const OPDBillingContent: React.FC<OPDBillingContentProps> = ({ visit }) =
         notes: `Package includes ${packageData.procedures.length} procedure(s)`,
         origin_object_id: packageId,
       };
+
+      console.log('[Package Addition] Package item to add:', packageItem);
 
       // If bill exists, create item with optimistic update
       if (existingBill) {
@@ -844,11 +849,14 @@ export const OPDBillingContent: React.FC<OPDBillingContentProps> = ({ visit }) =
             origin_object_id: packageId,
           };
 
-          await opdBillService.createBillItem(itemData);
+          const createdItem = await opdBillService.createBillItem(itemData);
+          console.log('[Package Addition] Created item from API:', createdItem);
 
           // Refresh bills to get real item with actual ID
           await mutateBills();
           await mutateVisitBills();
+
+          console.log('[Package Addition] Bills refreshed successfully');
         } catch (error) {
           console.error('Failed to add package:', error);
           // ROLLBACK: Remove the temp item

@@ -72,9 +72,14 @@ export const ProcedureBillingTab: React.FC<ProcedureBillingTabProps> = ({
     setLoadingPackageId(packageId);
     try {
       await onAddPackage(packageId, packageName);
+      // Close dialog and clear loading only on success
       setIsPackageDialogOpen(false);
-    } finally {
       setLoadingPackageId(null);
+    } catch (error) {
+      // On error, clear loading but keep dialog open so user can try again
+      setLoadingPackageId(null);
+      console.error('Error adding package:', error);
+      // Error toast is already shown by onAddPackage
     }
   };
 

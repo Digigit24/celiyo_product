@@ -812,58 +812,59 @@ export const OPDBillingContent: React.FC<OPDBillingContentProps> = ({ visit }) =
         return;
       }
 
-      const newItems: OPDBillItem[] = packageData.procedures.map((proc) => ({
-        item_name: proc.name,
-        source: 'Procedure',
+      // Create a single package item with discounted price
+      const packageItem: OPDBillItem = {
+        item_name: packageName,
+        source: 'Package',
         quantity: 1,
-        system_calculated_price: proc.default_charge || '0',
-        unit_price: proc.default_charge || '0',
-        total_price: proc.default_charge || '0',
-        notes: `Package: ${packageName}`,
-      }));
+        system_calculated_price: packageData.discounted_charge || packageData.total_charge || '0',
+        unit_price: packageData.discounted_charge || packageData.total_charge || '0',
+        total_price: packageData.discounted_charge || packageData.total_charge || '0',
+        notes: `Package includes ${packageData.procedures.length} procedure(s)`,
+        origin_object_id: packageId,
+      };
 
-      // If bill exists, create items with optimistic update
+      // If bill exists, create item with optimistic update
       if (existingBill) {
-        // OPTIMISTIC: Add to UI immediately with temporary IDs
-        const tempItems = newItems.map((item, idx) => ({ ...item, id: Date.now() + idx }));
-        setBillItems((prev) => [...prev, ...tempItems]);
-        toast.success(`Added ${newItems.length} procedures from package to bill`);
+        // OPTIMISTIC: Add to UI immediately with temporary ID
+        const tempItem = { ...packageItem, id: Date.now() };
+        setBillItems((prev) => [...prev, tempItem]);
+        toast.success('Package added to bill');
 
         // API call in background
         try {
-          // Create all items from the package
-          for (const item of newItems) {
-            const itemData: OPDBillItemCreateData = {
-              bill: existingBill.id,
-              item_name: item.item_name,
-              source: item.source,
-              quantity: item.quantity,
-              unit_price: item.unit_price,
-              system_calculated_price: item.system_calculated_price || item.unit_price,
-              notes: item.notes || '',
-            };
+          const itemData: OPDBillItemCreateData = {
+            bill: existingBill.id,
+            item_name: packageItem.item_name,
+            source: packageItem.source,
+            quantity: packageItem.quantity,
+            unit_price: packageItem.unit_price,
+            system_calculated_price: packageItem.system_calculated_price || packageItem.unit_price,
+            notes: packageItem.notes || '',
+            origin_object_id: packageId,
+          };
 
-            await opdBillService.createBillItem(itemData);
-          }
+          await opdBillService.createBillItem(itemData);
 
-          // Refresh bills to get real items with actual IDs
+          // Refresh bills to get real item with actual ID
           await mutateBills();
           await mutateVisitBills();
         } catch (error) {
-          console.error('Failed to add package items:', error);
-          // ROLLBACK: Remove the temp items
-          const tempIds = tempItems.map(i => i.id);
-          setBillItems((prev) => prev.filter(item => !tempIds.includes(item.id)));
-          toast.error('Failed to add package items to bill');
+          console.error('Failed to add package:', error);
+          // ROLLBACK: Remove the temp item
+          setBillItems((prev) => prev.filter(item => item.id !== tempItem.id));
+          toast.error('Failed to add package to bill');
+          throw error; // Re-throw to be caught by the outer catch
         }
       } else {
         // If no bill exists yet, just add to local state
-        setBillItems((prev) => [...prev, ...newItems]);
-        toast.success(`Added ${newItems.length} procedures from package (will be saved when bill is created)`);
+        setBillItems((prev) => [...prev, packageItem]);
+        toast.success('Package added (will be saved when bill is created)');
       }
     } catch (error) {
       console.error('Error loading package:', error);
       toast.error('Failed to load package details. Please try again.');
+      throw error; // Re-throw so the dialog handler can manage loading state properly
     }
   };
 

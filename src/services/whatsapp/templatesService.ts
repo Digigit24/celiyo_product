@@ -132,35 +132,6 @@ class TemplatesService {
   }
 
   /**
-   * Create template from library
-   */
-  async createFromLibrary(payload: {
-    name: string;
-    library_template_name: string;
-    language: TemplateLanguage;
-    category: TemplateCategory;
-    button_inputs?: Record<string, string>[];
-  }): Promise<Template> {
-    try {
-      console.log('➕ Creating template from library:', payload.name);
-      
-      const response = await whatsappClient.post<Template>(
-        '/templates/library',
-        payload
-      );
-      
-      console.log('✅ Template created from library:', response.data.name);
-      
-      return response.data;
-    } catch (error: any) {
-      console.error('❌ Failed to create template from library:', error);
-      
-      const message = error.response?.data?.detail || 'Failed to create template from library';
-      throw new Error(message);
-    }
-  }
-
-  /**
    * Update an existing template
    */
   async updateTemplate(id: number, payload: UpdateTemplatePayload): Promise<Template> {

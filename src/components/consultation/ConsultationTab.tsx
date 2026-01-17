@@ -78,12 +78,7 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
   const [encounterType, setEncounterType] = useState<'visit' | 'admission'>('visit');
   const [requisitionSidebarOpen, setRequisitionSidebarOpen] = useState(false);
   const [templateDrawerOpen, setTemplateDrawerOpen] = useState(false);
-  
-  // Local file management state
-  const [fileAttachments, setFileAttachments] = useState<FileAttachment[]>([]);
-  const [isLoadingFiles, setIsLoadingFiles] = useState(false);
-  const [fileIdCounter, setFileIdCounter] = useState(1);
-  
+
   const previewRef = useRef<HTMLDivElement>(null);
 
   // Fetch active admission for the patient
@@ -138,82 +133,6 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
     selectedResponse?.template || null
   );
   const fieldsData = useMemo(() => templateData?.fields || [], [templateData]);
-
-  // Handle file upload (frontend only - creates mock file with preview)
-  const handleUploadFile = useCallback(async (file: File, description: string) => {
-    if (!currentObjectId) {
-      throw new Error('No active encounter found');
-    }
-
-    setIsLoadingFiles(true);
-
-    // Simulate upload delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    // Create object URL for preview
-    const fileUrl = URL.createObjectURL(file);
-
-    // Create mock file attachment
-    const newFile: FileAttachment = {
-      id: fileIdCounter,
-      file_url: fileUrl,
-      file_name: file.name,
-      file_type: file.type,
-      file_size: file.size,
-      uploaded_by: filledByName || 'Current User',
-      created_at: new Date().toISOString(),
-      description: description || undefined,
-    };
-
-    setFileAttachments(prev => [...prev, newFile]);
-    setFileIdCounter(prev => prev + 1);
-    setIsLoadingFiles(false);
-
-    toast.success('File uploaded successfully');
-  }, [currentObjectId, fileIdCounter, filledByName]);
-
-  // Handle file deletion (frontend only)
-  const handleDeleteFile = useCallback(async (fileId: number) => {
-    setIsLoadingFiles(true);
-
-    // Simulate deletion delay
-    await new Promise(resolve => setTimeout(resolve, 300));
-
-    // Find and revoke the object URL to free memory
-    const fileToDelete = fileAttachments.find(f => f.id === fileId);
-    if (fileToDelete && fileToDelete.file_url.startsWith('blob:')) {
-      URL.revokeObjectURL(fileToDelete.file_url);
-    }
-
-    setFileAttachments(prev => prev.filter(f => f.id !== fileId));
-    setIsLoadingFiles(false);
-
-    toast.success('File deleted successfully');
-  }, [fileAttachments]);
-
-  // Handle file download (frontend only)
-  const handleDownloadFile = useCallback((file: FileAttachment) => {
-    // Create a temporary link and trigger download
-    const link = document.createElement('a');
-    link.href = file.file_url;
-    link.download = file.file_name;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    toast.success('File download started');
-  }, []);
-
-  // Cleanup object URLs on unmount
-  useEffect(() => {
-    return () => {
-      fileAttachments.forEach(file => {
-        if (file.file_url.startsWith('blob:')) {
-          URL.revokeObjectURL(file.file_url);
-        }
-      });
-    };
-  }, [fileAttachments]);
 
   // Populate form data when response is loaded
   useEffect(() => {
@@ -749,18 +668,14 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
           responses={responses}
           templates={templates}
           fileAttachments={fileAttachments}
-          fileAttachments={fileAttachments}
           isLoadingResponses={isLoadingResponses}
           isLoadingTemplates={isLoadingTemplates}
-          isLoadingFiles={isLoadingFiles}
+          isLoadingFiles={isLoadingAttachments}
           onViewResponse={handleViewResponse}
           onRefresh={mutateResponses}
-          onRefreshFiles={() => {}} // No-op for frontend only
+          onRefreshFiles={mutateAttachments}
           templateDrawerOpen={templateDrawerOpen}
           onTemplateDrawerChange={setTemplateDrawerOpen}
-          onUploadFile={handleUploadFile}
-          onDeleteFile={handleDeleteFile}
-          onDownloadFile={handleDownloadFile}
           onUploadFile={handleUploadFile}
           onDeleteFile={handleDeleteFile}
           onDownloadFile={handleDownloadFile}

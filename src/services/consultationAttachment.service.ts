@@ -1,5 +1,5 @@
 // src/services/consultationAttachment.service.ts
-import { hmsClient } from './hms';
+import { hmsClient } from '@/lib/client';
 
 export interface ConsultationAttachment {
   id: number;

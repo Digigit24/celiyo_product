@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { OPDVisitHeader, OPDPatientQuickInfo, OPDVisitTabs } from '@/components/opd/shared';
+import { OPDBillingContent } from '@/components/opd/OPDBillingContent';
 
 export const OPDConsultation: React.FC = () => {
   const { visitId } = useParams<{ visitId: string }>();
@@ -162,7 +163,12 @@ export const OPDConsultation: React.FC = () => {
       <div className="flex-1 overflow-auto p-6 max-w-8xl mx-auto w-full space-y-6">
         <div className="grid grid-cols-1 gap-6">
           <OPDPatientQuickInfo visit={visit} patient={patient} />
-          <OPDVisitTabs visit={visit} activeTab={activeTab} onTabChange={setActiveTab} />
+          <OPDVisitTabs
+            visit={visit}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            billingContent={<OPDBillingContent visit={visit} />}
+          />
         </div>
       </div>
     </div>

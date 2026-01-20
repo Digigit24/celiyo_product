@@ -1013,6 +1013,10 @@ export const OPDBillingContent: React.FC<OPDBillingContentProps> = ({ visit }) =
     // OPTIMISTIC: Show form immediately
     setShowBillingForm(true);
 
+    // Calculate total amount from bill items
+    const subtotal = billItems.reduce((sum, item) => sum + parseFloat(item.total_price || '0'), 0);
+    const totalAmount = subtotal.toFixed(2);
+
     // Create initial bill data
     const initialBillData = {
       visit: visit.id,
@@ -1021,6 +1025,7 @@ export const OPDBillingContent: React.FC<OPDBillingContentProps> = ({ visit }) =
       charge_type: (opdFormData.chargeType as ChargeType) || 'first_visit',
       diagnosis: '',
       remarks: '',
+      total_amount: totalAmount,
       discount_percent: '0',
       discount_amount: '0',
       payment_mode: 'cash' as const,
@@ -1041,14 +1046,14 @@ export const OPDBillingContent: React.FC<OPDBillingContentProps> = ({ visit }) =
       charge_type: initialBillData.charge_type,
       diagnosis: initialBillData.diagnosis || '',
       remarks: initialBillData.remarks || '',
-      total_amount: '0.00',
+      total_amount: totalAmount,
       discount_percent: '0',
       discount_amount: '0.00',
-      payable_amount: '0.00',
+      payable_amount: totalAmount,
       payment_mode: initialBillData.payment_mode,
       payment_status: 'unpaid',
       received_amount: '0.00',
-      balance_amount: '0.00',
+      balance_amount: totalAmount,
       items: [],
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
@@ -1185,6 +1190,7 @@ export const OPDBillingContent: React.FC<OPDBillingContentProps> = ({ visit }) =
         charge_type: (opdFormData.chargeType as ChargeType) || 'first_visit',
         diagnosis: opdFormData.diagnosis || '',
         remarks: opdFormData.remarks || '',
+        total_amount: billingData.subtotal || '0',
         discount_percent: billingData.discountPercent || '0',
         discount_amount: billingData.discount || '0',
         payment_mode: billingData.paymentMode || 'cash',

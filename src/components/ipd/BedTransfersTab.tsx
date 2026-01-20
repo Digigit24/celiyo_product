@@ -1,5 +1,5 @@
 // src/components/ipd/BedTransfersTab.tsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useIPD } from '@/hooks/useIPD';
 import { BedTransferFormData } from '@/types/ipd.types';
 import { Button } from '@/components/ui/button';
@@ -39,14 +39,25 @@ export default function BedTransfersTab({ admissionId }: BedTransfersTabProps) {
     reason: '',
   });
 
-  const { useBedTransfers, useAvailableBeds, useBeds, createBedTransfer } = useIPD();
+  const { useBedTransfers, useAvailableBeds, useBeds, createBedTransfer, useAdmissionById } = useIPD();
   const { data: transfersData, error: transfersError, mutate } = useBedTransfers({ admission: admissionId });
-  const { data: availableBeds } = useAvailableBeds();
+  const { data: availableBedsData } = useAvailableBeds();
   const { data: allBedsData } = useBeds();
+  const { data: admission } = useAdmissionById(admissionId);
 
   const transfers = transfersData?.results || [];
-  const beds = availableBeds || [];
+  const beds = availableBedsData?.results || availableBedsData || [];
   const allBeds = allBedsData?.results || [];
+
+  // Auto-populate from_bed when dialog opens
+  useEffect(() => {
+    if (isCreateDialogOpen && admission?.bed) {
+      setFormData(prev => ({
+        ...prev,
+        from_bed: admission.bed
+      }));
+    }
+  }, [isCreateDialogOpen, admission]);
 
   // Show error state if transfers fetch fails
   if (transfersError) {
@@ -89,7 +100,7 @@ export default function BedTransfersTab({ admissionId }: BedTransfersTabProps) {
   const resetForm = () => {
     setFormData({
       admission: admissionId,
-      from_bed: 0,
+      from_bed: admission?.bed || 0,
       to_bed: 0,
       reason: '',
     });
@@ -178,9 +189,10 @@ export default function BedTransfersTab({ admissionId }: BedTransfersTabProps) {
               <Select
                 value={formData.from_bed ? formData.from_bed.toString() : ''}
                 onValueChange={(value) => setFormData({ ...formData, from_bed: parseInt(value) })}
+                disabled
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select current bed" />
+                  <SelectValue placeholder="Current bed (auto-filled)" />
                 </SelectTrigger>
                 <SelectContent>
                   {allBeds.map((bed) => (
@@ -202,11 +214,17 @@ export default function BedTransfersTab({ admissionId }: BedTransfersTabProps) {
                   <SelectValue placeholder="Select new bed" />
                 </SelectTrigger>
                 <SelectContent>
-                  {beds.map((bed) => (
-                    <SelectItem key={bed.id} value={bed.id.toString()}>
-                      {bed.ward_name} - {bed.bed_number}
-                    </SelectItem>
-                  ))}
+                  {beds.length > 0 ? (
+                    beds.map((bed) => (
+                      <SelectItem key={bed.id} value={bed.id.toString()}>
+                        {bed.ward_name} - {bed.bed_number}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <div className="p-2 text-sm text-muted-foreground text-center">
+                      No available beds found
+                    </div>
+                  )}
                 </SelectContent>
               </Select>
             </div>

@@ -116,6 +116,103 @@ export default function Admissions() {
     navigate(`/ipd/admissions/${admission.id}?tab=consultation`);
   };
 
+  // Mobile card renderer
+  const renderMobileCard = (row: Admission, actions: any) => {
+    return (
+      <>
+        <div className="flex items-center justify-between mb-2">
+          <span className="font-mono font-semibold text-sm">{row.admission_id}</span>
+          <Badge
+            variant="default"
+            className={
+              row.status === 'admitted'
+                ? 'bg-blue-600'
+                : row.status === 'discharged'
+                ? 'bg-green-600'
+                : row.status === 'transferred'
+                ? 'bg-yellow-600'
+                : 'bg-gray-600'
+            }
+          >
+            {ADMISSION_STATUS_LABELS[row.status]}
+          </Badge>
+        </div>
+
+        <div className="space-y-1 text-sm">
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Patient:</span>
+            <span className="font-medium">{row.patient_name?.replace(/ None$/, '') || ''}</span>
+          </div>
+
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Ward:</span>
+            <span>{row.ward_name}</span>
+          </div>
+
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Bed:</span>
+            <span className="font-mono text-xs">{row.bed_number || '-'}</span>
+          </div>
+
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Admitted:</span>
+            <span className="text-xs">
+              {format(new Date(row.admission_date), 'dd MMM yyyy HH:mm')}
+            </span>
+          </div>
+
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Length of Stay:</span>
+            <span>{row.length_of_stay} days</span>
+          </div>
+        </div>
+
+        {/* Quick Action Buttons */}
+        <div className="flex gap-2 pt-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleBilling(row);
+            }}
+            className="flex-1"
+          >
+            <IndianRupee className="h-3.5 w-3.5 mr-1.5" />
+            Billing
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleConsultation(row);
+            }}
+            className="flex-1"
+          >
+            <Stethoscope className="h-3.5 w-3.5 mr-1.5" />
+            Consult
+          </Button>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex gap-2 pt-2">
+          {actions.view && (
+            <Button size="sm" variant="outline" onClick={actions.view} className="flex-1">
+              View
+            </Button>
+          )}
+          {row.status === 'admitted' && (
+            <Button size="sm" variant="outline" onClick={() => openDischargeDialog(row)}>
+              <FileText className="h-3 w-3 mr-1" />
+              Discharge
+            </Button>
+          )}
+        </div>
+      </>
+    );
+  };
+
   // DataTable columns
   const columns: DataTableColumn<Admission>[] = [
     {
@@ -329,121 +426,31 @@ export default function Admissions() {
         </CardHeader>
         <CardContent className="p-0">
           <DataTable
-          rows={admissions}
-          isLoading={isLoading}
-          columns={columns}
-          getRowId={(row) => row.id}
-          getRowLabel={(row) => `${row.admission_id} - ${row.patient_name}`}
-          onView={viewDetails}
-          extraActions={(row) => (
-            <>
-              {row.status === 'admitted' && (
-                <button
-                  onClick={() => openDischargeDialog(row)}
-                  className="w-full text-left px-2 py-1.5 text-sm hover:bg-accent rounded flex items-center gap-2"
-                >
-                  <FileText className="h-4 w-4" />
-                  Discharge
-                </button>
-              )}
-            </>
-          )}
-          renderMobileCard={(row, actions) => (
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="font-mono font-semibold text-sm">{row.admission_id}</span>
-                <Badge
-                  variant="default"
-                  className={
-                    row.status === 'admitted'
-                      ? 'bg-blue-600'
-                      : row.status === 'discharged'
-                      ? 'bg-green-600'
-                      : row.status === 'transferred'
-                      ? 'bg-yellow-600'
-                      : 'bg-gray-600'
-                  }
-                >
-                  {ADMISSION_STATUS_LABELS[row.status]}
-                </Badge>
-              </div>
-
-              <div className="space-y-1 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Patient:</span>
-                  <span className="font-medium">{row.patient_name?.replace(/ None$/, '') || ''}</span>
-                </div>
-
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Ward:</span>
-                  <span>{row.ward_name}</span>
-                </div>
-
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Bed:</span>
-                  <span className="font-mono text-xs">{row.bed_number || '-'}</span>
-                </div>
-
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Admitted:</span>
-                  <span className="text-xs">
-                    {format(new Date(row.admission_date), 'dd MMM yyyy HH:mm')}
-                  </span>
-                </div>
-
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Length of Stay:</span>
-                  <span>{row.length_of_stay} days</span>
-                </div>
-              </div>
-
-              {/* Quick Action Buttons */}
-              <div className="flex gap-2 pt-2 mt-2 border-t">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleBilling(row);
-                  }}
-                  className="flex-1"
-                >
-                  <IndianRupee className="h-3.5 w-3.5 mr-1.5" />
-                  Billing
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleConsultation(row);
-                  }}
-                  className="flex-1"
-                >
-                  <Stethoscope className="h-3.5 w-3.5 mr-1.5" />
-                  Consult
-                </Button>
-              </div>
-
-              <div className="mt-2 flex gap-2">
-                <Button size="sm" variant="outline" onClick={() => viewDetails(row)} className="flex-1">
-                  <Eye className="h-3 w-3 mr-1" />
-                  View
-                </Button>
+            rows={admissions}
+            isLoading={isLoading}
+            columns={columns}
+            renderMobileCard={renderMobileCard}
+            getRowId={(row) => row.id}
+            getRowLabel={(row) => `${row.admission_id} - ${row.patient_name}`}
+            onView={viewDetails}
+            onBilling={handleBilling}
+            onConsultation={handleConsultation}
+            extraActions={(row) => (
+              <>
                 {row.status === 'admitted' && (
-                  <Button size="sm" variant="outline" onClick={() => openDischargeDialog(row)} className="flex-1">
-                    <FileText className="h-3 w-3 mr-1" />
+                  <button
+                    onClick={() => openDischargeDialog(row)}
+                    className="w-full text-left px-2 py-1.5 text-sm hover:bg-accent rounded flex items-center gap-2"
+                  >
+                    <FileText className="h-4 w-4" />
                     Discharge
-                  </Button>
+                  </button>
                 )}
-              </div>
-            </div>
-          )}
-          onBilling={handleBilling}
-          onConsultation={handleConsultation}
-          emptyTitle="No admissions found"
-          emptySubtitle="Create a new admission to get started"
-        />
+              </>
+            )}
+            emptyTitle="No admissions found"
+            emptySubtitle="Create a new admission to get started"
+          />
         </CardContent>
       </Card>
 

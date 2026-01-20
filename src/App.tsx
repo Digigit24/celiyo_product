@@ -42,7 +42,6 @@ import WhatsAppOnboarding from "./pages/WhatsAppOnboarding";
 import { ThemeSync } from "@/components/ThemeSync";
 import OPDVisits from "./pages/OPDVisits";  // ✅ Updated to new production page
 import { OPDConsultation } from "./pages/opd/Consultation"; // ✅ Updated import for Consultation (Modern UI)
-import OPDVisitDetails from "./pages/opd-production/OPDVisitDetails"; // ✅ Unified page for consultation and billing
 import ConsultationCanvas from "./pages/opd-production/ConsultationCanvas";
 import OPDBills from "./pages/opd-production/OPDBills";
 import ClinicalNotes from "./pages/opd-production/ClinicalNotes";
@@ -123,7 +122,6 @@ const AppLayout = () => {
 
               {/* OPD Routes */}
               <Route path="/opd/visits" element={<OPDVisits />} />
-              <Route path="/opd/billing/:visitId" element={<OPDVisitDetails />} />
               <Route path="/opd/consultation/:visitId" element={<OPDConsultation />} />
               <Route path="/opd/consultation/:visitId/canvas/:responseId" element={<ConsultationCanvas />} />
               <Route path="/opd/bills" element={<OPDBills />} />

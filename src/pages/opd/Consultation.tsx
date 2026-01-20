@@ -20,10 +20,20 @@ export const OPDConsultation: React.FC = () => {
     completeOpdVisit
   } = useOpdVisit();
 
-  const [activeTab, setActiveTab] = useState('consultation');
+  // Get initial tab from location state, default to 'consultation'
+  const initialTab = (location.state as any)?.activeTab || 'consultation';
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [completeNote, setCompleteNote] = useState('');
+
+  // Update active tab when location state changes
+  useEffect(() => {
+    const newTab = (location.state as any)?.activeTab;
+    if (newTab) {
+      setActiveTab(newTab);
+    }
+  }, [location.state]);
 
   // Fetch current visit
   const { data: visit, isLoading, error, mutate: mutateVisit } = useOpdVisitById(visitId ? parseInt(visitId) : null);

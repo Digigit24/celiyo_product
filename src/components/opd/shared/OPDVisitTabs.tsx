@@ -1,6 +1,5 @@
 // src/components/opd/shared/OPDVisitTabs.tsx
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ConsultationTab } from '@/components/consultation/ConsultationTab';
@@ -25,16 +24,8 @@ export const OPDVisitTabs: React.FC<OPDVisitTabsProps> = ({
   onTabChange,
   billingContent
 }) => {
-  const navigate = useNavigate();
-
   const handleTabChange = (value: string) => {
-    if (value === 'billing') {
-      navigate(`/opd/billing/${visit.id}`);
-    } else if (value === 'consultation') {
-      navigate(`/opd/consultation/${visit.id}`);
-    } else {
-      onTabChange(value);
-    }
+    onTabChange(value);
   };
 
   return (

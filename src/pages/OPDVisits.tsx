@@ -112,7 +112,11 @@ export const OPDVisits: React.FC = () => {
   };
 
   const handleBilling = (visit: OpdVisit) => {
-    navigate(`/opd/billing/${visit.id}`);
+    // Navigate to consultation route with billing tab active
+    const visitIds = visits.map(v => v.id);
+    navigate(`/opd/consultation/${visit.id}`, {
+      state: { visitIds, from: '/opd/visits', activeTab: 'billing' }
+    });
   };
 
   const handleConsultation = (visit: OpdVisit) => {

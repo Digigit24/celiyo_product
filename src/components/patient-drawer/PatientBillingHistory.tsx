@@ -199,8 +199,8 @@ export default function PatientBillingHistory({ patientId }: PatientBillingHisto
 
   const handleView = (bill: OPDBill) => {
     if (bill.visit) {
-      navigate(`/opd/billing/${bill.visit}`, {
-        state: { from: location.pathname }
+      navigate(`/opd/consultation/${bill.visit}`, {
+        state: { from: location.pathname, activeTab: 'billing' }
       });
     }
   };

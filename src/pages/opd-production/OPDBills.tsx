@@ -488,7 +488,7 @@ export const OPDBills: React.FC = () => {
                 renderMobileCard={renderMobileCard}
                 getRowId={(bill) => bill.id}
                 getRowLabel={(bill) => bill.bill_number}
-                onView={(bill) => navigate(`/opd/billing/${bill.visit}`)}
+                onView={(bill) => navigate(`/opd/consultation/${bill.visit}`, { state: { activeTab: 'billing' } })}
                 onEdit={(bill) => { setDrawerMode('edit'); setSelectedBillId(bill.id); setDrawerOpen(true); }}
                 onDelete={handleDelete}
                 emptyTitle="No bills found"

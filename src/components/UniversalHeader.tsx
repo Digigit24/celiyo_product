@@ -26,9 +26,6 @@ const routeTitles: Record<string, string> = {
 
 // Dynamic route patterns (order matters - check from most specific to least)
 const getDynamicTitle = (pathname: string): string | null => {
-  if (pathname.startsWith("/opd/billing/")) {
-    return "OPD Billing";
-  }
   if (pathname.startsWith("/opd/consultation/")) {
     return "OPD Consultations";
   }

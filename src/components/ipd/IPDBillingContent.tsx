@@ -36,6 +36,7 @@ import { IPDBillingTab } from './IPDBillingTab';
 import { BillItemsTable } from '@/components/opd/BillItemsTable';
 import { InvestigationsBillingTab } from '@/components/opd/InvestigationsBillingTab';
 import { ProcedureBillingTab } from '@/components/opd/ProcedureBillingTab';
+import { IPDBillPreviewTab } from './IPDBillPreviewTab';
 
 import type {
   IPDBilling,
@@ -272,6 +273,10 @@ export const IPDBillingContent: React.FC<IPDBillingContentProps> = ({ admission,
 
   // Fetch tenant settings for branding
   const { data: tenantData } = useTenantDetail(tenantId);
+  const tenantSettings = tenantData?.settings || {};
+
+  // Print/Export ref
+  const printAreaRef = React.useRef<HTMLDivElement>(null);
 
   const {
     useIPDBillings,
@@ -799,8 +804,58 @@ export const IPDBillingContent: React.FC<IPDBillingContentProps> = ({ admission,
     }
   };
 
+  // Print functionality - simple browser print
+  const handlePrint = () => {
+    window.print();
+  };
+
+  const handleDownloadPDF = () => {
+    toast.info('PDF download feature coming soon');
+  };
+
   return (
     <div className="space-y-6">
+      <style>{`
+        @page {
+          size: A4;
+          margin: 0;
+        }
+        @media print {
+          /* Hide browser default headers and footers */
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+
+          .no-print {
+            display: none !important;
+          }
+          body * {
+            visibility: hidden;
+          }
+          #bill-preview-area,
+          #bill-preview-area * {
+            visibility: visible;
+          }
+          #bill-preview-area {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            padding: 15mm 15mm 15mm 15mm;
+          }
+          /* Ensure colors print */
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
+          }
+          /* Remove shadows and borders that don't print well */
+          .shadow, .shadow-sm, .shadow-md, .shadow-lg {
+            box-shadow: none !important;
+          }
+        }
+      `}</style>
       {/* Show "Create New Bill" button if no bill exists */}
       {admissionBills.length === 0 && !showBillingForm && !admissionBillsLoading && (
         <Card className="border-dashed">
@@ -962,13 +1017,33 @@ export const IPDBillingContent: React.FC<IPDBillingContentProps> = ({ admission,
           </TabsContent>
 
           <TabsContent value="preview" className="space-y-6">
-            <Card>
-              <CardContent className="py-8">
-                <div className="text-center text-muted-foreground">
-                  Bill preview will be available soon
-                </div>
-              </CardContent>
-            </Card>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2">
+                <IPDBillPreviewTab
+                  ref={printAreaRef}
+                  admission={admission}
+                  billingFormData={billingFormData}
+                  billItems={billItems}
+                  billingData={billingData}
+                  tenantData={tenantData}
+                  tenantSettings={tenantSettings}
+                  onPrint={handlePrint}
+                  onDownloadPDF={handleDownloadPDF}
+                />
+              </div>
+
+              <BillingDetailsPanel
+                data={billingData}
+                billItems={billItems}
+                onChange={handleBillingChange}
+                onFormatReceived={() => {
+                  const num = parseFloat(billingData.receivedAmount);
+                  if (!isNaN(num)) setBillingData((prev) => ({ ...prev, receivedAmount: num.toFixed(2) }));
+                }}
+                onSave={handleSaveBill}
+                isEditMode={isEditMode}
+              />
+            </div>
           </TabsContent>
         </Tabs>
       )}

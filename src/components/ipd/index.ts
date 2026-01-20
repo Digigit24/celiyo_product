@@ -2,3 +2,4 @@
 export { IPDBillingTab } from './IPDBillingTab';
 export { IPDBillingContent } from './IPDBillingContent';
 export { IPDConsultationTab } from './IPDConsultationTab';
+export { IPDBillPreviewTab } from './IPDBillPreviewTab';

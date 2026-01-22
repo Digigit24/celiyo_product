@@ -9,6 +9,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { UniversalSidebar } from "@/components/UniversalSidebar";
 import { UniversalHeader } from "@/components/UniversalHeader";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { ModuleProtectedRoute } from "@/components/ModuleProtectedRoute";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { swrConfig } from "@/lib/swrConfig";
 import { authService } from "@/services/authService";
@@ -103,84 +104,84 @@ const AppLayout = () => {
               <Route path="/inbox" element={<Inbox />} />
 
               {/* CRM Routes */}
-              <Route path="/crm/leads" element={<CRMLeads />} />
-              <Route path="/crm/leads/:leadId" element={<LeadDetailsPage />} />
-              <Route path="/crm/activities" element={<CRMActivities />} />
-              <Route path="/crm/statuses" element={<CRMLeadStatuses />} />
-              <Route path="/crm/settings" element={<CRMFieldConfigurations />} />
-              <Route path="/crm/tasks" element={<CRMTasks />} />
-              <Route path="/crm/meetings" element={<Meetings />} />
-              <Route path="/crm/pipeline" element={<Navigate to="/crm/leads" replace />} />
+              <Route path="/crm/leads" element={<ModuleProtectedRoute requiredModule="crm"><CRMLeads /></ModuleProtectedRoute>} />
+              <Route path="/crm/leads/:leadId" element={<ModuleProtectedRoute requiredModule="crm"><LeadDetailsPage /></ModuleProtectedRoute>} />
+              <Route path="/crm/activities" element={<ModuleProtectedRoute requiredModule="crm"><CRMActivities /></ModuleProtectedRoute>} />
+              <Route path="/crm/statuses" element={<ModuleProtectedRoute requiredModule="crm"><CRMLeadStatuses /></ModuleProtectedRoute>} />
+              <Route path="/crm/settings" element={<ModuleProtectedRoute requiredModule="crm"><CRMFieldConfigurations /></ModuleProtectedRoute>} />
+              <Route path="/crm/tasks" element={<ModuleProtectedRoute requiredModule="crm"><CRMTasks /></ModuleProtectedRoute>} />
+              <Route path="/crm/meetings" element={<ModuleProtectedRoute requiredModule="crm"><Meetings /></ModuleProtectedRoute>} />
+              <Route path="/crm/pipeline" element={<ModuleProtectedRoute requiredModule="crm"><Navigate to="/crm/leads" replace /></ModuleProtectedRoute>} />
 
               {/* HMS Routes */}
-              <Route path="/hms/doctors" element={<Doctors />} />
-              <Route path="/hms/doctor-test" element={<DoctorTest />} />
-              <Route path="/hms/specialties" element={<Specialties />} />
-              <Route path="/patients" element={<PatientsTest />} />
-              <Route path="/patients/:patientId" element={<PatientDetailsPage />} />
-              <Route path="/appointments" element={<AppointmentsTest />} />
+              <Route path="/hms/doctors" element={<ModuleProtectedRoute requiredModule="hms"><Doctors /></ModuleProtectedRoute>} />
+              <Route path="/hms/doctor-test" element={<ModuleProtectedRoute requiredModule="hms"><DoctorTest /></ModuleProtectedRoute>} />
+              <Route path="/hms/specialties" element={<ModuleProtectedRoute requiredModule="hms"><Specialties /></ModuleProtectedRoute>} />
+              <Route path="/patients" element={<ModuleProtectedRoute requiredModule="hms"><PatientsTest /></ModuleProtectedRoute>} />
+              <Route path="/patients/:patientId" element={<ModuleProtectedRoute requiredModule="hms"><PatientDetailsPage /></ModuleProtectedRoute>} />
+              <Route path="/appointments" element={<ModuleProtectedRoute requiredModule="hms"><AppointmentsTest /></ModuleProtectedRoute>} />
 
               {/* OPD Routes */}
-              <Route path="/opd/visits" element={<OPDVisits />} />
-              <Route path="/opd/consultation/:visitId" element={<OPDConsultation />} />
-              <Route path="/opd/consultation/:visitId/canvas/:responseId" element={<ConsultationCanvas />} />
-              <Route path="/opd/bills" element={<OPDBills />} />
-              <Route path="/opd/clinical-notes" element={<ClinicalNotes />} />
-              <Route path="/opd/findings" element={<VisitFindings />} />
-              <Route path="/opd/procedures" element={<ProcedureMasters />} />
-              <Route path="/opd/packages" element={<ProcedurePackages />} />
-              <Route path="/opd/procedure-bills" element={<ProcedureBills />} />
-              <Route path="/opd/settings" element={<Navigate to="/opd/settings/templates" replace />} />
-              <Route path="/opd/settings/:tab" element={<OPDSettings />} />
+              <Route path="/opd/visits" element={<ModuleProtectedRoute requiredModule="opd"><OPDVisits /></ModuleProtectedRoute>} />
+              <Route path="/opd/consultation/:visitId" element={<ModuleProtectedRoute requiredModule="opd"><OPDConsultation /></ModuleProtectedRoute>} />
+              <Route path="/opd/consultation/:visitId/canvas/:responseId" element={<ModuleProtectedRoute requiredModule="opd"><ConsultationCanvas /></ModuleProtectedRoute>} />
+              <Route path="/opd/bills" element={<ModuleProtectedRoute requiredModule="opd"><OPDBills /></ModuleProtectedRoute>} />
+              <Route path="/opd/clinical-notes" element={<ModuleProtectedRoute requiredModule="opd"><ClinicalNotes /></ModuleProtectedRoute>} />
+              <Route path="/opd/findings" element={<ModuleProtectedRoute requiredModule="opd"><VisitFindings /></ModuleProtectedRoute>} />
+              <Route path="/opd/procedures" element={<ModuleProtectedRoute requiredModule="opd"><ProcedureMasters /></ModuleProtectedRoute>} />
+              <Route path="/opd/packages" element={<ModuleProtectedRoute requiredModule="opd"><ProcedurePackages /></ModuleProtectedRoute>} />
+              <Route path="/opd/procedure-bills" element={<ModuleProtectedRoute requiredModule="opd"><ProcedureBills /></ModuleProtectedRoute>} />
+              <Route path="/opd/settings" element={<ModuleProtectedRoute requiredModule="opd"><Navigate to="/opd/settings/templates" replace /></ModuleProtectedRoute>} />
+              <Route path="/opd/settings/:tab" element={<ModuleProtectedRoute requiredModule="opd"><OPDSettings /></ModuleProtectedRoute>} />
 
               {/* IPD Routes */}
-              <Route path="/ipd/wards" element={<Wards />} />
-              <Route path="/ipd/beds" element={<Beds />} />
-              <Route path="/ipd/admissions" element={<Admissions />} />
-              <Route path="/ipd/admissions/:id" element={<AdmissionDetails />} />
-              <Route path="/ipd/billing" element={<IPDBillingListPage />} />
-              <Route path="/ipd/billing/:billId" element={<IPDBillingDetailsPage />} />
+              <Route path="/ipd/wards" element={<ModuleProtectedRoute requiredModule="ipd"><Wards /></ModuleProtectedRoute>} />
+              <Route path="/ipd/beds" element={<ModuleProtectedRoute requiredModule="ipd"><Beds /></ModuleProtectedRoute>} />
+              <Route path="/ipd/admissions" element={<ModuleProtectedRoute requiredModule="ipd"><Admissions /></ModuleProtectedRoute>} />
+              <Route path="/ipd/admissions/:id" element={<ModuleProtectedRoute requiredModule="ipd"><AdmissionDetails /></ModuleProtectedRoute>} />
+              <Route path="/ipd/billing" element={<ModuleProtectedRoute requiredModule="ipd"><IPDBillingListPage /></ModuleProtectedRoute>} />
+              <Route path="/ipd/billing/:billId" element={<ModuleProtectedRoute requiredModule="ipd"><IPDBillingDetailsPage /></ModuleProtectedRoute>} />
 
               {/* Diagnostics Routes */}
-              <Route path="/diagnostics" element={<Diagnostics />} />
-              <Route path="/diagnostics/requisitions" element={<Requisitions />} />
-              <Route path="/diagnostics/investigations" element={<Investigations />} />
-              <Route path="/diagnostics/lab-reports" element={<LabReports />} />
+              <Route path="/diagnostics" element={<ModuleProtectedRoute requiredModule="diagnostics"><Diagnostics /></ModuleProtectedRoute>} />
+              <Route path="/diagnostics/requisitions" element={<ModuleProtectedRoute requiredModule="diagnostics"><Requisitions /></ModuleProtectedRoute>} />
+              <Route path="/diagnostics/investigations" element={<ModuleProtectedRoute requiredModule="diagnostics"><Investigations /></ModuleProtectedRoute>} />
+              <Route path="/diagnostics/lab-reports" element={<ModuleProtectedRoute requiredModule="diagnostics"><LabReports /></ModuleProtectedRoute>} />
 
               {/* Payment Routes */}
-              <Route path="/payments/transactions" element={<Transactions />} />
-              <Route path="/payments/categories" element={<PaymentCategories />} />
-              <Route path="/payments/periods" element={<AccountingPeriods />} />
+              <Route path="/payments/transactions" element={<ModuleProtectedRoute requiredModule="payments"><Transactions /></ModuleProtectedRoute>} />
+              <Route path="/payments/categories" element={<ModuleProtectedRoute requiredModule="payments"><PaymentCategories /></ModuleProtectedRoute>} />
+              <Route path="/payments/periods" element={<ModuleProtectedRoute requiredModule="payments"><AccountingPeriods /></ModuleProtectedRoute>} />
 
               {/* Pharmacy Routes */}
-              <Route path="/pharmacy/products" element={<ProductsPage />} />
-              <Route path="/pharmacy/pos" element={<POSPage />} />
-              <Route path="/pharmacy/statistics" element={<PharmacyStatisticsPage />} />
-              <Route path="/cart" element={<CartListPage />} />
+              <Route path="/pharmacy/products" element={<ModuleProtectedRoute requiredModule="pharmacy"><ProductsPage /></ModuleProtectedRoute>} />
+              <Route path="/pharmacy/pos" element={<ModuleProtectedRoute requiredModule="pharmacy"><POSPage /></ModuleProtectedRoute>} />
+              <Route path="/pharmacy/statistics" element={<ModuleProtectedRoute requiredModule="pharmacy"><PharmacyStatisticsPage /></ModuleProtectedRoute>} />
+              <Route path="/cart" element={<ModuleProtectedRoute requiredModule="pharmacy"><CartListPage /></ModuleProtectedRoute>} />
 
               {/* WhatsApp Routes */}
-              <Route path="/whatsapp/onboarding" element={<WhatsAppOnboarding />} />
-              <Route path="/whatsapp/contacts" element={<Contacts />} />
-              <Route path="/whatsapp/chats" element={<Chats />} />
-              <Route path="/whatsapp/groups" element={<Groups />} />
-              <Route path="/whatsapp/templates" element={<Templates />} />
-              <Route path="/whatsapp/campaigns" element={<Campaigns />} />
-              <Route path="/whatsapp/flows" element={<Flows />} />
-              <Route path="/whatsapp/flows/:flow_id" element={<FlowEditor />} />
-              <Route path="/whatsapp/qrcode" element={<QRCodes />} />
+              <Route path="/whatsapp/onboarding" element={<ModuleProtectedRoute requiredModule="whatsapp"><WhatsAppOnboarding /></ModuleProtectedRoute>} />
+              <Route path="/whatsapp/contacts" element={<ModuleProtectedRoute requiredModule="whatsapp"><Contacts /></ModuleProtectedRoute>} />
+              <Route path="/whatsapp/chats" element={<ModuleProtectedRoute requiredModule="whatsapp"><Chats /></ModuleProtectedRoute>} />
+              <Route path="/whatsapp/groups" element={<ModuleProtectedRoute requiredModule="whatsapp"><Groups /></ModuleProtectedRoute>} />
+              <Route path="/whatsapp/templates" element={<ModuleProtectedRoute requiredModule="whatsapp"><Templates /></ModuleProtectedRoute>} />
+              <Route path="/whatsapp/campaigns" element={<ModuleProtectedRoute requiredModule="whatsapp"><Campaigns /></ModuleProtectedRoute>} />
+              <Route path="/whatsapp/flows" element={<ModuleProtectedRoute requiredModule="whatsapp"><Flows /></ModuleProtectedRoute>} />
+              <Route path="/whatsapp/flows/:flow_id" element={<ModuleProtectedRoute requiredModule="whatsapp"><FlowEditor /></ModuleProtectedRoute>} />
+              <Route path="/whatsapp/qrcode" element={<ModuleProtectedRoute requiredModule="whatsapp"><QRCodes /></ModuleProtectedRoute>} />
 
               {/* Admin Routes */}
-              <Route path="/admin/users" element={<Users />} />
-              <Route path="/admin/roles" element={<Roles />} />
-              <Route path="/admin/settings" element={<AdminSettings />} />
-              <Route path="/admin/debug" element={<Debug />} />
+              <Route path="/admin/users" element={<ModuleProtectedRoute requiredModule="admin"><Users /></ModuleProtectedRoute>} />
+              <Route path="/admin/roles" element={<ModuleProtectedRoute requiredModule="admin"><Roles /></ModuleProtectedRoute>} />
+              <Route path="/admin/settings" element={<ModuleProtectedRoute requiredModule="admin"><AdminSettings /></ModuleProtectedRoute>} />
+              <Route path="/admin/debug" element={<ModuleProtectedRoute requiredModule="admin"><Debug /></ModuleProtectedRoute>} />
 
               {/* Integration Routes */}
-              <Route path="/integrations" element={<Integrations />} />
-              <Route path="/integrations/workflows/new" element={<WorkflowEditor />} />
-              <Route path="/integrations/workflows/:workflowId" element={<WorkflowEditor />} />
-              <Route path="/integrations/workflows/:workflowId/logs" element={<WorkflowLogs />} />
-              <Route path="/integrations/oauth/callback" element={<OAuthCallback />} />
+              <Route path="/integrations" element={<ModuleProtectedRoute requiredModule="integrations"><Integrations /></ModuleProtectedRoute>} />
+              <Route path="/integrations/workflows/new" element={<ModuleProtectedRoute requiredModule="integrations"><WorkflowEditor /></ModuleProtectedRoute>} />
+              <Route path="/integrations/workflows/:workflowId" element={<ModuleProtectedRoute requiredModule="integrations"><WorkflowEditor /></ModuleProtectedRoute>} />
+              <Route path="/integrations/workflows/:workflowId/logs" element={<ModuleProtectedRoute requiredModule="integrations"><WorkflowLogs /></ModuleProtectedRoute>} />
+              <Route path="/integrations/oauth/callback" element={<ModuleProtectedRoute requiredModule="integrations"><OAuthCallback /></ModuleProtectedRoute>} />
 
               {/* 404 */}
               <Route path="*" element={<NotFound />} />

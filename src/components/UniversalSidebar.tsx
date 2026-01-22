@@ -69,6 +69,7 @@ interface MenuItem {
   path?: string;
   badge?: number;
   children?: MenuItem[];
+  module?: string; // Module required to access this menu item
 }
 
 const menuItems: MenuItem[] = [
@@ -77,6 +78,7 @@ const menuItems: MenuItem[] = [
     label: "Dashboard",
     icon: LayoutDashboard,
     path: "/",
+    // No module required - Dashboard is always accessible
   },
   // {
   //   id: "inbox",
@@ -90,6 +92,7 @@ const menuItems: MenuItem[] = [
     id: "whatsapp",
     label: "WhatsApp",
     icon: MessageCircle,
+    module: "whatsapp",
     children: [
       {
         id: "whatsapp-onboarding",
@@ -145,6 +148,7 @@ const menuItems: MenuItem[] = [
     id: "crm",
     label: "CRM",
     icon: Building2,
+    module: "crm",
     children: [
       {
         id: "crm-leads",
@@ -194,6 +198,7 @@ const menuItems: MenuItem[] = [
     id: "integrations",
     label: "Integrations",
     icon: Plug,
+    module: "integrations",
     children: [
       {
         id: "integrations-overview",
@@ -213,6 +218,7 @@ const menuItems: MenuItem[] = [
     id: "hms",
     label: "HMS",
     icon: Stethoscope,
+    module: "hms",
     children: [
       {
         id: "hms-doctors",
@@ -244,6 +250,7 @@ const menuItems: MenuItem[] = [
     id: "opd",
     label: "OPD",
     icon: Stethoscope,
+    module: "opd",
     children: [
       {
         id: "opd-visits",
@@ -299,6 +306,7 @@ const menuItems: MenuItem[] = [
     id: "ipd",
     label: "IPD",
     icon: Bed,
+    module: "ipd",
     children: [
       {
         id: "ipd-admissions",
@@ -330,6 +338,7 @@ const menuItems: MenuItem[] = [
     id: "diagnostics",
     label: "Diagnostics",
     icon: FlaskConical,
+    module: "diagnostics",
     children: [
       {
         id: "diagnostics-requisitions",
@@ -355,6 +364,7 @@ const menuItems: MenuItem[] = [
     id: "payments",
     label: "Payments",
     icon: IndianRupee,
+    module: "payments",
     children: [
       {
         id: "payment-transactions",
@@ -380,6 +390,7 @@ const menuItems: MenuItem[] = [
     id: "pharmacy",
     label: "Pharmacy",
     icon: Pill,
+    module: "pharmacy",
     children: [
       {
         id: "pharmacy-products",
@@ -411,6 +422,7 @@ const menuItems: MenuItem[] = [
     id: "admin",
     label: "Admin",
     icon: Shield,
+    module: "admin",
     children: [
       {
         id: "admin-users",
@@ -454,7 +466,7 @@ export function UniversalSidebar({
   setMobileOpen,
 }: UniversalSidebarProps) {
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, hasModuleAccess } = useAuth();
   const { useCurrentTenant } = useTenant();
   const { data: currentTenant, isLoading: isTenantLoading } = useCurrentTenant();
   const [openSections, setOpenSections] = useState<string[]>(["masters"]);
@@ -469,6 +481,15 @@ export function UniversalSidebar({
     ? tenantData.settings.logo
     : undefined;
   const tenantName = tenantData?.name || 'HMS';
+
+  // Filter menu items based on enabled modules
+  const filteredMenuItems = menuItems.filter((item) => {
+    // If no module is specified, item is always visible (e.g., Dashboard)
+    if (!item.module) return true;
+
+    // Check if user has access to the module
+    return hasModuleAccess(item.module);
+  });
 
   // Debug logging
   console.log('Tenant data:', {
@@ -573,7 +594,7 @@ export function UniversalSidebar({
       {/* Navigation Menu */}
       <ScrollArea className="flex-1 px-3 py-4">
         <nav className="space-y-1">
-          {menuItems.map((item) => {
+          {filteredMenuItems.map((item) => {
             if (item.children) {
               // Menu item with children (collapsible)
               const isOpen = openSections.includes(item.id);

@@ -1,6 +1,7 @@
 // src/pages/CRMFollowups.tsx
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTheme } from 'next-themes';
 import { useCRM } from '@/hooks/useCRM';
 import { useCurrency } from '@/hooks/useCurrency';
 import { DataTable, type DataTableColumn } from '@/components/DataTable';
@@ -9,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calendar, Clock, AlertCircle, Phone, Mail, MessageCircle, Eye, CalendarClock, MoreVertical } from 'lucide-react';
+import { Calendar, Clock, AlertCircle, Phone, Mail, MessageCircle, Eye, CalendarClock, MoreVertical, Loader2 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
 import { format, formatDistanceToNow, isToday, isTomorrow, isPast, isWithinInterval, addDays, startOfDay, endOfDay, parseISO } from 'date-fns';
@@ -17,8 +18,69 @@ import type { Lead, LeadsQueryParams } from '@/types/crmTypes';
 
 type FollowupFilter = 'all' | 'overdue' | 'today' | 'tomorrow' | 'upcoming' | 'no-date';
 
+// Stats Card Component matching Dashboard style
+interface StatCardProps {
+  title: string;
+  value: string | number;
+  icon: React.ReactNode;
+  gradient: string;
+  isDark: boolean;
+  loading?: boolean;
+  onClick?: () => void;
+  isActive?: boolean;
+}
+
+const StatCard = ({ title, value, icon, gradient, isDark, loading, onClick, isActive }: StatCardProps) => {
+  return (
+    <Card
+      className={`relative overflow-hidden cursor-pointer transition-all duration-300 ${
+        isDark ? 'border-gray-700' : 'border-gray-200'
+      } ${
+        isActive
+          ? 'ring-2 ring-primary shadow-lg scale-[1.02]'
+          : 'shadow-sm hover:shadow-md hover:scale-[1.01]'
+      }`}
+      onClick={onClick}
+    >
+      <div className="p-6 relative z-10">
+        <div className="flex items-center justify-between">
+          <div className="flex-1">
+            <p className={`text-sm font-medium ${isDark ? 'text-gray-400' : 'text-gray-600/80'}`}>
+              {title}
+            </p>
+            {loading ? (
+              <div className="mt-2">
+                <Loader2 className={`w-6 h-6 animate-spin ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
+              </div>
+            ) : (
+              <h3 className={`text-3xl font-bold mt-2 ${
+                isDark
+                  ? 'bg-gradient-to-br from-gray-100 to-gray-300 bg-clip-text text-transparent'
+                  : 'bg-gradient-to-br from-gray-900 to-gray-600 bg-clip-text text-transparent'
+              }`}>
+                {value}
+              </h3>
+            )}
+          </div>
+          <div className="p-4 rounded-2xl">
+            {icon}
+          </div>
+        </div>
+      </div>
+      <div className={`absolute inset-0 pointer-events-none ${gradient}`} />
+      <div className={`absolute inset-0 pointer-events-none ${
+        isDark
+          ? 'bg-gradient-to-br from-white/5 to-transparent'
+          : 'bg-gradient-to-br from-white/50 to-transparent'
+      }`} />
+    </Card>
+  );
+};
+
 export const CRMFollowups: React.FC = () => {
   const navigate = useNavigate();
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
   const { hasCRMAccess, useLeads, patchLead } = useCRM();
   const { formatCurrency: formatCurrencyDynamic } = useCurrency();
 
@@ -381,66 +443,67 @@ export const CRMFollowups: React.FC = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <Card className={activeTab === 'overdue' ? 'ring-2 ring-red-500' : ''}>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Overdue</p>
-                <p className="text-2xl font-bold text-red-600">{counts.overdue}</p>
-              </div>
-              <AlertCircle className="h-8 w-8 text-red-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className={activeTab === 'today' ? 'ring-2 ring-orange-500' : ''}>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Today</p>
-                <p className="text-2xl font-bold text-orange-600">{counts.today}</p>
-              </div>
-              <Clock className="h-8 w-8 text-orange-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className={activeTab === 'tomorrow' ? 'ring-2 ring-blue-500' : ''}>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Tomorrow</p>
-                <p className="text-2xl font-bold text-blue-600">{counts.tomorrow}</p>
-              </div>
-              <Calendar className="h-8 w-8 text-blue-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className={activeTab === 'upcoming' ? 'ring-2 ring-green-500' : ''}>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Upcoming</p>
-                <p className="text-2xl font-bold text-green-600">{counts.upcoming}</p>
-              </div>
-              <Calendar className="h-8 w-8 text-green-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className={activeTab === 'no-date' ? 'ring-2 ring-gray-500' : ''}>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">No Date</p>
-                <p className="text-2xl font-bold text-gray-600">{counts.noDate}</p>
-              </div>
-              <Calendar className="h-8 w-8 text-gray-600" />
-            </div>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-5">
+        <StatCard
+          title="Overdue"
+          value={counts.overdue}
+          icon={<AlertCircle className="w-7 h-7 text-red-600" />}
+          gradient={isDark
+            ? 'bg-gradient-to-br from-red-900/20 via-gray-800 to-red-900/10'
+            : 'bg-gradient-to-br from-red-50 via-white to-red-50/30'}
+          isDark={isDark}
+          loading={isLoading}
+          onClick={() => setActiveTab('overdue')}
+          isActive={activeTab === 'overdue'}
+        />
+        <StatCard
+          title="Today"
+          value={counts.today}
+          icon={<Clock className="w-7 h-7 text-orange-600" />}
+          gradient={isDark
+            ? 'bg-gradient-to-br from-orange-900/20 via-gray-800 to-orange-900/10'
+            : 'bg-gradient-to-br from-orange-50 via-white to-orange-50/30'}
+          isDark={isDark}
+          loading={isLoading}
+          onClick={() => setActiveTab('today')}
+          isActive={activeTab === 'today'}
+        />
+        <StatCard
+          title="Tomorrow"
+          value={counts.tomorrow}
+          icon={<Calendar className="w-7 h-7 text-blue-600" />}
+          gradient={isDark
+            ? 'bg-gradient-to-br from-blue-900/20 via-gray-800 to-blue-900/10'
+            : 'bg-gradient-to-br from-blue-50 via-white to-blue-50/30'}
+          isDark={isDark}
+          loading={isLoading}
+          onClick={() => setActiveTab('tomorrow')}
+          isActive={activeTab === 'tomorrow'}
+        />
+        <StatCard
+          title="Upcoming"
+          value={counts.upcoming}
+          icon={<Calendar className="w-7 h-7 text-green-600" />}
+          gradient={isDark
+            ? 'bg-gradient-to-br from-green-900/20 via-gray-800 to-green-900/10'
+            : 'bg-gradient-to-br from-green-50 via-white to-green-50/30'}
+          isDark={isDark}
+          loading={isLoading}
+          onClick={() => setActiveTab('upcoming')}
+          isActive={activeTab === 'upcoming'}
+        />
+        <StatCard
+          title="No Date"
+          value={counts.noDate}
+          icon={<Calendar className="w-7 h-7 text-gray-600" />}
+          gradient={isDark
+            ? 'bg-gradient-to-br from-gray-900/20 via-gray-800 to-gray-900/10'
+            : 'bg-gradient-to-br from-gray-50 via-white to-gray-50/30'}
+          isDark={isDark}
+          loading={isLoading}
+          onClick={() => setActiveTab('no-date')}
+          isActive={activeTab === 'no-date'}
+        />
       </div>
 
       {/* Tabs */}

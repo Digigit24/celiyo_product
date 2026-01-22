@@ -9,11 +9,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calendar, Clock, AlertCircle, Phone, Mail, MessageCircle, Eye, CalendarClock } from 'lucide-react';
+import { Calendar, Clock, AlertCircle, Phone, Mail, MessageCircle, Eye, CalendarClock, MoreVertical } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
 import { format, formatDistanceToNow, isToday, isTomorrow, isPast, isWithinInterval, addDays, startOfDay, endOfDay, parseISO } from 'date-fns';
 import type { Lead, LeadsQueryParams } from '@/types/crmTypes';
-import type { RowActions } from '@/components/DataTable';
 
 type FollowupFilter = 'all' | 'overdue' | 'today' | 'tomorrow' | 'upcoming' | 'no-date';
 
@@ -180,8 +180,7 @@ export const CRMFollowups: React.FC = () => {
   const columns: DataTableColumn<Lead>[] = [
     {
       header: 'Lead Name',
-      accessor: 'name',
-      sortable: true,
+      key: 'name',
       cell: (lead) => (
         <div>
           <div className="font-medium">{lead.name}</div>
@@ -189,10 +188,12 @@ export const CRMFollowups: React.FC = () => {
           {lead.company && <div className="text-xs text-muted-foreground">{lead.company}</div>}
         </div>
       ),
+      accessor: (lead) => lead.name,
+      sortable: true,
     },
     {
       header: 'Contact',
-      accessor: 'phone',
+      key: 'phone',
       cell: (lead) => (
         <div className="space-y-1">
           <div className="flex items-center gap-2">
@@ -207,11 +208,11 @@ export const CRMFollowups: React.FC = () => {
           )}
         </div>
       ),
+      accessor: (lead) => lead.phone,
     },
     {
       header: 'Follow-up Date',
-      accessor: 'next_follow_up_at',
-      sortable: true,
+      key: 'next_follow_up_at',
       cell: (lead) => (
         <div className="space-y-1">
           {lead.next_follow_up_at ? (
@@ -228,16 +229,18 @@ export const CRMFollowups: React.FC = () => {
           )}
         </div>
       ),
+      accessor: (lead) => lead.next_follow_up_at || '',
+      sortable: true,
     },
     {
       header: 'Status',
-      accessor: 'next_follow_up_at',
+      key: 'status',
       cell: (lead) => getFollowupBadge(lead),
+      accessor: (lead) => lead.next_follow_up_at || '',
     },
     {
       header: 'Priority',
-      accessor: 'priority',
-      sortable: true,
+      key: 'priority',
       cell: (lead) => {
         const priorityColors = {
           LOW: 'bg-blue-100 text-blue-800',
@@ -250,11 +253,12 @@ export const CRMFollowups: React.FC = () => {
           </Badge>
         );
       },
+      accessor: (lead) => lead.priority,
+      sortable: true,
     },
     {
       header: 'Value',
-      accessor: 'value_amount',
-      sortable: true,
+      key: 'value_amount',
       cell: (lead) => {
         if (!lead.value_amount) return <span className="text-sm text-muted-foreground">-</span>;
         return (
@@ -263,45 +267,104 @@ export const CRMFollowups: React.FC = () => {
           </div>
         );
       },
+      accessor: (lead) => lead.value_amount || '0',
+      sortable: true,
     },
   ];
 
-  const rowActions: RowActions<Lead> = [
-    {
-      label: 'View Details',
-      icon: Eye,
-      onClick: handleViewLead,
-    },
-    {
-      label: 'Schedule Follow-up',
-      icon: CalendarClock,
-      onClick: handleScheduleFollowup,
-    },
-    {
-      label: 'Call',
-      icon: Phone,
-      onClick: (lead) => {
-        if (lead.phone) handleCall(lead.phone);
-        else toast.error('No phone number available');
-      },
-    },
-    {
-      label: 'Email',
-      icon: Mail,
-      onClick: (lead) => {
-        if (lead.email) handleEmail(lead.email);
-        else toast.error('No email available');
-      },
-    },
-    {
-      label: 'WhatsApp',
-      icon: MessageCircle,
-      onClick: (lead) => {
-        if (lead.phone) handleWhatsApp(lead.phone);
-        else toast.error('No phone number available');
-      },
-    },
-  ];
+  // Render mobile card view
+  const renderMobileCard = (lead: Lead, actions: any) => {
+    return (
+      <Card className="mb-3">
+        <CardContent className="p-4 space-y-3">
+          {/* Header */}
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <h3 className="font-semibold">{lead.name}</h3>
+              {lead.title && <p className="text-sm text-muted-foreground">{lead.title}</p>}
+              {lead.company && <p className="text-xs text-muted-foreground">{lead.company}</p>}
+            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => handleViewLead(lead)}>
+                  <Eye className="mr-2 h-4 w-4" />
+                  View Details
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleScheduleFollowup(lead)}>
+                  <CalendarClock className="mr-2 h-4 w-4" />
+                  Schedule Follow-up
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => lead.phone && handleCall(lead.phone)}>
+                  <Phone className="mr-2 h-4 w-4" />
+                  Call
+                </DropdownMenuItem>
+                {lead.email && (
+                  <DropdownMenuItem onClick={() => handleEmail(lead.email)}>
+                    <Mail className="mr-2 h-4 w-4" />
+                    Email
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem onClick={() => lead.phone && handleWhatsApp(lead.phone)}>
+                  <MessageCircle className="mr-2 h-4 w-4" />
+                  WhatsApp
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
+          {/* Contact Info */}
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 text-sm">
+              <Phone className="h-3 w-3 text-muted-foreground" />
+              <span>{lead.phone}</span>
+            </div>
+            {lead.email && (
+              <div className="flex items-center gap-2 text-sm">
+                <Mail className="h-3 w-3 text-muted-foreground" />
+                <span>{lead.email}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Follow-up Info */}
+          <div className="space-y-2">
+            <div className="text-sm">
+              {lead.next_follow_up_at ? (
+                <>
+                  <div className="font-medium">{format(parseISO(lead.next_follow_up_at), 'MMM dd, yyyy')}</div>
+                  <div className="text-xs text-muted-foreground">{format(parseISO(lead.next_follow_up_at), 'hh:mm a')}</div>
+                </>
+              ) : (
+                <span className="text-muted-foreground">No follow-up set</span>
+              )}
+            </div>
+            {getFollowupBadge(lead)}
+          </div>
+
+          {/* Priority & Value */}
+          <div className="flex items-center gap-2">
+            <Badge variant="secondary" className={
+              lead.priority === 'HIGH' ? 'bg-red-100 text-red-800' :
+              lead.priority === 'MEDIUM' ? 'bg-yellow-100 text-yellow-800' :
+              'bg-blue-100 text-blue-800'
+            }>
+              {lead.priority}
+            </Badge>
+            {lead.value_amount && (
+              <span className="text-sm font-medium text-green-600">
+                {formatCurrencyDynamic(parseFloat(lead.value_amount), lead.value_currency || 'INR')}
+              </span>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -418,13 +481,37 @@ export const CRMFollowups: React.FC = () => {
             </CardHeader>
             <CardContent>
               <DataTable
-                data={filteredLeads}
+                rows={filteredLeads}
                 columns={columns}
-                rowActions={rowActions}
+                renderMobileCard={renderMobileCard}
+                getRowId={(lead) => lead.id}
+                getRowLabel={(lead) => lead.name}
                 isLoading={isLoading}
-                error={error}
-                emptyMessage={`No ${activeTab === 'all' ? '' : activeTab} follow-ups found`}
-                onRefresh={mutate}
+                onView={handleViewLead}
+                extraActions={(lead) => (
+                  <>
+                    <DropdownMenuItem onClick={() => handleScheduleFollowup(lead)}>
+                      <CalendarClock className="mr-2 h-4 w-4" />
+                      Schedule Follow-up
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => lead.phone && handleCall(lead.phone)}>
+                      <Phone className="mr-2 h-4 w-4" />
+                      Call
+                    </DropdownMenuItem>
+                    {lead.email && (
+                      <DropdownMenuItem onClick={() => handleEmail(lead.email)}>
+                        <Mail className="mr-2 h-4 w-4" />
+                        Email
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuItem onClick={() => lead.phone && handleWhatsApp(lead.phone)}>
+                      <MessageCircle className="mr-2 h-4 w-4" />
+                      WhatsApp
+                    </DropdownMenuItem>
+                  </>
+                )}
+                emptyTitle={`No ${activeTab === 'all' ? '' : activeTab} follow-ups found`}
+                emptySubtitle="Try adjusting your filters"
               />
             </CardContent>
           </Card>

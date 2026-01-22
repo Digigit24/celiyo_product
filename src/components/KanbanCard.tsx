@@ -11,9 +11,11 @@ import {
   Calendar,
   GripVertical,
   Eye,
-  MessageCircle
+  MessageCircle,
+  Clock,
+  AlertCircle
 } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, parseISO, isPast, isToday, isTomorrow, format } from 'date-fns';
 import type { Lead, PriorityEnum } from '@/types/crmTypes';
 import { useCurrency } from '@/hooks/useCurrency';
 
@@ -59,6 +61,46 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({
 
     // Use dynamic currency formatting from tenant settings (no decimals for Kanban)
     return formatCurrencyDynamic(numericAmount, true, 0);
+  };
+
+  // Get follow-up badge with status indicator
+  const getFollowupBadge = (followUpDate: string) => {
+    const date = parseISO(followUpDate);
+    const isOverdue = isPast(date) && !isToday(date);
+
+    if (isOverdue) {
+      return (
+        <Badge variant="destructive" className="text-xs gap-1 animate-pulse">
+          <AlertCircle className="h-3 w-3" />
+          Overdue - {format(date, 'MMM dd')}
+        </Badge>
+      );
+    }
+
+    if (isToday(date)) {
+      return (
+        <Badge className="text-xs gap-1 bg-orange-500 hover:bg-orange-600">
+          <Clock className="h-3 w-3" />
+          Today - {format(date, 'hh:mm a')}
+        </Badge>
+      );
+    }
+
+    if (isTomorrow(date)) {
+      return (
+        <Badge variant="secondary" className="text-xs gap-1 bg-blue-500 text-white hover:bg-blue-600">
+          <Calendar className="h-3 w-3" />
+          Tomorrow - {format(date, 'hh:mm a')}
+        </Badge>
+      );
+    }
+
+    return (
+      <Badge variant="outline" className="text-xs gap-1">
+        <Calendar className="h-3 w-3" />
+        {formatDistanceToNow(date, { addSuffix: true })}
+      </Badge>
+    );
   };
 
   return (
@@ -159,11 +201,8 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({
 
         {/* Next Follow-up */}
         {lead.next_follow_up_at && (
-          <div className="flex items-center gap-2 text-xs text-orange-600">
-            <Calendar className="h-3 w-3 flex-shrink-0" />
-            <span>
-              Follow-up {formatDistanceToNow(new Date(lead.next_follow_up_at), { addSuffix: true })}
-            </span>
+          <div className="flex items-start gap-2">
+            {getFollowupBadge(lead.next_follow_up_at)}
           </div>
         )}
 

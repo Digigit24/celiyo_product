@@ -48,6 +48,7 @@ import {
   FlaskConical, // Added for Diagnostics module
   Plug, // Added for Integrations
   Zap, // Added for Workflows
+  CalendarClock, // Added for Follow-ups
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -155,6 +156,12 @@ const menuItems: MenuItem[] = [
         label: "Leads",
         icon: Users,
         path: "/crm/leads",
+      },
+      {
+        id: "crm-followups",
+        label: "Follow-ups",
+        icon: CalendarClock,
+        path: "/crm/followups",
       },
       {
         id: "crm-activities",

@@ -31,7 +31,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ConsultationTab } from '@/components/consultation/ConsultationTab';
-import { BillingTab } from '@/components/consultation/BillingTab';
+import { OPDBillingContent } from '@/components/opd/OPDBillingContent';
 import { HistoryTab } from '@/components/consultation/HistoryTab';
 import { ProfileTab } from '@/components/consultation/ProfileTab';
 import { useOPDTemplate } from '@/hooks/useOPDTemplate';
@@ -61,7 +61,16 @@ export const OPDConsultation: React.FC = () => {
     createTemplateResponse,
   } = useOPDTemplate();
 
-  const [activeTab, setActiveTab] = useState('consultation');
+  // Get tab from URL hash or default to consultation
+  const getInitialTab = () => {
+    const hash = location.hash.replace('#', '');
+    if (['consultation', 'billing', 'history', 'profile'].includes(hash)) {
+      return hash;
+    }
+    return 'consultation';
+  };
+
+  const [activeTab, setActiveTab] = useState(getInitialTab());
   const [selectedTemplate, setSelectedTemplate] = useState<string>('');
   const [activeResponse, setActiveResponse] = useState<TemplateResponse | null>(null);
   const [showNewResponseDialog, setShowNewResponseDialog] = useState(false);
@@ -70,6 +79,21 @@ export const OPDConsultation: React.FC = () => {
   const [isDefaultTemplateApplied, setIsDefaultTemplateApplied] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [completeNote, setCompleteNote] = useState('');
+
+  // Update URL hash when tab changes
+  const handleTabChange = (tab: string) => {
+    console.log('Tab change requested:', tab, 'Current:', activeTab);
+    setActiveTab(tab);
+    navigate(`#${tab}`, { replace: true });
+  };
+
+  // Sync tab with URL hash changes
+  useEffect(() => {
+    const hash = location.hash.replace('#', '');
+    if (hash && ['consultation', 'billing', 'history', 'profile'].includes(hash)) {
+      setActiveTab(hash);
+    }
+  }, [location.hash]);
 
   // Fetch current visit
   const { data: visit, isLoading, error, mutate: mutateVisit } = useOpdVisitById(visitId ? parseInt(visitId) : null);
@@ -341,6 +365,25 @@ export const OPDConsultation: React.FC = () => {
             )}
           </div>
         </div>
+
+        {/* Tabs Navigation - Part of Sticky Header */}
+        <div className="border-t px-4 bg-muted/30 relative z-10">
+          <div className="flex gap-6">
+            {['consultation', 'billing', 'history', 'profile'].map(tab => (
+              <button
+                key={tab}
+                onClick={() => handleTabChange(tab)}
+                className={`px-2 py-3 text-sm font-medium capitalize transition-colors border-b-2 relative z-10 ${
+                  activeTab === tab
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       <div className="flex-1 overflow-auto p-6 max-w-8xl mx-auto w-full space-y-6">
@@ -430,46 +473,22 @@ export const OPDConsultation: React.FC = () => {
             </CardContent>
           </Card>
 
-          {/* Tabs for Consultation, Billing, History, Profile */}
-          <Card className="flex-1 overflow-hidden flex flex-col">
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full flex-1 flex flex-col">
-              <div className="border-b px-4 bg-muted/30">
-                <TabsList className="w-full justify-start h-12 p-0 bg-transparent gap-6">
-                  {['consultation', 'billing', 'history', 'profile'].map(tab => (
-                    <TabsTrigger
-                      key={tab}
-                      value={tab}
-                      className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none h-full px-2 capitalize font-medium"
-                    >
-                      {tab}
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
-              </div>
-
-              <div className="p-0 flex-1 overflow-auto bg-card">
-                <TabsContent value="consultation" className="mt-0 h-full p-6">
-                  <ConsultationTab
-                    visit={visit}
-                    // selectedTemplate={selectedTemplate} // Prop removed in interface update?
-                    // activeResponse={activeResponse}     // Prop removed in interface update?
-                    // onResponseUpdate={mutateResponses}  // Prop removed in interface update?
-                  />
-                </TabsContent>
-
-                <TabsContent value="billing" className="mt-0 h-full p-6">
-                  <BillingTab visit={visit} />
-                </TabsContent>
-
-                <TabsContent value="history" className="mt-0 h-full p-6">
-                  <HistoryTab patientId={visit.patient} />
-                </TabsContent>
-
-                <TabsContent value="profile" className="mt-0 h-full p-6">
-                  <ProfileTab patientId={visit.patient} />
-                </TabsContent>
-              </div>
-            </Tabs>
+          {/* Tab Content */}
+          <Card>
+            <CardContent className="p-6">
+              {activeTab === 'consultation' && (
+                <ConsultationTab visit={visit} />
+              )}
+              {activeTab === 'billing' && (
+                <OPDBillingContent visit={visit} />
+              )}
+              {activeTab === 'history' && (
+                <HistoryTab patientId={visit.patient} />
+              )}
+              {activeTab === 'profile' && (
+                <ProfileTab patientId={visit.patient} />
+              )}
+            </CardContent>
           </Card>
         </div>
       </div>

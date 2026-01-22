@@ -153,9 +153,9 @@ export const Doctors: React.FC = () => {
       key: 'fee',
       cell: (doctor) => (
         <div className="flex flex-col text-sm">
-          <span className="font-medium">${doctor.consultation_fee || 0}</span>
+          <span className="font-medium">₹{doctor.consultation_fee || 0}</span>
           <span className="text-xs text-muted-foreground">
-            Follow-up: ${doctor.follow_up_fee || 0}
+            Follow-up: ₹{doctor.follow_up_fee || 0}
           </span>
         </div>
       ),

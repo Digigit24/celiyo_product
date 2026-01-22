@@ -630,7 +630,7 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
   };
 
   return (
-    <div className="h-full flex flex-col relative">
+    <div className="flex flex-col relative">
       {/* Sticky Header - Encounter Type Toggle */}
       <div className="sticky top-0 z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
         <div className="flex items-center justify-between gap-4 px-4 py-3">
@@ -659,7 +659,7 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
         </div>
       </div>
 
-      <div className="flex-1 overflow-hidden">
+      <div className="overflow-hidden">
         {/* Kanban Board View */}
         <ConsultationBoard
           encounterType={encounterType}

@@ -11,13 +11,14 @@ import { LeadStatusFormDrawer } from '@/components/LeadStatusFormDrawer';
 import { KanbanBoard } from '@/components/KanbanBoard';
 import { LeadImportMappingDialog } from '@/components/LeadImportMappingDialog';
 import { EditableNotesCell } from '@/components/crm/EditableNotesCell';
+import { WhatsAppTemplateModal } from '@/components/WhatsAppTemplateModal';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, RefreshCw, Building2, Phone, Mail, IndianRupee, LayoutGrid, List, Download, Upload, FileSpreadsheet, ChevronDown, MessageCircle, Trash2 } from 'lucide-react';
+import { Plus, RefreshCw, Building2, Phone, Mail, IndianRupee, LayoutGrid, List, Download, Upload, FileSpreadsheet, ChevronDown, MessageCircle, Trash2, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 import type { Lead, LeadsQueryParams, PriorityEnum, LeadStatus } from '@/types/crmTypes';
@@ -56,6 +57,9 @@ export const CRMLeads: React.FC = () => {
   const [selectedLeadIds, setSelectedLeadIds] = useState<Set<number>>(new Set());
   const [isDeleting, setIsDeleting] = useState(false);
   const [hideDuplicates, setHideDuplicates] = useState(true);
+
+  const [templateModalOpen, setTemplateModalOpen] = useState(false);
+  const [selectedLeadForTemplate, setSelectedLeadForTemplate] = useState<Lead | null>(null);
 
   const { data: leadsData, error, isLoading, mutate } = useLeads(queryParams);
   const { data: statusesData, mutate: mutateStatuses } = useLeadStatuses({
@@ -362,6 +366,16 @@ export const CRMLeads: React.FC = () => {
       description: lead.phone,
       duration: 2000,
     });
+  }, []);
+
+  const handleWhatsAppTemplateLead = useCallback((lead: Lead) => {
+    if (!lead.phone) {
+      toast.error('No phone number available for this lead');
+      return;
+    }
+
+    setSelectedLeadForTemplate(lead);
+    setTemplateModalOpen(true);
   }, []);
 
   const handleMoveStatus = useCallback(
@@ -720,6 +734,19 @@ export const CRMLeads: React.FC = () => {
                 <MessageCircle className="h-3 w-3" />
                 WhatsApp
               </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 px-2 text-xs gap-1 text-blue-600 border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleWhatsAppTemplateLead(lead);
+                }}
+                title="Send WhatsApp Template"
+              >
+                <FileText className="h-3 w-3" />
+                Template
+              </Button>
             </div>
           </div>
         ),
@@ -909,6 +936,19 @@ export const CRMLeads: React.FC = () => {
               >
                 <MessageCircle className="h-3.5 w-3.5" />
                 WhatsApp
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 px-3 text-xs gap-1.5 flex-1 text-blue-600 border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleWhatsAppTemplateLead(lead);
+                }}
+                title="Send WhatsApp Template"
+              >
+                <FileText className="h-3.5 w-3.5" />
+                Template
               </Button>
             </div>
           )}
@@ -1210,6 +1250,13 @@ export const CRMLeads: React.FC = () => {
         onClose={() => setImportMappingOpen(false)}
         file={selectedFile}
         onConfirm={handleImportConfirm}
+      />
+
+      <WhatsAppTemplateModal
+        open={templateModalOpen}
+        onOpenChange={setTemplateModalOpen}
+        phoneNumber={selectedLeadForTemplate?.phone || ''}
+        leadName={selectedLeadForTemplate?.name || ''}
       />
     </div>
   );

@@ -66,6 +66,9 @@ export const AdminSettings: React.FC = () => {
   const [contactPhone, setContactPhone] = useState('');
   const [websiteUrl, setWebsiteUrl] = useState('');
 
+  // WhatsApp API settings
+  const [whatsappVendorUid, setWhatsappVendorUid] = useState('');
+
   // Branding settings (all go into settings JSON)
   const [headerBgColor, setHeaderBgColor] = useState('#3b82f6');
   const [headerTextColor, setHeaderTextColor] = useState('#ffffff');
@@ -119,6 +122,9 @@ export const AdminSettings: React.FC = () => {
       if (settings.logo) {
         setLogoPreview(settings.logo);
       }
+
+      // WhatsApp API settings
+      setWhatsappVendorUid(settings.whatsapp_vendor_uid || '');
 
       // Currency settings
       setCurrencyCode(settings.currency_code || 'INR');
@@ -174,6 +180,8 @@ export const AdminSettings: React.FC = () => {
         footer_bg_color: footerBgColor,
         footer_text_color: footerTextColor,
         logo: logoPreview, // Base64 or URL
+        // WhatsApp API settings
+        whatsapp_vendor_uid: whatsappVendorUid,
         // Currency settings
         currency_code: currencyCode,
         currency_symbol: currencySymbol,
@@ -549,6 +557,21 @@ export const AdminSettings: React.FC = () => {
                     onChange={(e) => setWebsiteUrl(e.target.value)}
                   />
                 </div>
+              </div>
+
+              {/* WhatsApp API Configuration */}
+              <div className="space-y-2 pt-4 border-t">
+                <Label htmlFor="whatsappVendorUid">WhatsApp Vendor UID</Label>
+                <Input
+                  id="whatsappVendorUid"
+                  type="text"
+                  placeholder="e.g., 90d99df2-4fc7-4957-a5ac-c5d95b771ee1"
+                  value={whatsappVendorUid}
+                  onChange={(e) => setWhatsappVendorUid(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Your WhatsApp API Vendor UID from the WhatsApp service dashboard
+                </p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">

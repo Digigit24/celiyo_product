@@ -30,6 +30,8 @@ import { toast } from 'sonner';
 import { useOPDTemplate } from '@/hooks/useOPDTemplate';
 import { useIPD } from '@/hooks/useIPD';
 import { useOpdVisit } from '@/hooks/useOpdVisit';
+import { templatesService } from '@/services/whatsapp/templatesService';
+import { authService } from '@/services/authService';
 import { useTenant } from '@/hooks/useTenant';
 import { useUsers } from '@/hooks/useUsers';
 import { useConsultationAttachment } from '@/hooks/useConsultationAttachment';
@@ -306,6 +308,41 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit, onVisit
       toast.success(followupDate ? 'Follow-up scheduled' : 'Follow-up cleared');
       setIsFollowupOpen(false);
       onVisitUpdate?.();
+
+      // Send WhatsApp template if follow-up date is set
+      if (followupDate && visit.patient_details?.mobile_primary) {
+        try {
+          const preferences = authService.getUserPreferences();
+          const defaultTemplateId = preferences?.whatsappDefaults?.followup;
+
+          if (defaultTemplateId) {
+            // Fetch the template details
+            const template = await templatesService.getTemplate(defaultTemplateId);
+
+            // Clean phone number (remove spaces, dashes, etc.)
+            let phone = visit.patient_details.mobile_primary.replace(/[\s\-\(\)]/g, '');
+            if (!phone.startsWith('91') && phone.length === 10) {
+              phone = '91' + phone;
+            }
+
+            // Send template with patient name and follow-up date as parameters
+            await templatesService.sendTemplate({
+              to: phone,
+              template_name: template.name,
+              language: template.language as any,
+              parameters: {
+                '1': visit.patient_details.full_name || 'Patient',
+                '2': format(followupDate, 'dd MMM yyyy'),
+              },
+            });
+
+            toast.success('Follow-up reminder sent via WhatsApp');
+          }
+        } catch (waError: any) {
+          console.error('Failed to send WhatsApp template:', waError);
+          // Don't show error toast - follow-up was saved successfully
+        }
+      }
     } catch (err: any) {
       toast.error(err.message || 'Failed to save follow-up');
     } finally {

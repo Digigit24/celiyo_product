@@ -391,17 +391,6 @@ export const OPDConsultation: React.FC = () => {
               {visit.status?.replace('_', ' ')}
             </Badge>
 
-            {/* Follow-up Button */}
-            <Button
-              variant={visit.follow_up_date ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setIsFollowupOpen(true)}
-              className={`gap-2 ${visit.follow_up_date ? 'bg-purple-600 hover:bg-purple-700 text-white' : ''}`}
-            >
-              <CalendarPlus className="h-4 w-4" />
-              {visit.follow_up_date ? format(new Date(visit.follow_up_date), 'dd MMM') : 'Follow-up'}
-            </Button>
-
             {/* Action Buttons based on Status */}
             {visit.status === 'waiting' && (
               <Button onClick={handleStartConsultation} disabled={isSaving} className="gap-2 bg-blue-600 hover:bg-blue-700 text-white">
@@ -445,7 +434,24 @@ export const OPDConsultation: React.FC = () => {
         <div className="grid grid-cols-1 gap-6">
           {/* Patient Quick Info Card */}
           <Card className="bg-card/50">
-            <CardContent className="p-4 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <CardContent className="p-4">
+              {/* Follow-up Button - Prominent */}
+              <div className="flex items-center gap-3 mb-4 pb-4 border-b">
+                <span className="text-sm font-medium">Next Follow-up:</span>
+                <Button
+                  variant={visit.follow_up_date ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setIsFollowupOpen(true)}
+                  className={`gap-2 ${visit.follow_up_date ? 'bg-purple-600 hover:bg-purple-700 text-white' : ''}`}
+                >
+                  <CalendarPlus className="h-4 w-4" />
+                  {visit.follow_up_date ? format(new Date(visit.follow_up_date), 'dd MMM yyyy') : 'Set Follow-up'}
+                </Button>
+                {visit.follow_up_notes && (
+                  <span className="text-xs text-muted-foreground">{visit.follow_up_notes}</span>
+                )}
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
               <div className="flex flex-col gap-1">
                 <span className="text-xs text-muted-foreground">Blood Group</span>
                 <span className="font-medium flex items-center gap-2">
@@ -469,6 +475,7 @@ export const OPDConsultation: React.FC = () => {
                 <span className={`font-medium ${visit.priority === 'high' || visit.priority === 'urgent' ? 'text-red-600' : ''}`}>
                   {visit.priority?.toUpperCase()}
                 </span>
+              </div>
               </div>
             </CardContent>
           </Card>

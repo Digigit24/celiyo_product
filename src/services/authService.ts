@@ -93,6 +93,24 @@ class AuthService {
         }
       }
 
+      // Fetch tenant settings to get whatsapp_vendor_uid
+      if (user.tenant?.id) {
+        try {
+          console.log('🔄 Fetching tenant settings...');
+          const tenantDetailUrl = API_CONFIG.AUTH.TENANTS.DETAIL.replace(':id', user.tenant.id);
+          const tenantResponse = await authClient.get(tenantDetailUrl);
+          const tenantSettings = tenantResponse.data?.settings || {};
+
+          // Store whatsapp_vendor_uid in tenant object
+          if (tenantSettings.whatsapp_vendor_uid) {
+            user.tenant.whatsapp_vendor_uid = tenantSettings.whatsapp_vendor_uid;
+            console.log('✅ WhatsApp Vendor UID fetched:', tenantSettings.whatsapp_vendor_uid);
+          }
+        } catch (tenantError) {
+          console.warn('⚠️ Failed to fetch tenant settings:', tenantError);
+        }
+      }
+
       // Apply theme preference
       if (user.preferences?.theme) {
         console.log('🎨 Applying theme preference:', user.preferences.theme);

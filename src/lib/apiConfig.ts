@@ -20,6 +20,9 @@ export const API_CONFIG = {
 
   // ✅ WebSocket URL for real-time WhatsApp updates
   WHATSAPP_WS_URL: import.meta.env.VITE_WHATSAPP_WS_URL || 'wss://whatsapp.celiyo.com',
+
+  // External WhatsApp API (Laravel backend with vendor UID in URL path)
+  WHATSAPP_EXTERNAL_BASE_URL: import.meta.env.VITE_WHATSAPP_EXTERNAL_BASE_URL || 'https://whatsappapi.celiyo.com/api',
   
   
   // For development, set in .env.local instead of editing code:

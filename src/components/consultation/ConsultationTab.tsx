@@ -32,7 +32,6 @@ import { useIPD } from '@/hooks/useIPD';
 import { useOpdVisit } from '@/hooks/useOpdVisit';
 import { templatesService } from '@/services/whatsapp/templatesService';
 import { authService } from '@/services/authService';
-import { patientService } from '@/services/patient.service';
 import { useTenant } from '@/hooks/useTenant';
 import { useUsers } from '@/hooks/useUsers';
 import { useConsultationAttachment } from '@/hooks/useConsultationAttachment';
@@ -312,61 +311,37 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit, onVisit
 
       // Send WhatsApp template if follow-up date is set
       if (followupDate) {
-        // Try to get phone from visit.patient_details, otherwise fetch patient
-        let patientPhone = visit.patient_details?.mobile_primary;
-        console.log('📱 Attempting to send WhatsApp follow-up:', { patientPhone, visitPatientId: visit.patient, followupDate });
-
-        // If no phone in visit details, fetch patient data
-        if (!patientPhone && visit.patient) {
-          try {
-            console.log('🔍 Fetching patient details for ID:', visit.patient);
-            const patientData = await patientService.getPatient(visit.patient);
-            patientPhone = patientData.mobile_primary;
-            console.log('✅ Patient fetched, phone:', patientPhone);
-          } catch (patientErr) {
-            console.error('❌ Failed to fetch patient:', patientErr);
-          }
-        }
+        const patientPhone = visit.patient_details?.mobile_primary;
 
         if (!patientPhone) {
-          console.warn('No patient phone number available');
-          toast.warning('No phone number - WhatsApp not sent');
+          console.warn('No patient phone number in visit data');
         } else {
           try {
             const preferences = authService.getUserPreferences();
-            console.log('📋 User preferences:', preferences);
             const defaultTemplateId = preferences?.whatsappDefaults?.followup;
-            console.log('📝 Default followup template ID:', defaultTemplateId);
 
             if (!defaultTemplateId) {
-              console.warn('No default followup template configured');
               toast.warning('Set default followup template in Admin Settings');
             } else {
-              // Fetch the template details
-              console.log('🔍 Fetching template:', defaultTemplateId);
               const template = await templatesService.getTemplate(defaultTemplateId);
-              console.log('✅ Template fetched:', template.name, template.language);
 
-              // Clean phone number (remove spaces, dashes, etc.)
+              // Clean phone number
               let phone = patientPhone.replace(/[\s\-\(\)]/g, '');
               if (!phone.startsWith('91') && phone.length === 10) {
                 phone = '91' + phone;
               }
-              console.log('📞 Sending to phone:', phone);
 
-              // Send template directly without parameters
-              const result = await templatesService.sendTemplate({
+              await templatesService.sendTemplate({
                 to: phone,
                 template_name: template.name,
                 language: template.language as any,
               });
-              console.log('✅ WhatsApp sent:', result);
 
               toast.success('Follow-up reminder sent via WhatsApp');
             }
           } catch (waError: any) {
-            console.error('❌ Failed to send WhatsApp template:', waError);
-            toast.error('WhatsApp send failed: ' + (waError.message || 'Unknown error'));
+            console.error('WhatsApp send failed:', waError);
+            toast.error('WhatsApp send failed');
           }
         }
       }

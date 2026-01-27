@@ -25,9 +25,12 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
-import { 
-  ArrowLeft, Loader2, User, Phone, Calendar, Activity, Droplet, 
-  PlusCircle, Eye, ChevronLeft, ChevronRight, Play, CheckCircle 
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  ArrowLeft, Loader2, User, Phone, Calendar, Activity, Droplet,
+  PlusCircle, Eye, ChevronLeft, ChevronRight, Play, CheckCircle, CalendarPlus, X
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ConsultationTab } from '@/components/consultation/ConsultationTab';
@@ -79,6 +82,10 @@ export const OPDConsultation: React.FC = () => {
   const [isDefaultTemplateApplied, setIsDefaultTemplateApplied] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [completeNote, setCompleteNote] = useState('');
+  const [followupDate, setFollowupDate] = useState<Date | undefined>(undefined);
+  const [followupNotes, setFollowupNotes] = useState('');
+  const [isFollowupOpen, setIsFollowupOpen] = useState(false);
+  const [isSavingFollowup, setIsSavingFollowup] = useState(false);
 
   // Update URL hash when tab changes
   const handleTabChange = (tab: string) => {
@@ -158,6 +165,42 @@ export const OPDConsultation: React.FC = () => {
     } finally {
       setIsSaving(false);
     }
+  };
+
+  // Initialize followup state from visit data
+  useEffect(() => {
+    if (visit) {
+      if (visit.follow_up_date) {
+        setFollowupDate(new Date(visit.follow_up_date));
+      } else {
+        setFollowupDate(undefined);
+      }
+      setFollowupNotes(visit.follow_up_notes || '');
+    }
+  }, [visit?.id, visit?.follow_up_date, visit?.follow_up_notes]);
+
+  const handleSaveFollowup = async () => {
+    if (!visit) return;
+    setIsSavingFollowup(true);
+    try {
+      await patchOpdVisit(visit.id, {
+        follow_up_required: !!followupDate,
+        follow_up_date: followupDate ? format(followupDate, 'yyyy-MM-dd') : null,
+        follow_up_notes: followupNotes || null,
+      });
+      toast.success(followupDate ? 'Follow-up scheduled' : 'Follow-up cleared');
+      setIsFollowupOpen(false);
+      mutateVisit();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to save follow-up');
+    } finally {
+      setIsSavingFollowup(false);
+    }
+  };
+
+  const handleClearFollowup = async () => {
+    setFollowupDate(undefined);
+    setFollowupNotes('');
   };
 
   const { data: templatesData, isLoading: isLoadingTemplates } = useTemplates({ is_active: true });
@@ -348,6 +391,59 @@ export const OPDConsultation: React.FC = () => {
             >
               {visit.status?.replace('_', ' ')}
             </Badge>
+
+            {/* Follow-up Button */}
+            <Popover open={isFollowupOpen} onOpenChange={setIsFollowupOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant={visit.follow_up_date ? 'default' : 'outline'}
+                  size="sm"
+                  className={`gap-2 ${visit.follow_up_date ? 'bg-purple-600 hover:bg-purple-700 text-white' : ''}`}
+                >
+                  <CalendarPlus className="h-4 w-4" />
+                  {visit.follow_up_date ? format(new Date(visit.follow_up_date), 'dd MMM') : 'Follow-up'}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <div className="p-3 border-b">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-medium text-sm">Schedule Follow-up</h4>
+                    {followupDate && (
+                      <Button variant="ghost" size="sm" onClick={handleClearFollowup} className="h-6 px-2 text-xs text-muted-foreground">
+                        <X className="h-3 w-3 mr-1" /> Clear
+                      </Button>
+                    )}
+                  </div>
+                </div>
+                <CalendarComponent
+                  mode="single"
+                  selected={followupDate}
+                  onSelect={setFollowupDate}
+                  disabled={(date) => date < new Date()}
+                  initialFocus
+                />
+                <div className="p-3 border-t space-y-3">
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Notes (optional)</Label>
+                    <Textarea
+                      placeholder="Follow-up instructions..."
+                      value={followupNotes}
+                      onChange={(e) => setFollowupNotes(e.target.value)}
+                      className="mt-1 h-16 text-sm resize-none"
+                    />
+                  </div>
+                  <Button
+                    onClick={handleSaveFollowup}
+                    disabled={isSavingFollowup}
+                    className="w-full"
+                    size="sm"
+                  >
+                    {isSavingFollowup && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                    {followupDate ? 'Save Follow-up' : 'Clear Follow-up'}
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
 
             {/* Action Buttons based on Status */}
             {visit.status === 'waiting' && (

@@ -30,6 +30,7 @@ import { toast } from 'sonner';
 import { useOPDTemplate } from '@/hooks/useOPDTemplate';
 import { useIPD } from '@/hooks/useIPD';
 import { useOpdVisit } from '@/hooks/useOpdVisit';
+import { usePatient } from '@/hooks/usePatient';
 import { templatesService } from '@/services/whatsapp/templatesService';
 import { authService } from '@/services/authService';
 import { useTenant } from '@/hooks/useTenant';
@@ -102,6 +103,10 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit, onVisit
   const previewRef = useRef<HTMLDivElement>(null);
 
   const { patchOpdVisit } = useOpdVisit();
+
+  // Fetch patient details (for phone number)
+  const { usePatientById } = usePatient();
+  const { data: patientData } = usePatientById(visit.patient);
 
   // Fetch active admission for the patient
   const { data: admissionsData } = useAdmissions({

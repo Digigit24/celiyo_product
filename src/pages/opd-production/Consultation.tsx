@@ -519,7 +519,7 @@ export const OPDConsultation: React.FC = () => {
           <Card>
             <CardContent className="p-6">
               {activeTab === 'consultation' && (
-                <ConsultationTab visit={visit} onSetFollowup={() => setIsFollowupOpen(true)} />
+                <ConsultationTab visit={visit} onVisitUpdate={() => mutateVisit()} />
               )}
               {activeTab === 'billing' && (
                 <OPDBillingContent visit={visit} />

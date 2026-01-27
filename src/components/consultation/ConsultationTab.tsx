@@ -14,11 +14,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Loader2, Save, Download, Printer, Building2, Stethoscope, CalendarPlus } from 'lucide-react';
+import { Loader2, Save, Download, Printer, Building2, Stethoscope, CalendarPlus, X } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import { Calendar } from '@/components/ui/calendar';
+import { format } from 'date-fns';
 import { OpdVisit } from '@/types/opdVisit.types';
 import { toast } from 'sonner';
 import { useOPDTemplate } from '@/hooks/useOPDTemplate';
 import { useIPD } from '@/hooks/useIPD';
+import { useOpdVisit } from '@/hooks/useOpdVisit';
 import { useTenant } from '@/hooks/useTenant';
 import { useUsers } from '@/hooks/useUsers';
 import { useConsultationAttachment } from '@/hooks/useConsultationAttachment';
@@ -45,10 +56,10 @@ interface FileAttachment {
 
 interface ConsultationTabProps {
   visit: OpdVisit;
-  onSetFollowup?: () => void;
+  onVisitUpdate?: () => void;
 }
 
-export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit, onSetFollowup }) => {
+export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit, onVisitUpdate }) => {
   const {
     useTemplates,
     useTemplate,
@@ -79,8 +90,16 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit, onSetFo
   const [encounterType, setEncounterType] = useState<'visit' | 'admission'>('visit');
   const [requisitionSidebarOpen, setRequisitionSidebarOpen] = useState(false);
   const [templateDrawerOpen, setTemplateDrawerOpen] = useState(false);
+  const [isFollowupOpen, setIsFollowupOpen] = useState(false);
+  const [followupDate, setFollowupDate] = useState<Date | undefined>(
+    visit.follow_up_date ? new Date(visit.follow_up_date) : undefined
+  );
+  const [followupNotes, setFollowupNotes] = useState(visit.follow_up_notes || '');
+  const [isSavingFollowup, setIsSavingFollowup] = useState(false);
 
   const previewRef = useRef<HTMLDivElement>(null);
+
+  const { patchOpdVisit } = useOpdVisit();
 
   // Fetch active admission for the patient
   const { data: admissionsData } = useAdmissions({
@@ -274,6 +293,30 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit, onSetFo
   const handleDownloadFile = useCallback((file: any) => {
     downloadAttachment(file);
   }, [downloadAttachment]);
+
+  // Handle follow-up save
+  const handleSaveFollowup = async () => {
+    setIsSavingFollowup(true);
+    try {
+      await patchOpdVisit(visit.id, {
+        follow_up_required: !!followupDate,
+        follow_up_date: followupDate ? format(followupDate, 'yyyy-MM-dd') : null,
+        follow_up_notes: followupNotes || null,
+      });
+      toast.success(followupDate ? 'Follow-up scheduled' : 'Follow-up cleared');
+      setIsFollowupOpen(false);
+      onVisitUpdate?.();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to save follow-up');
+    } finally {
+      setIsSavingFollowup(false);
+    }
+  };
+
+  const handleClearFollowup = () => {
+    setFollowupDate(undefined);
+    setFollowupNotes('');
+  };
 
   const handlePrint = useCallback(() => {
     if (!previewRef.current) return;
@@ -660,17 +703,15 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit, onSetFo
             )}
 
             {/* Follow-up Button */}
-            {onSetFollowup && (
-              <Button
-                variant={visit.follow_up_date ? 'default' : 'outline'}
-                size="sm"
-                onClick={onSetFollowup}
-                className={`gap-2 ${visit.follow_up_date ? 'bg-purple-600 hover:bg-purple-700 text-white' : ''}`}
-              >
-                <CalendarPlus className="h-4 w-4" />
-                {visit.follow_up_date ? `Follow-up: ${new Date(visit.follow_up_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}` : 'Set Follow-up'}
-              </Button>
-            )}
+            <Button
+              variant={visit.follow_up_date ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setIsFollowupOpen(true)}
+              className={`gap-2 ${visit.follow_up_date ? 'bg-purple-600 hover:bg-purple-700 text-white' : ''}`}
+            >
+              <CalendarPlus className="h-4 w-4" />
+              {visit.follow_up_date ? `Follow-up: ${new Date(visit.follow_up_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}` : 'Set Follow-up'}
+            </Button>
           </div>
         </div>
       </div>
@@ -813,6 +854,63 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit, onSetFo
           objectId={currentObjectId}
         />
       )}
+
+      {/* Follow-up Dialog */}
+      <Dialog open={isFollowupOpen} onOpenChange={setIsFollowupOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CalendarPlus className="h-5 w-5" />
+              Schedule Follow-up
+            </DialogTitle>
+            <DialogDescription>
+              Set the next follow-up date for this patient
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="flex justify-center">
+              <Calendar
+                mode="single"
+                selected={followupDate}
+                onSelect={setFollowupDate}
+                disabled={(date) => date < new Date()}
+                className="rounded-md border"
+              />
+            </div>
+            <div>
+              <Label className="text-sm">Notes (optional)</Label>
+              <Textarea
+                placeholder="Follow-up instructions..."
+                value={followupNotes}
+                onChange={(e) => setFollowupNotes(e.target.value)}
+                className="mt-2 h-20 resize-none"
+              />
+            </div>
+          </div>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            {visit.follow_up_date && (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  handleClearFollowup();
+                  handleSaveFollowup();
+                }}
+                className="text-destructive hover:text-destructive"
+              >
+                Clear Follow-up
+              </Button>
+            )}
+            <Button
+              onClick={handleSaveFollowup}
+              disabled={isSavingFollowup || !followupDate}
+              className="bg-purple-600 hover:bg-purple-700"
+            >
+              {isSavingFollowup && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Save Follow-up
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

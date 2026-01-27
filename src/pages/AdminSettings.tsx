@@ -7,15 +7,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { RefreshCw, Loader2, AlertCircle, Save, Building2, Database, Settings as SettingsIcon, Image as ImageIcon, X, User, Plus, Trash2, Moon, Sun, IndianRupee } from 'lucide-react';
+import { RefreshCw, Loader2, AlertCircle, Save, Building2, Database, Settings as SettingsIcon, Image as ImageIcon, X, User, Plus, Trash2, Moon, Sun, IndianRupee, MessageSquare } from 'lucide-react';
 import { useTenant } from '@/hooks/useTenant';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import type { TenantUpdateData, TenantSettings } from '@/types/tenant.types';
-import type { UserPreferences } from '@/types/user.types';
+import type { UserPreferences, WhatsAppDefaults } from '@/types/user.types';
 import { authClient } from '@/lib/client';
 import { API_CONFIG, buildUrl } from '@/lib/apiConfig';
 import { CurrencySettingsTab } from '@/components/admin-settings/CurrencySettingsTab';
+import { WhatsAppDefaultsTab } from '@/components/admin-settings/WhatsAppDefaultsTab';
 
 export const AdminSettings: React.FC = () => {
   // Get tenant from current session
@@ -40,6 +41,7 @@ export const AdminSettings: React.FC = () => {
   const [isSavingPreferences, setIsSavingPreferences] = useState<boolean>(false);
   const [newPrefKey, setNewPrefKey] = useState<string>('');
   const [newPrefValue, setNewPrefValue] = useState<string>('');
+  const [whatsappDefaults, setWhatsappDefaults] = useState<WhatsAppDefaults>({});
 
   // Basic tenant fields (direct fields, not in settings)
   const [name, setName] = useState('');
@@ -218,6 +220,8 @@ export const AdminSettings: React.FC = () => {
       setUserPreferencesData(response.data);
       // Initialize editedPreferences with current preferences or empty object
       setEditedPreferences(response.data?.preferences || {});
+      // Initialize whatsappDefaults from preferences
+      setWhatsappDefaults(response.data?.preferences?.whatsappDefaults || {});
       console.log('User preferences data:', response.data);
     } catch (err: any) {
       const errorMessage = err.response?.data?.error || err.message || 'Failed to fetch user preferences';
@@ -280,6 +284,39 @@ export const AdminSettings: React.FC = () => {
       return updated;
     });
     toast.success('Preference removed');
+  };
+
+  // Save WhatsApp defaults
+  const saveWhatsAppDefaults = async () => {
+    if (!userId) {
+      toast.error('No user ID found');
+      return;
+    }
+
+    setIsSavingPreferences(true);
+
+    try {
+      const url = buildUrl(API_CONFIG.AUTH.USERS.UPDATE, { id: userId }, 'auth');
+      const updatedPreferences = {
+        ...editedPreferences,
+        whatsappDefaults,
+      };
+      const response = await authClient.patch(url, { preferences: updatedPreferences });
+      setUserPreferencesData(response.data);
+      setEditedPreferences(response.data?.preferences || {});
+      setWhatsappDefaults(response.data?.preferences?.whatsappDefaults || {});
+
+      // Update local storage and apply preferences immediately
+      const { authService } = await import('@/services/authService');
+      authService.updateUserPreferences(response.data?.preferences || {});
+
+      toast.success('WhatsApp defaults saved successfully');
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.error || err.message || 'Failed to save WhatsApp defaults';
+      toast.error(errorMessage);
+    } finally {
+      setIsSavingPreferences(false);
+    }
   };
 
   // Update preference value
@@ -385,11 +422,15 @@ export const AdminSettings: React.FC = () => {
       {/* Tenant Settings Forms */}
       {tenantData && (
         <Tabs defaultValue="tenant" className="w-full max-w-6xl">
-          <TabsList className="grid w-full grid-cols-3 max-w-2xl">
+          <TabsList className="grid w-full grid-cols-4 max-w-3xl">
             <TabsTrigger value="tenant">Tenant Settings</TabsTrigger>
             <TabsTrigger value="currency">
               <IndianRupee className="h-4 w-4 mr-2" />
               Currency
+            </TabsTrigger>
+            <TabsTrigger value="whatsapp" onClick={() => fetchUserPreferences()}>
+              <MessageSquare className="h-4 w-4 mr-2" />
+              WhatsApp
             </TabsTrigger>
             <TabsTrigger value="user" onClick={() => fetchUserPreferences()}>
               <User className="h-4 w-4 mr-2" />
@@ -835,6 +876,16 @@ export const AdminSettings: React.FC = () => {
                 Save Currency Settings
               </Button>
             </div>
+          </TabsContent>
+
+          {/* WhatsApp Defaults Tab */}
+          <TabsContent value="whatsapp">
+            <WhatsAppDefaultsTab
+              whatsappDefaults={whatsappDefaults}
+              onWhatsAppDefaultsChange={setWhatsappDefaults}
+              onSave={saveWhatsAppDefaults}
+              isSaving={isSavingPreferences}
+            />
           </TabsContent>
 
           {/* User Preferences Tab */}

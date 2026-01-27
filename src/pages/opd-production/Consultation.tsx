@@ -25,7 +25,6 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -393,57 +392,15 @@ export const OPDConsultation: React.FC = () => {
             </Badge>
 
             {/* Follow-up Button */}
-            <Popover open={isFollowupOpen} onOpenChange={setIsFollowupOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant={visit.follow_up_date ? 'default' : 'outline'}
-                  size="sm"
-                  className={`gap-2 ${visit.follow_up_date ? 'bg-purple-600 hover:bg-purple-700 text-white' : ''}`}
-                >
-                  <CalendarPlus className="h-4 w-4" />
-                  {visit.follow_up_date ? format(new Date(visit.follow_up_date), 'dd MMM') : 'Follow-up'}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="end">
-                <div className="p-3 border-b">
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-medium text-sm">Schedule Follow-up</h4>
-                    {followupDate && (
-                      <Button variant="ghost" size="sm" onClick={handleClearFollowup} className="h-6 px-2 text-xs text-muted-foreground">
-                        <X className="h-3 w-3 mr-1" /> Clear
-                      </Button>
-                    )}
-                  </div>
-                </div>
-                <CalendarComponent
-                  mode="single"
-                  selected={followupDate}
-                  onSelect={setFollowupDate}
-                  disabled={(date) => date < new Date()}
-                  initialFocus
-                />
-                <div className="p-3 border-t space-y-3">
-                  <div>
-                    <Label className="text-xs text-muted-foreground">Notes (optional)</Label>
-                    <Textarea
-                      placeholder="Follow-up instructions..."
-                      value={followupNotes}
-                      onChange={(e) => setFollowupNotes(e.target.value)}
-                      className="mt-1 h-16 text-sm resize-none"
-                    />
-                  </div>
-                  <Button
-                    onClick={handleSaveFollowup}
-                    disabled={isSavingFollowup}
-                    className="w-full"
-                    size="sm"
-                  >
-                    {isSavingFollowup && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                    {followupDate ? 'Save Follow-up' : 'Clear Follow-up'}
-                  </Button>
-                </div>
-              </PopoverContent>
-            </Popover>
+            <Button
+              variant={visit.follow_up_date ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setIsFollowupOpen(true)}
+              className={`gap-2 ${visit.follow_up_date ? 'bg-purple-600 hover:bg-purple-700 text-white' : ''}`}
+            >
+              <CalendarPlus className="h-4 w-4" />
+              {visit.follow_up_date ? format(new Date(visit.follow_up_date), 'dd MMM') : 'Follow-up'}
+            </Button>
 
             {/* Action Buttons based on Status */}
             {visit.status === 'waiting' && (
@@ -613,6 +570,63 @@ export const OPDConsultation: React.FC = () => {
             </Button>
             <Button onClick={() => handleAddNewResponse(false)} disabled={isSaving}>
               {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Create Note
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Follow-up Dialog */}
+      <Dialog open={isFollowupOpen} onOpenChange={setIsFollowupOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CalendarPlus className="h-5 w-5" />
+              Schedule Follow-up
+            </DialogTitle>
+            <DialogDescription>
+              Set the next follow-up date for this patient
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="flex justify-center">
+              <CalendarComponent
+                mode="single"
+                selected={followupDate}
+                onSelect={setFollowupDate}
+                disabled={(date) => date < new Date()}
+                className="rounded-md border"
+              />
+            </div>
+            <div>
+              <Label className="text-sm">Notes (optional)</Label>
+              <Textarea
+                placeholder="Follow-up instructions..."
+                value={followupNotes}
+                onChange={(e) => setFollowupNotes(e.target.value)}
+                className="mt-2 h-20 resize-none"
+              />
+            </div>
+          </div>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            {visit.follow_up_date && (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  handleClearFollowup();
+                  handleSaveFollowup();
+                }}
+                className="text-destructive hover:text-destructive"
+              >
+                Clear Follow-up
+              </Button>
+            )}
+            <Button
+              onClick={handleSaveFollowup}
+              disabled={isSavingFollowup || !followupDate}
+              className="bg-purple-600 hover:bg-purple-700"
+            >
+              {isSavingFollowup && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Save Follow-up
             </Button>
           </DialogFooter>
         </DialogContent>

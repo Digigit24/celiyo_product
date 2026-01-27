@@ -316,7 +316,7 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit, onVisit
 
       // Send WhatsApp template if follow-up date is set
       if (followupDate) {
-        const patientPhone = visit.patient_details?.mobile_primary;
+        const patientPhone = patientData?.mobile_primary || visit.patient_details?.mobile_primary;
 
         if (!patientPhone) {
           toast.warning('Patient phone number not available');

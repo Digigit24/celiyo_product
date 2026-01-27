@@ -325,15 +325,11 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit, onVisit
               phone = '91' + phone;
             }
 
-            // Send template with patient name and follow-up date as parameters
+            // Send template directly without parameters
             await templatesService.sendTemplate({
               to: phone,
               template_name: template.name,
               language: template.language as any,
-              parameters: {
-                '1': visit.patient_details.full_name || 'Patient',
-                '2': format(followupDate, 'dd MMM yyyy'),
-              },
             });
 
             toast.success('Follow-up reminder sent via WhatsApp');

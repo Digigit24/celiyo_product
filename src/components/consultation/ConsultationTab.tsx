@@ -32,6 +32,7 @@ import { useIPD } from '@/hooks/useIPD';
 import { useOpdVisit } from '@/hooks/useOpdVisit';
 import { templatesService } from '@/services/whatsapp/templatesService';
 import { authService } from '@/services/authService';
+import { patientService } from '@/services/patient.service';
 import { useTenant } from '@/hooks/useTenant';
 import { useUsers } from '@/hooks/useUsers';
 import { useConsultationAttachment } from '@/hooks/useConsultationAttachment';
@@ -311,8 +312,21 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit, onVisit
 
       // Send WhatsApp template if follow-up date is set
       if (followupDate) {
-        const patientPhone = visit.patient_details?.mobile_primary;
-        console.log('📱 Attempting to send WhatsApp follow-up:', { patientPhone, followupDate });
+        // Try to get phone from visit.patient_details, otherwise fetch patient
+        let patientPhone = visit.patient_details?.mobile_primary;
+        console.log('📱 Attempting to send WhatsApp follow-up:', { patientPhone, visitPatientId: visit.patient, followupDate });
+
+        // If no phone in visit details, fetch patient data
+        if (!patientPhone && visit.patient) {
+          try {
+            console.log('🔍 Fetching patient details for ID:', visit.patient);
+            const patientData = await patientService.getPatient(visit.patient);
+            patientPhone = patientData.mobile_primary;
+            console.log('✅ Patient fetched, phone:', patientPhone);
+          } catch (patientErr) {
+            console.error('❌ Failed to fetch patient:', patientErr);
+          }
+        }
 
         if (!patientPhone) {
           console.warn('No patient phone number available');

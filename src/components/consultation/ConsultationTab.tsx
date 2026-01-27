@@ -314,15 +314,15 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit, onVisit
         const patientPhone = visit.patient_details?.mobile_primary;
 
         if (!patientPhone) {
-          console.warn('No patient phone number in visit data');
+          toast.warning('Patient phone number not available');
         } else {
-          try {
-            const preferences = authService.getUserPreferences();
-            const defaultTemplateId = preferences?.whatsappDefaults?.followup;
+          const preferences = authService.getUserPreferences();
+          const defaultTemplateId = preferences?.whatsappDefaults?.followup;
 
-            if (!defaultTemplateId) {
-              toast.warning('Set default followup template in Admin Settings');
-            } else {
+          if (!defaultTemplateId) {
+            toast.warning('Set default followup template in Admin Settings');
+          } else {
+            try {
               const template = await templatesService.getTemplate(defaultTemplateId);
 
               // Clean phone number
@@ -337,11 +337,11 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit, onVisit
                 language: template.language as any,
               });
 
-              toast.success('Follow-up reminder sent via WhatsApp');
+              toast.success('WhatsApp reminder sent');
+            } catch (waError: any) {
+              console.error('WhatsApp send failed:', waError);
+              toast.error('WhatsApp failed: ' + (waError.message || 'Unknown error'));
             }
-          } catch (waError: any) {
-            console.error('WhatsApp send failed:', waError);
-            toast.error('WhatsApp send failed');
           }
         }
       }

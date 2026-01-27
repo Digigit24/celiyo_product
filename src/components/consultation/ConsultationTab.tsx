@@ -310,33 +310,50 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit, onVisit
       onVisitUpdate?.();
 
       // Send WhatsApp template if follow-up date is set
-      if (followupDate && visit.patient_details?.mobile_primary) {
-        try {
-          const preferences = authService.getUserPreferences();
-          const defaultTemplateId = preferences?.whatsappDefaults?.followup;
+      if (followupDate) {
+        const patientPhone = visit.patient_details?.mobile_primary;
+        console.log('📱 Attempting to send WhatsApp follow-up:', { patientPhone, followupDate });
 
-          if (defaultTemplateId) {
-            // Fetch the template details
-            const template = await templatesService.getTemplate(defaultTemplateId);
+        if (!patientPhone) {
+          console.warn('No patient phone number available');
+          toast.warning('No phone number - WhatsApp not sent');
+        } else {
+          try {
+            const preferences = authService.getUserPreferences();
+            console.log('📋 User preferences:', preferences);
+            const defaultTemplateId = preferences?.whatsappDefaults?.followup;
+            console.log('📝 Default followup template ID:', defaultTemplateId);
 
-            // Clean phone number (remove spaces, dashes, etc.)
-            let phone = visit.patient_details.mobile_primary.replace(/[\s\-\(\)]/g, '');
-            if (!phone.startsWith('91') && phone.length === 10) {
-              phone = '91' + phone;
+            if (!defaultTemplateId) {
+              console.warn('No default followup template configured');
+              toast.warning('Set default followup template in Admin Settings');
+            } else {
+              // Fetch the template details
+              console.log('🔍 Fetching template:', defaultTemplateId);
+              const template = await templatesService.getTemplate(defaultTemplateId);
+              console.log('✅ Template fetched:', template.name, template.language);
+
+              // Clean phone number (remove spaces, dashes, etc.)
+              let phone = patientPhone.replace(/[\s\-\(\)]/g, '');
+              if (!phone.startsWith('91') && phone.length === 10) {
+                phone = '91' + phone;
+              }
+              console.log('📞 Sending to phone:', phone);
+
+              // Send template directly without parameters
+              const result = await templatesService.sendTemplate({
+                to: phone,
+                template_name: template.name,
+                language: template.language as any,
+              });
+              console.log('✅ WhatsApp sent:', result);
+
+              toast.success('Follow-up reminder sent via WhatsApp');
             }
-
-            // Send template directly without parameters
-            await templatesService.sendTemplate({
-              to: phone,
-              template_name: template.name,
-              language: template.language as any,
-            });
-
-            toast.success('Follow-up reminder sent via WhatsApp');
+          } catch (waError: any) {
+            console.error('❌ Failed to send WhatsApp template:', waError);
+            toast.error('WhatsApp send failed: ' + (waError.message || 'Unknown error'));
           }
-        } catch (waError: any) {
-          console.error('Failed to send WhatsApp template:', waError);
-          // Don't show error toast - follow-up was saved successfully
         }
       }
     } catch (err: any) {

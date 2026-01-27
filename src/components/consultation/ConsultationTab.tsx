@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Loader2, Save, Download, Printer, Building2, Stethoscope } from 'lucide-react';
+import { Loader2, Save, Download, Printer, Building2, Stethoscope, CalendarPlus } from 'lucide-react';
 import { OpdVisit } from '@/types/opdVisit.types';
 import { toast } from 'sonner';
 import { useOPDTemplate } from '@/hooks/useOPDTemplate';
@@ -45,9 +45,10 @@ interface FileAttachment {
 
 interface ConsultationTabProps {
   visit: OpdVisit;
+  onSetFollowup?: () => void;
 }
 
-export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
+export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit, onSetFollowup }) => {
   const {
     useTemplates,
     useTemplate,
@@ -650,12 +651,27 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit }) => {
             </div>
           </div>
 
-          {encounterType === 'admission' && activeAdmission && (
-            <div className="hidden md:flex items-center gap-2 text-xs text-muted-foreground px-3 py-1.5 bg-muted/50 rounded-full">
-              <Building2 className="h-3 w-3" />
-              <span>Admission: {activeAdmission.admission_id}</span>
-            </div>
-          )}
+          <div className="flex items-center gap-3">
+            {encounterType === 'admission' && activeAdmission && (
+              <div className="hidden md:flex items-center gap-2 text-xs text-muted-foreground px-3 py-1.5 bg-muted/50 rounded-full">
+                <Building2 className="h-3 w-3" />
+                <span>Admission: {activeAdmission.admission_id}</span>
+              </div>
+            )}
+
+            {/* Follow-up Button */}
+            {onSetFollowup && (
+              <Button
+                variant={visit.follow_up_date ? 'default' : 'outline'}
+                size="sm"
+                onClick={onSetFollowup}
+                className={`gap-2 ${visit.follow_up_date ? 'bg-purple-600 hover:bg-purple-700 text-white' : ''}`}
+              >
+                <CalendarPlus className="h-4 w-4" />
+                {visit.follow_up_date ? `Follow-up: ${new Date(visit.follow_up_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}` : 'Set Follow-up'}
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 

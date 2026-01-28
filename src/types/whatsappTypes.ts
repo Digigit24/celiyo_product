@@ -291,14 +291,15 @@ export interface TemplateComponent {
 }
 
 export interface Template {
-  id: number;
-  tenant_id: string;
+  id: number | string;
+  tenant_id?: string;
   template_id?: string;
   name: string;
   language: string;
   category: TemplateCategory;
   status: TemplateStatus;
   components: TemplateComponent[];
+  body?: string;
   quality_score?: string;
   rejection_reason?: string;
   usage_count: number;

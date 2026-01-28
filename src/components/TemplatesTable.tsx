@@ -48,13 +48,29 @@ export function TemplatesTable({
     );
   };
 
-  const getBodyText = (components: any[]) => {
-    const bodyComponent = components.find(c => c.type === 'BODY');
-    if (!bodyComponent?.text) return '-';
-    
-    // Truncate long text
-    const text = bodyComponent.text;
-    return text.length > 100 ? `${text.substring(0, 100)}...` : text;
+  const getBodyText = (template: Template) => {
+    // Handle components array format (Meta/WhatsApp standard)
+    if (template.components && Array.isArray(template.components)) {
+      const bodyComponent = template.components.find(c => c.type === 'BODY');
+      if (bodyComponent?.text) {
+        const text = bodyComponent.text;
+        return text.length > 100 ? `${text.substring(0, 100)}...` : text;
+      }
+    }
+
+    // Handle Laravel API format - body might be a direct field
+    if (template.body) {
+      const text = typeof template.body === 'string' ? template.body : String(template.body);
+      return text.length > 100 ? `${text.substring(0, 100)}...` : text;
+    }
+
+    // Handle content field
+    if ((template as any).content) {
+      const text = (template as any).content;
+      return text.length > 100 ? `${text.substring(0, 100)}...` : text;
+    }
+
+    return '-';
   };
 
   const formatDate = (dateString: string) => {
@@ -96,7 +112,7 @@ export function TemplatesTable({
       cell: (template: Template) => (
         <div className="max-w-xs">
           <div className="text-sm text-muted-foreground truncate">
-            {getBodyText(template.components)}
+            {getBodyText(template)}
           </div>
         </div>
       ),

@@ -67,55 +67,40 @@ class TemplatesService {
 
   /**
    * Normalize Laravel response to standard format
+   * Uses mapLaravelTemplate to convert Laravel API structure to frontend format
    */
   private normalizeTemplatesResponse(raw: any): TemplatesListResponse {
+    let rawTemplates: any[] = [];
+
     // Handle DataTables format: { data: [], recordsTotal, recordsFiltered }
     if (raw?.data && Array.isArray(raw.data)) {
-      return {
-        items: raw.data as Template[],
-        total: raw.recordsTotal || raw.recordsFiltered || raw.data.length,
-        page: 1,
-        page_size: raw.data.length
-      };
+      rawTemplates = raw.data;
     }
-
     // Handle { templates: [], total } format
-    if (raw?.templates && Array.isArray(raw.templates)) {
-      return {
-        items: raw.templates as Template[],
-        total: raw.total || raw.templates.length,
-        page: 1,
-        page_size: raw.templates.length
-      };
+    else if (raw?.templates && Array.isArray(raw.templates)) {
+      rawTemplates = raw.templates;
     }
-
     // Handle { items: [], total } format
-    if (raw?.items && Array.isArray(raw.items)) {
-      return {
-        items: raw.items as Template[],
-        total: raw.total || raw.items.length,
-        page: raw.page || 1,
-        page_size: raw.page_size || raw.items.length
-      };
+    else if (raw?.items && Array.isArray(raw.items)) {
+      rawTemplates = raw.items;
     }
-
     // Handle direct array response
-    if (Array.isArray(raw)) {
-      return {
-        items: raw as Template[],
-        total: raw.length,
-        page: 1,
-        page_size: raw.length
-      };
+    else if (Array.isArray(raw)) {
+      rawTemplates = raw;
+    }
+    // Fallback - try to find any array in the response
+    else {
+      rawTemplates = (Object.values(raw || {}).find((v) => Array.isArray(v)) as any[]) || [];
     }
 
-    // Fallback - try to find any array in the response
-    const firstArray = Object.values(raw || {}).find((v) => Array.isArray(v)) as Template[] | undefined;
+    // Map each Laravel template to frontend format
+    const mappedTemplates = rawTemplates.map(t => this.mapLaravelTemplate(t));
+
     return {
-      items: firstArray || [],
-      total: firstArray?.length || 0,
-      page: 1,
-      page_size: firstArray?.length || 0
+      items: mappedTemplates,
+      total: raw?.recordsTotal || raw?.recordsFiltered || raw?.total || mappedTemplates.length,
+      page: raw?.page || 1,
+      page_size: raw?.page_size || mappedTemplates.length
     };
   }
 
@@ -718,57 +703,65 @@ class TemplatesService {
   }
 
   /**
+   * Map Laravel API template to frontend Template format
+   * Laravel API returns: { _uid, template_name, template_id, language, category, status, template_data: { components, ... } }
+   * Frontend expects: { id, name, language, category, status, components, ... }
+   */
+  private mapLaravelTemplate(laravelTemplate: any): Template {
+    return {
+      id: laravelTemplate._uid || laravelTemplate.id,
+      name: laravelTemplate.template_name || laravelTemplate.name,
+      language: laravelTemplate.language,
+      category: laravelTemplate.category,
+      status: laravelTemplate.status,
+      // Extract components from template_data if available
+      components: laravelTemplate.template_data?.components || laravelTemplate.components || [],
+      // Keep additional fields
+      template_id: laravelTemplate.template_id,
+      body: laravelTemplate.template_data?.components?.find((c: any) => c.type === 'BODY')?.text || '',
+      usage_count: laravelTemplate.usage_count || 0,
+      quality_score: laravelTemplate.quality_score,
+      created_at: laravelTemplate.created_at,
+      updated_at: laravelTemplate.updated_at,
+    } as Template;
+  }
+
+  /**
    * Normalize API response to standard TemplatesListResponse format
    * Handles various response formats from the Laravel backend
    */
   private normalizeApiResponse(response: TemplatesApiResponse): TemplatesListResponse {
+    let rawTemplates: any[] = [];
+
     // Handle { data: [] } format (Laravel standard)
     if (response?.data && Array.isArray(response.data)) {
-      return {
-        items: response.data as Template[],
-        total: response.total || response.recordsTotal || response.data.length,
-        page: response.current_page || 1,
-        page_size: response.per_page || response.data.length
-      };
+      rawTemplates = response.data;
     }
-
     // Handle { templates: [] } format
-    if (response?.templates && Array.isArray(response.templates)) {
-      return {
-        items: response.templates as Template[],
-        total: response.total || response.templates.length,
-        page: 1,
-        page_size: response.templates.length
-      };
+    else if (response?.templates && Array.isArray(response.templates)) {
+      rawTemplates = response.templates;
     }
-
     // Handle { items: [] } format
-    if (response?.items && Array.isArray(response.items)) {
-      return {
-        items: response.items as Template[],
-        total: response.total || response.items.length,
-        page: 1,
-        page_size: response.items.length
-      };
+    else if (response?.items && Array.isArray(response.items)) {
+      rawTemplates = response.items;
     }
-
     // Handle direct array response
-    if (Array.isArray(response)) {
-      return {
-        items: response as Template[],
-        total: response.length,
-        page: 1,
-        page_size: response.length
-      };
+    else if (Array.isArray(response)) {
+      rawTemplates = response;
+    }
+    // Fallback - try to find any array in the response
+    else {
+      rawTemplates = (Object.values(response || {}).find((v) => Array.isArray(v)) as any[]) || [];
     }
 
-    // Fallback - try to find any array in the response
-    const firstArray = Object.values(response || {}).find((v) => Array.isArray(v)) as Template[] | undefined;
+    // Map each Laravel template to frontend format
+    const mappedTemplates = rawTemplates.map(t => this.mapLaravelTemplate(t));
+
     return {
-      items: firstArray || [],
-      total: firstArray?.length || 0,
-      page: 1,
-      page_size: firstArray?.length || 0
+      items: mappedTemplates,
+      total: response?.total || response?.recordsTotal || mappedTemplates.length,
+      page: response?.current_page || 1,
+      page_size: response?.per_page || mappedTemplates.length
     };
   }
 

@@ -17,13 +17,16 @@ export const API_CONFIG = {
   HMS_BASE_URL: import.meta.env.VITE_HMS_BASE_URL || 'https://hms.celiyo.com/api',
   WHATSAPP_BASE_URL: import.meta.env.VITE_WHATSAPP_BASE_URL || 'https://whatsappapi.celiyo.com/api',
 
+  // Laravel Main App URL (for web routes like templates that are in web.php, not api.php)
+  // Templates are served from: /vendor-console/whatsapp/templates/
+  LARAVEL_APP_URL: import.meta.env.VITE_LARAVEL_APP_URL || 'https://whatsappapi.celiyo.com',
 
   // ✅ WebSocket URL for real-time WhatsApp updates
   WHATSAPP_WS_URL: import.meta.env.VITE_WHATSAPP_WS_URL || 'wss://whatsapp.celiyo.com',
 
   // External WhatsApp API (Laravel backend with vendor UID in URL path)
   WHATSAPP_EXTERNAL_BASE_URL: import.meta.env.VITE_WHATSAPP_EXTERNAL_BASE_URL || 'https://whatsappapi.celiyo.com/api',
-  
+
   // Get vendor UID from localStorage
   getVendorUid: () => {
     try {
@@ -37,13 +40,14 @@ export const API_CONFIG = {
     }
     return null;
   },
-  
-  
+
+
   // For development, set in .env.local instead of editing code:
   // VITE_AUTH_BASE_URL=http://localhost:8000/api
   // VITE_CRM_BASE_URL=http://localhost:8001/api
   // VITE_WHATSAPP_BASE_URL=http://localhost:8002/api
   // VITE_WHATSAPP_WS_URL=ws://localhost:8002
+  // VITE_LARAVEL_APP_URL=http://localhost:8000
 
   // ==================== AUTHENTICATION ====================
   AUTH: {
@@ -665,16 +669,17 @@ export const API_CONFIG = {
       EDIT_LABEL: '/vendor/whatsapp/contact/chat/edit-label',
       DELETE_LABEL: '/vendor/whatsapp/contact/chat/delete-label/:labelUid',
 
-      // Templates (aligned with Laravel app API pattern)
-      TEMPLATES: '/vendor/whatsapp/templates',
-      TEMPLATE_DETAIL: '/vendor/whatsapp/templates/:id',
-      TEMPLATE_CREATE: '/vendor/whatsapp/templates',
-      TEMPLATE_UPDATE: '/vendor/whatsapp/templates/:id',
-      TEMPLATE_DELETE: '/vendor/whatsapp/templates/:id',
-      TEMPLATE_SYNC: '/vendor/whatsapp/templates/:id/sync',
-      TEMPLATE_SYNC_ALL: '/vendor/whatsapp/templates/sync',
-      TEMPLATE_SEND: '/vendor/whatsapp/templates/send',
-      TEMPLATE_SEND_BULK: '/vendor/whatsapp/templates/send/bulk',
+      // Templates - These use Laravel WEB routes (not API routes!)
+      // The templates endpoints are in web.php under /vendor-console/whatsapp/templates/
+      // NOT in api.php, so they need to be called from the main Laravel app URL
+      TEMPLATES: '/vendor-console/whatsapp/templates/list-data',
+      TEMPLATE_VIEW: '/vendor-console/whatsapp/templates',
+      TEMPLATE_CREATE_VIEW: '/vendor-console/whatsapp/templates/create',
+      TEMPLATE_CREATE: '/vendor-console/whatsapp/templates/create-process',
+      TEMPLATE_UPDATE_VIEW: '/vendor-console/whatsapp/templates/update/:templateUid',
+      TEMPLATE_UPDATE: '/vendor-console/whatsapp/templates/update-process',
+      TEMPLATE_DELETE: '/vendor-console/whatsapp/templates/delete/:whatsappTemplateUid',
+      TEMPLATE_SYNC: '/vendor-console/whatsapp/templates/sync',
 
       // Messages (Laravel app API pattern)
       MESSAGES_SEND: '/vendor/whatsapp/contact/chat/send',

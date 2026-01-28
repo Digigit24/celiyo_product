@@ -24,6 +24,20 @@ export const API_CONFIG = {
   // External WhatsApp API (Laravel backend with vendor UID in URL path)
   WHATSAPP_EXTERNAL_BASE_URL: import.meta.env.VITE_WHATSAPP_EXTERNAL_BASE_URL || 'https://whatsappapi.celiyo.com/api',
   
+  // Get vendor UID from localStorage
+  getVendorUid: () => {
+    try {
+      const userJson = localStorage.getItem('celiyo_user');
+      if (userJson) {
+        const user = JSON.parse(userJson);
+        return user?.vendor_uid || user?.tenant?.vendor_uid || null;
+      }
+    } catch (error) {
+      console.error('Failed to get vendor UID:', error);
+    }
+    return null;
+  },
+  
   
   // For development, set in .env.local instead of editing code:
   // VITE_AUTH_BASE_URL=http://localhost:8000/api
@@ -596,6 +610,58 @@ export const API_CONFIG = {
       ACTIVATE: '/tenant/config/activate',
     },
   },
+
+  // ==================== WHATSAPP EXTERNAL (Laravel API) ====================
+  WHATSAPP_EXTERNAL: {
+    // Base path with vendor UID: /{vendorUid}/
+    // Messages
+    SEND_MESSAGE: '/:vendorUid/contact/send-message',
+    SEND_MEDIA_MESSAGE: '/:vendorUid/contact/send-media-message',
+    SEND_TEMPLATE_MESSAGE: '/:vendorUid/contact/send-template-message',
+    SEND_INTERACTIVE_MESSAGE: '/:vendorUid/contact/send-interactive-message',
+    
+    // Contacts
+    CREATE_CONTACT: '/:vendorUid/contact/create',
+    UPDATE_CONTACT: '/:vendorUid/contact/update/:phoneNumber',
+    ASSIGN_TEAM_MEMBER: '/:vendorUid/contact/assign-team-member',
+    
+    // Mobile App API endpoints
+    APP: {
+      // Unread count
+      UNREAD_COUNT: '/vendor/whatsapp/chat/unread-count',
+      
+      // Contacts data
+      CONTACTS_DATA: '/vendor/contact/contacts-data/:contactUid?',
+      
+      // Chat
+      CHAT_VIEW: '/vendor/whatsapp/contact/chat/:contactUid?',
+      CHAT_DATA: '/vendor/whatsapp/contact/chat-data/:contactUid/:way?',
+      SEND_CHAT: '/vendor/whatsapp/contact/chat/send',
+      
+      // Chat box data (labels, team members)
+      CHAT_BOX_DATA: '/vendor/whatsapp/contact/chat-box-data/:contactUid',
+      
+      // Contact update data
+      CONTACT_UPDATE_DATA: '/vendor/contacts/:contactIdOrUid/get-update-data',
+      
+      // Media
+      PREPARE_SEND_MEDIA: '/vendor/whatsapp/contact/chat/prepare-send-media/:mediaType?',
+      SEND_MEDIA: '/vendor/whatsapp/contact/chat/send-media',
+      
+      // Contact actions
+      UPDATE_NOTES: '/vendor/whatsapp/contact/chat/update-notes',
+      ASSIGN_USER: '/vendor/whatsapp/contact/chat/assign-user',
+      ASSIGN_LABELS: '/vendor/whatsapp/contact/chat/assign-labels',
+      
+      // Chat history
+      CLEAR_HISTORY: '/vendor/whatsapp/contact/chat/clear-history/:contactUid',
+      
+      // Labels
+      CREATE_LABEL: '/vendor/whatsapp/contact/create-label',
+      EDIT_LABEL: '/vendor/whatsapp/contact/chat/edit-label',
+      DELETE_LABEL: '/vendor/whatsapp/contact/chat/delete-label/:labelUid',
+    },
+  },
 };
 
 // ==================== HELPER FUNCTIONS ====================
@@ -604,18 +670,19 @@ export const API_CONFIG = {
  * Build full URL with appropriate base URL
  * @param endpoint - API endpoint path
  * @param params - URL parameters to replace (e.g., {id: '1'})
- * @param apiType - 'auth' | 'crm' | 'whatsapp' to determine base URL
+ * @param apiType - 'auth' | 'crm' | 'whatsapp' | 'whatsapp-external' to determine base URL
  * @returns Full URL string
  */
 export const buildUrl = (
   endpoint: string,
   params?: Record<string, string | number>,
-  apiType: 'auth' | 'crm' | 'hms' | 'whatsapp' = 'auth'
+  apiType: 'auth' | 'crm' | 'hms' | 'whatsapp' | 'whatsapp-external' = 'auth'
 ): string => {
   const baseUrl =
     apiType === 'auth' ? API_CONFIG.AUTH_BASE_URL :
     apiType === 'crm' ? API_CONFIG.CRM_BASE_URL :
     apiType === 'hms' ? API_CONFIG.HMS_BASE_URL :
+    apiType === 'whatsapp-external' ? API_CONFIG.WHATSAPP_EXTERNAL_BASE_URL :
     API_CONFIG.WHATSAPP_BASE_URL;
   
   let url = `${baseUrl}${endpoint}`;
@@ -654,14 +721,14 @@ export const buildQueryString = (
  * @param endpoint - API endpoint path
  * @param urlParams - URL parameters to replace (e.g., {id: '1'})
  * @param queryParams - Query parameters object
- * @param apiType - 'auth' | 'crm' | 'whatsapp' to determine base URL
+ * @param apiType - 'auth' | 'crm' | 'whatsapp' | 'whatsapp-external' to determine base URL
  * @returns Full URL with query string
  */
 export const getFullUrl = (
   endpoint: string,
   urlParams?: Record<string, string | number>,
   queryParams?: Record<string, string | number | boolean | undefined>,
-  apiType: 'auth' | 'crm' | 'hms' | 'whatsapp' = 'auth'
+  apiType: 'auth' | 'crm' | 'hms' | 'whatsapp' | 'whatsapp-external' = 'auth'
 ): string => {
   const baseUrl = buildUrl(endpoint, urlParams, apiType);
   const queryString = buildQueryString(queryParams);

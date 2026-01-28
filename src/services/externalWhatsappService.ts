@@ -58,37 +58,82 @@ const buildVendorUrl = (endpoint: string): string => {
   return `/${vendorUid}${endpoint}`;
 };
 
-// Types for API requests
-export interface SendMessagePayload {
-  phone_number: string;
-  message: string;
-  from_phone_number_id?: string;
+// Types for API requests (aligned with Laravel backend)
+export interface ContactInfo {
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  country?: string;
+  language_code?: string;
+  groups?: string; // comma-separated group names
+  custom_fields?: Record<string, any>;
 }
 
-export interface SendTemplateMessagePayload {
+export interface SendMessagePayload {
+  from_phone_number_id?: string; // optional, uses default if not provided
   phone_number: string;
-  template_name: string;
-  template_language: string;
-  from_phone_number_id?: string;
-  // Dynamic template fields
-  [key: string]: any;
+  message_body: string;
+  contact?: ContactInfo; // optional, creates contact if doesn't exist
 }
 
 export interface SendMediaMessagePayload {
-  phone_number: string;
-  media_type: 'IMAGE' | 'VIDEO' | 'DOCUMENT' | 'AUDIO';
-  media_url: string;
-  caption?: string;
   from_phone_number_id?: string;
+  phone_number: string;
+  media_type: 'image' | 'video' | 'audio' | 'document';
+  media_url: string;
+  caption?: string; // for image or video
+  file_name?: string; // for document
+  contact?: ContactInfo;
+}
+
+export interface SendTemplateMessagePayload {
+  from_phone_number_id?: string;
+  phone_number: string;
+  template_name: string;
+  template_language: string;
+  
+  // Header parameters
+  header_image?: string;
+  header_video?: string;
+  header_document?: string;
+  header_document_name?: string;
+  header_field_1?: string;
+  
+  // Location parameters
+  location_latitude?: string;
+  location_longitude?: string;
+  location_name?: string;
+  location_address?: string;
+  
+  // Body parameters (field_1, field_2, field_3, field_4, etc.)
+  field_1?: string;
+  field_2?: string;
+  field_3?: string;
+  field_4?: string;
+  
+  // Button parameters (button_0, button_1, etc.)
+  button_0?: string;
+  button_1?: string;
+  
+  // Copy code
+  copy_code?: string;
+  
+  contact?: ContactInfo;
 }
 
 export interface SendInteractiveMessagePayload {
+  from_phone_number_id?: string;
   phone_number: string;
   interactive_type: 'button' | 'list';
   body_text: string;
+  header_text?: string;
+  footer_text?: string;
   buttons?: Array<{ id: string; title: string }>;
-  sections?: Array<{ title: string; rows: Array<{ id: string; title: string; description?: string }> }>;
-  from_phone_number_id?: string;
+  list_sections?: Array<{
+    title: string;
+    rows: Array<{ id: string; title: string; description?: string }>;
+  }>;
+  contact?: ContactInfo;
 }
 
 export interface CreateContactPayload {
@@ -98,16 +143,23 @@ export interface CreateContactPayload {
   email?: string;
   country?: string;
   language_code?: string;
-  groups?: string;
+  groups?: string; // comma-separated
+  custom_fields?: Record<string, any>;
 }
 
-export interface ContactPayload {
+export interface UpdateContactPayload {
   first_name?: string;
   last_name?: string;
   email?: string;
   country?: string;
   language_code?: string;
   groups?: string;
+  custom_fields?: Record<string, any>;
+}
+
+export interface AssignTeamMemberPayload {
+  phone_number: string;
+  user_id: number;
 }
 
 // External WhatsApp API Service
@@ -153,7 +205,7 @@ class ExternalWhatsappService {
   }
 
   // Update contact
-  async updateContact(phoneNumber: string, payload: ContactPayload): Promise<any> {
+  async updateContact(phoneNumber: string, payload: UpdateContactPayload): Promise<any> {
     const url = buildVendorUrl(`/contact/update/${phoneNumber}`);
     console.log('📤 Updating contact via external API:', url);
     const response = await externalWhatsappClient.post(url, payload);
@@ -161,13 +213,10 @@ class ExternalWhatsappService {
   }
 
   // Assign team member to contact
-  async assignTeamMember(contactId: string, teamMemberId: string): Promise<any> {
+  async assignTeamMember(payload: AssignTeamMemberPayload): Promise<any> {
     const url = buildVendorUrl('/contact/assign-team-member');
     console.log('📤 Assigning team member via external API:', url);
-    const response = await externalWhatsappClient.post(url, {
-      contact_id: contactId,
-      team_member_id: teamMemberId,
-    });
+    const response = await externalWhatsappClient.post(url, payload);
     return response.data;
   }
 

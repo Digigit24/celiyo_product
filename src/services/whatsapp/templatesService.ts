@@ -287,15 +287,21 @@ class TemplatesService {
     try {
       console.log('📤 Sending template:', payload.template_name, 'to', payload.to);
 
-      // Send template uses the external API with vendorUid
-      const response = await externalWhatsappClient.post<TemplateSendResponse>(
-        API_CONFIG.WHATSAPP_EXTERNAL.SEND_TEMPLATE_MESSAGE.replace(':vendorUid', API_CONFIG.getVendorUid() || ''),
-        payload
-      );
+      // Map the payload to Laravel API format and use externalWhatsappService
+      const response = await externalWhatsappService.sendTemplateMessage({
+        phone_number: payload.to,
+        template_name: payload.template_name,
+        template_language: payload.language,
+        // Map component parameters if provided
+        field_1: payload.components?.[0]?.parameters?.[0]?.text,
+        field_2: payload.components?.[0]?.parameters?.[1]?.text,
+        field_3: payload.components?.[0]?.parameters?.[2]?.text,
+        field_4: payload.components?.[0]?.parameters?.[3]?.text,
+      });
 
-      console.log('✅ Template sent:', response.data.message_id);
+      console.log('✅ Template sent:', response.message_id || response);
 
-      return response.data;
+      return response;
     } catch (error: any) {
       console.error('❌ Failed to send template:', error);
 

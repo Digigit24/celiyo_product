@@ -33,7 +33,7 @@ export const API_CONFIG = {
       const userJson = localStorage.getItem('celiyo_user');
       if (userJson) {
         const user = JSON.parse(userJson);
-        return user?.vendor_uid || user?.tenant?.vendor_uid || null;
+        return user?.vendor_uid || user?.tenant?.vendor_uid || user?.tenant?.whatsapp_vendor_uid || null;
       }
     } catch (error) {
       console.error('Failed to get vendor UID:', error);

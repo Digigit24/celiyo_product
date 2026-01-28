@@ -286,17 +286,24 @@ class TemplatesService {
   async sendTemplate(payload: TemplateSendRequest): Promise<TemplateSendResponse> {
     try {
       console.log('📤 Sending template:', payload.template_name, 'to', payload.to);
+      console.log('📤 Parameters:', payload.parameters);
 
       // Map the payload to Laravel API format and use externalWhatsappService
+      // Parameters come as { "1": "value1", "2": "value2", ... } from the UI
       const response = await externalWhatsappService.sendTemplateMessage({
         phone_number: payload.to,
         template_name: payload.template_name,
         template_language: payload.language,
-        // Map component parameters if provided
-        field_1: payload.components?.[0]?.parameters?.[0]?.text,
-        field_2: payload.components?.[0]?.parameters?.[1]?.text,
-        field_3: payload.components?.[0]?.parameters?.[2]?.text,
-        field_4: payload.components?.[0]?.parameters?.[3]?.text,
+        // Map parameters - UI sends { "1": "val", "2": "val" } format
+        field_1: payload.parameters?.["1"] || payload.parameters?.field_1,
+        field_2: payload.parameters?.["2"] || payload.parameters?.field_2,
+        field_3: payload.parameters?.["3"] || payload.parameters?.field_3,
+        field_4: payload.parameters?.["4"] || payload.parameters?.field_4,
+        // Also support header fields
+        header_field_1: payload.parameters?.header_1 || payload.parameters?.header_field_1,
+        // Button parameters
+        button_0: payload.parameters?.button_0,
+        button_1: payload.parameters?.button_1,
       });
 
       console.log('✅ Template sent:', response.message_id || response);

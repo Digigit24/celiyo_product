@@ -400,6 +400,130 @@ export interface TemplateAnalytics {
   last_used_at?: string;
 }
 
+// ==================== TEMPLATE API TYPES ====================
+// These types are for the Laravel API routes:
+// GET /api/{vendorUid}/templates - Fetch all templates
+// GET /api/{vendorUid}/templates/{templateUid} - Fetch single template
+
+/**
+ * Laravel template format from API routes
+ * May include additional fields from the database model
+ */
+export interface LaravelTemplate {
+  _id?: number;
+  _uid?: string;
+  template_id?: string;
+  template_name: string;
+  language: string;
+  category: string;
+  status: string;
+  components?: TemplateComponent[];
+  template_components?: any;
+  quality_score?: string;
+  rejection_reason?: string;
+  usage_count?: number;
+  last_used_at?: string;
+  vendors__id?: number;
+  created_at?: string;
+  updated_at?: string;
+  // Allow additional fields from Laravel
+  [key: string]: any;
+}
+
+/**
+ * API response for templates list endpoint
+ * GET /api/{vendorUid}/templates
+ */
+export interface TemplatesApiListResponse {
+  // Standard Laravel pagination
+  data?: LaravelTemplate[];
+  current_page?: number;
+  per_page?: number;
+  total?: number;
+  last_page?: number;
+  from?: number;
+  to?: number;
+  // Alternative formats
+  templates?: LaravelTemplate[];
+  items?: LaravelTemplate[];
+  recordsTotal?: number;
+  recordsFiltered?: number;
+  // Success/error flags
+  reaction?: number;
+  message?: string;
+}
+
+/**
+ * API response for single template endpoint
+ * GET /api/{vendorUid}/templates/{templateUid}
+ */
+export interface TemplateApiDetailResponse {
+  data?: LaravelTemplate;
+  template?: LaravelTemplate;
+  reaction?: number;
+  message?: string;
+}
+
+/**
+ * Template send request payload for API route
+ * POST /api/{vendorUid}/contact/send-template-message
+ */
+export interface TemplateApiSendRequest {
+  from_phone_number_id?: string;
+  phone_number: string;
+  template_name: string;
+  template_language: string;
+  // Header parameters
+  header_image?: string;
+  header_video?: string;
+  header_document?: string;
+  header_document_name?: string;
+  header_field_1?: string;
+  // Location parameters
+  location_latitude?: string;
+  location_longitude?: string;
+  location_name?: string;
+  location_address?: string;
+  // Body parameters (field_1 through field_N)
+  field_1?: string;
+  field_2?: string;
+  field_3?: string;
+  field_4?: string;
+  field_5?: string;
+  field_6?: string;
+  field_7?: string;
+  field_8?: string;
+  // Button parameters
+  button_0?: string;
+  button_1?: string;
+  button_2?: string;
+  // Copy code
+  copy_code?: string;
+  // Contact info (optional - creates contact if doesn't exist)
+  contact?: {
+    first_name?: string;
+    last_name?: string;
+    email?: string;
+    country?: string;
+    language_code?: string;
+    groups?: string;
+    custom_fields?: Record<string, any>;
+  };
+}
+
+/**
+ * Template send response from API
+ */
+export interface TemplateApiSendResponse {
+  reaction?: number;
+  data?: {
+    message_id?: string;
+    wamid?: string;
+    status?: string;
+  };
+  message?: string;
+}
+
 // ==================== CAMPAIGN TYPES ====================
 
 export interface CampaignResult {

@@ -633,6 +633,12 @@ export const API_CONFIG = {
     UPDATE_CONTACT: '/:vendorUid/contact/update/:phoneNumber',
     ASSIGN_TEAM_MEMBER: '/:vendorUid/contact/assign-team-member',
 
+    // Templates API (Laravel API routes in api.php)
+    // GET /{vendorUid}/templates - Fetch all templates
+    // GET /{vendorUid}/templates/{templateUid} - Fetch single template
+    TEMPLATES_LIST: '/:vendorUid/templates',
+    TEMPLATE_DETAIL: '/:vendorUid/templates/:templateUid',
+
     // Mobile App API endpoints (app_api.vendor.authenticate middleware)
     APP: {
       // Unread count

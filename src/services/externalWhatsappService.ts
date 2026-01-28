@@ -260,18 +260,26 @@ class ExternalWhatsappService {
   }
 
   // ==================== TEMPLATE METHODS (for external API with vendor UID) ====================
+  // These use Laravel API routes: GET /api/{vendorUid}/templates
 
-  // Get templates list
+  /**
+   * Get all templates for vendor
+   * API Endpoint: GET /api/{vendorUid}/templates
+   * @param params - Optional query parameters for filtering
+   * @returns Promise with templates data from Laravel backend
+   */
   async getTemplates(params?: {
     status?: string;
     category?: string;
     language?: string;
     limit?: number;
     skip?: number;
-  }): Promise<any> {
+    page?: number;
+    per_page?: number;
+  }): Promise<TemplatesApiResponse> {
     const vendorUid = getWhatsappVendorUid();
     if (!vendorUid) {
-      throw new Error('WhatsApp Vendor UID not configured.');
+      throw new Error('WhatsApp Vendor UID not configured. Please set it in Admin Settings > Tenant Settings.');
     }
 
     const queryParams = new URLSearchParams();
@@ -280,38 +288,154 @@ class ExternalWhatsappService {
     if (params?.language) queryParams.append('language', params.language);
     if (params?.limit) queryParams.append('limit', params.limit.toString());
     if (params?.skip) queryParams.append('skip', params.skip.toString());
+    if (params?.page) queryParams.append('page', params.page.toString());
+    if (params?.per_page) queryParams.append('per_page', params.per_page.toString());
 
-    const url = `/${vendorUid}/whatsapp/templates${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+    // Use the new API route: /{vendorUid}/templates
+    const url = `/${vendorUid}/templates${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
     console.log('📥 Getting templates via external API:', url);
-    const response = await externalWhatsappClient.get(url);
-    return response.data;
+
+    try {
+      const response = await externalWhatsappClient.get(url);
+      console.log('✅ Templates fetched successfully:', {
+        total: response.data?.data?.length || response.data?.length || 0
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ Failed to fetch templates:', error);
+      const message = error.response?.data?.message || error.response?.data?.error || 'Failed to fetch templates';
+      throw new Error(message);
+    }
   }
 
-  // Get template by ID
-  async getTemplate(templateId: number | string): Promise<any> {
+  /**
+   * Get single template by UID
+   * API Endpoint: GET /api/{vendorUid}/templates/{templateUid}
+   * @param templateUid - The template UID to fetch
+   * @returns Promise with template data from Laravel backend
+   */
+  async getTemplate(templateUid: number | string): Promise<TemplateApiResponse> {
     const vendorUid = getWhatsappVendorUid();
     if (!vendorUid) {
-      throw new Error('WhatsApp Vendor UID not configured.');
+      throw new Error('WhatsApp Vendor UID not configured. Please set it in Admin Settings > Tenant Settings.');
     }
 
-    const url = `/${vendorUid}/whatsapp/templates/${templateId}`;
+    // Use the new API route: /{vendorUid}/templates/{templateUid}
+    const url = `/${vendorUid}/templates/${templateUid}`;
     console.log('📥 Getting template via external API:', url);
-    const response = await externalWhatsappClient.get(url);
-    return response.data;
+
+    try {
+      const response = await externalWhatsappClient.get(url);
+      console.log('✅ Template fetched successfully:', response.data?.data?.name || response.data?.name);
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ Failed to fetch template:', error);
+
+      if (error.response?.status === 404) {
+        throw new Error('Template not found');
+      }
+
+      const message = error.response?.data?.message || error.response?.data?.error || 'Failed to fetch template';
+      throw new Error(message);
+    }
   }
 
-  // Sync templates with Meta API
+  /**
+   * Get template by name and language (convenience method)
+   * Fetches all templates and filters by name and language
+   * @param name - Template name
+   * @param language - Template language code
+   * @returns Promise with matching template or throws error if not found
+   */
+  async getTemplateByName(name: string, language?: string): Promise<any> {
+    console.log('📥 Getting template by name:', { name, language });
+
+    try {
+      const response = await this.getTemplates({ limit: 100 });
+      const templates = response.data || response;
+
+      const templateList = Array.isArray(templates) ? templates : [];
+      const template = templateList.find((t: any) =>
+        t.name === name && (!language || t.language === language)
+      );
+
+      if (!template) {
+        throw new Error(`Template '${name}' not found${language ? ` for language ${language}` : ''}`);
+      }
+
+      console.log('✅ Template found by name:', template.name);
+      return template;
+    } catch (error: any) {
+      console.error('❌ Failed to get template by name:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get approved templates only (convenience method)
+   * @returns Promise with approved templates
+   */
+  async getApprovedTemplates(): Promise<TemplatesApiResponse> {
+    return this.getTemplates({ status: 'APPROVED' });
+  }
+
+  /**
+   * Sync templates with Meta API (if endpoint exists)
+   * Note: This endpoint may not be available in all Laravel setups
+   */
   async syncTemplates(): Promise<any> {
     const vendorUid = getWhatsappVendorUid();
     if (!vendorUid) {
       throw new Error('WhatsApp Vendor UID not configured.');
     }
 
-    const url = `/${vendorUid}/whatsapp/templates/sync`;
+    // Try the sync endpoint if it exists
+    const url = `/${vendorUid}/templates/sync`;
     console.log('🔄 Syncing templates via external API:', url);
-    const response = await externalWhatsappClient.post(url);
-    return response.data;
+
+    try {
+      const response = await externalWhatsappClient.post(url);
+      console.log('✅ Templates synced successfully');
+      return response.data;
+    } catch (error: any) {
+      // If sync endpoint doesn't exist, just refetch templates
+      if (error.response?.status === 404) {
+        console.warn('⚠️ Sync endpoint not available, fetching templates instead');
+        return this.getTemplates();
+      }
+      throw error;
+    }
   }
+}
+
+// ==================== TEMPLATE API RESPONSE TYPES ====================
+
+/**
+ * Response structure for templates list API
+ * The Laravel backend may return different formats, this handles common patterns
+ */
+export interface TemplatesApiResponse {
+  data?: any[];
+  templates?: any[];
+  items?: any[];
+  total?: number;
+  recordsTotal?: number;
+  recordsFiltered?: number;
+  current_page?: number;
+  per_page?: number;
+  last_page?: number;
+  // Also handle direct array response
+  [key: string]: any;
+}
+
+/**
+ * Response structure for single template API
+ */
+export interface TemplateApiResponse {
+  data?: any;
+  template?: any;
+  // Direct object response
+  [key: string]: any;
 }
 
 export const externalWhatsappService = new ExternalWhatsappService();

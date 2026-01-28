@@ -1,11 +1,20 @@
 // src/services/whatsapp/templatesService.ts
-// Templates Service - Uses Laravel WEB routes (not API routes!)
-// Templates are in web.php at: /vendor-console/whatsapp/templates/
-// These routes use session-based authentication
+// Templates Service - Supports both Laravel WEB routes and API routes
+//
+// WEB Routes (web.php): /vendor-console/whatsapp/templates/
+//   - Used for admin panel template management
+//   - Requires session-based authentication
+//
+// API Routes (api.php): /api/{vendorUid}/templates
+//   - GET /{vendorUid}/templates - Fetch all templates
+//   - GET /{vendorUid}/templates/{templateUid} - Fetch single template
+//   - Used for external integrations and mobile apps
+//   - Requires Bearer token + vendor UID
 
 import { laravelClient } from '@/lib/laravelClient';
-import { externalWhatsappClient } from '@/lib/externalWhatsappClient';
+import { externalWhatsappClient, getVendorUid } from '@/lib/externalWhatsappClient';
 import { API_CONFIG, buildQueryString } from '@/lib/apiConfig';
+import { externalWhatsappService, TemplatesApiResponse, TemplateApiResponse } from '@/services/externalWhatsappService';
 import {
   Template,
   TemplatesListQuery,
@@ -20,7 +29,13 @@ import {
   TemplateAnalytics,
   TemplateStatus,
   TemplateCategory,
-  TemplateLanguage
+  TemplateLanguage,
+  // New API types
+  LaravelTemplate,
+  TemplatesApiListResponse,
+  TemplateApiDetailResponse,
+  TemplateApiSendRequest,
+  TemplateApiSendResponse
 } from '@/types/whatsappTypes';
 
 // Laravel list response format (DataTables compatible)
@@ -605,6 +620,234 @@ class TemplatesService {
       const message = error.response?.data?.detail || error.response?.data?.message || 'Failed to create template from library';
       throw new Error(message);
     }
+  }
+
+  // ==================== API ROUTES METHODS ====================
+  // These methods use the Laravel API routes (api.php) instead of web routes
+  // API Endpoints:
+  //   GET /api/{vendorUid}/templates - Fetch all templates
+  //   GET /api/{vendorUid}/templates/{templateUid} - Fetch single template
+
+  /**
+   * Get all templates using API routes
+   * API Endpoint: GET /api/{vendorUid}/templates
+   * @param query - Optional query parameters for filtering
+   * @returns Promise with normalized templates response
+   */
+  async getTemplatesViaApi(query?: TemplatesListQuery): Promise<TemplatesListResponse> {
+    try {
+      console.log('📋 Fetching templates via API route:', query);
+
+      const response = await externalWhatsappService.getTemplates({
+        status: query?.status,
+        category: query?.category,
+        language: query?.language,
+        limit: query?.limit,
+        skip: query?.skip
+      });
+
+      // Normalize the API response to our standard format
+      const normalized = this.normalizeApiResponse(response);
+
+      console.log('✅ Templates fetched via API:', {
+        total: normalized.total,
+        count: normalized.items?.length || 0
+      });
+
+      return normalized;
+    } catch (error: any) {
+      console.error('❌ Failed to fetch templates via API:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get single template by UID using API routes
+   * API Endpoint: GET /api/{vendorUid}/templates/{templateUid}
+   * @param templateUid - The template UID to fetch
+   * @returns Promise with template data
+   */
+  async getTemplateViaApi(templateUid: number | string): Promise<Template> {
+    try {
+      console.log('📋 Fetching template via API route:', templateUid);
+
+      const response = await externalWhatsappService.getTemplate(templateUid);
+
+      // Extract template from response (handles different response formats)
+      const template = response.data || response.template || response;
+
+      console.log('✅ Template fetched via API:', template.name);
+
+      return template as Template;
+    } catch (error: any) {
+      console.error('❌ Failed to fetch template via API:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get template by name using API routes
+   * @param name - Template name
+   * @param language - Optional language code
+   * @returns Promise with matching template
+   */
+  async getTemplateByNameViaApi(name: string, language?: string): Promise<Template> {
+    try {
+      console.log('📋 Fetching template by name via API:', { name, language });
+
+      const template = await externalWhatsappService.getTemplateByName(name, language);
+
+      console.log('✅ Template found via API:', template.name);
+
+      return template as Template;
+    } catch (error: any) {
+      console.error('❌ Failed to fetch template by name via API:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get approved templates only using API routes
+   * @returns Promise with approved templates
+   */
+  async getApprovedTemplatesViaApi(): Promise<TemplatesListResponse> {
+    return this.getTemplatesViaApi({ status: TemplateStatus.APPROVED });
+  }
+
+  /**
+   * Normalize API response to standard TemplatesListResponse format
+   * Handles various response formats from the Laravel backend
+   */
+  private normalizeApiResponse(response: TemplatesApiResponse): TemplatesListResponse {
+    // Handle { data: [] } format (Laravel standard)
+    if (response?.data && Array.isArray(response.data)) {
+      return {
+        items: response.data as Template[],
+        total: response.total || response.recordsTotal || response.data.length,
+        page: response.current_page || 1,
+        page_size: response.per_page || response.data.length
+      };
+    }
+
+    // Handle { templates: [] } format
+    if (response?.templates && Array.isArray(response.templates)) {
+      return {
+        items: response.templates as Template[],
+        total: response.total || response.templates.length,
+        page: 1,
+        page_size: response.templates.length
+      };
+    }
+
+    // Handle { items: [] } format
+    if (response?.items && Array.isArray(response.items)) {
+      return {
+        items: response.items as Template[],
+        total: response.total || response.items.length,
+        page: 1,
+        page_size: response.items.length
+      };
+    }
+
+    // Handle direct array response
+    if (Array.isArray(response)) {
+      return {
+        items: response as Template[],
+        total: response.length,
+        page: 1,
+        page_size: response.length
+      };
+    }
+
+    // Fallback - try to find any array in the response
+    const firstArray = Object.values(response || {}).find((v) => Array.isArray(v)) as Template[] | undefined;
+    return {
+      items: firstArray || [],
+      total: firstArray?.length || 0,
+      page: 1,
+      page_size: firstArray?.length || 0
+    };
+  }
+
+  /**
+   * Send template message using API routes
+   * This uses the external API with vendor UID
+   * @param payload - Template send payload
+   * @returns Promise with send response
+   */
+  async sendTemplateViaApi(payload: {
+    phone_number: string;
+    template_name: string;
+    template_language: string;
+    // Header parameters
+    header_image?: string;
+    header_video?: string;
+    header_document?: string;
+    header_document_name?: string;
+    header_field_1?: string;
+    // Location parameters
+    location_latitude?: string;
+    location_longitude?: string;
+    location_name?: string;
+    location_address?: string;
+    // Body parameters
+    field_1?: string;
+    field_2?: string;
+    field_3?: string;
+    field_4?: string;
+    // Button parameters
+    button_0?: string;
+    button_1?: string;
+    copy_code?: string;
+  }): Promise<TemplateSendResponse> {
+    try {
+      console.log('📤 Sending template via API:', payload.template_name, 'to', payload.phone_number);
+
+      const response = await externalWhatsappService.sendTemplateMessage({
+        phone_number: payload.phone_number,
+        template_name: payload.template_name,
+        template_language: payload.template_language,
+        header_image: payload.header_image,
+        header_video: payload.header_video,
+        header_document: payload.header_document,
+        header_document_name: payload.header_document_name,
+        header_field_1: payload.header_field_1,
+        location_latitude: payload.location_latitude,
+        location_longitude: payload.location_longitude,
+        location_name: payload.location_name,
+        location_address: payload.location_address,
+        field_1: payload.field_1,
+        field_2: payload.field_2,
+        field_3: payload.field_3,
+        field_4: payload.field_4,
+        button_0: payload.button_0,
+        button_1: payload.button_1,
+        copy_code: payload.copy_code
+      });
+
+      console.log('✅ Template sent via API');
+
+      return response;
+    } catch (error: any) {
+      console.error('❌ Failed to send template via API:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Check if API routes are available (vendor UID is configured)
+   * @returns boolean indicating if API routes can be used
+   */
+  isApiAvailable(): boolean {
+    return !!getVendorUid();
+  }
+
+  /**
+   * Get vendor UID for API calls
+   * @returns vendor UID or null if not configured
+   */
+  getVendorUid(): string | null {
+    return getVendorUid();
   }
 }
 

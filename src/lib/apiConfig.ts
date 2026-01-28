@@ -530,8 +530,11 @@ export const API_CONFIG = {
   },
 
   // ==================== WHATSAPP ====================
+  // NOTE: These endpoints are for the legacy FastAPI backend.
+  // For Laravel backend, use WHATSAPP_EXTERNAL endpoints instead.
+  // Templates have been migrated to WHATSAPP_EXTERNAL.APP.TEMPLATES
   WHATSAPP: {
-    // Chat & Messages endpoints
+    // Chat & Messages endpoints (legacy - consider migrating to WHATSAPP_EXTERNAL)
     SEND_TEXT: '/messages/send',
     SEND_MEDIA: '/messages/send/media',
     SEND_LOCATION: '/messages/send/location',
@@ -542,36 +545,37 @@ export const API_CONFIG = {
     DELETE_CONVERSATION: '/messages/conversations/:phone',
     MESSAGES: '/messages/messages',
     STATS: '/messages/stats',
-    
-    // Contacts endpoints
+
+    // Contacts endpoints (legacy - consider migrating to WHATSAPP_EXTERNAL)
     CONTACTS: '/contacts/',
     CONTACT_DETAIL: '/contacts/:phone/',
     CONTACT_CREATE: '/contacts/',
     CONTACT_UPDATE: '/contacts/:phone/',
     CONTACT_DELETE: '/contacts/:phone/',
     CONTACT_IMPORT: '/contacts/import',
-    
-    // Groups endpoints
+
+    // Groups endpoints (legacy)
     GROUPS: '/groups/',
     GROUP_DETAIL: '/groups/:group_id',
     GROUP_CREATE: '/groups/',
     GROUP_UPDATE: '/groups/:group_id',
     GROUP_DELETE: '/groups/:group_id',
-    
-    // Templates endpoints (aligned to backend: id-based + name route)
-    TEMPLATES: '/templates/',
-    TEMPLATE_DETAIL: '/templates/:id',
-    TEMPLATE_CREATE: '/templates/',
-    TEMPLATE_UPDATE: '/templates/:id',
-    TEMPLATE_DELETE: '/templates/:id',
-    TEMPLATE_BY_NAME: '/templates/name/:template_name',
-    TEMPLATE_LIBRARY_CREATE: '/templates/library',
-    TEMPLATE_SEND: '/templates/send',
-    TEMPLATE_SEND_BULK: '/templates/send/bulk',
-    TEMPLATE_ANALYTICS: '/templates/:id/analytics',
-    TEMPLATE_WEBHOOK_STATUS: '/templates/webhook/status',
-    TEMPLATE_SYNC: '/templates/:id/sync',
-    TEMPLATE_SYNC_ALL: '/templates/sync',
+
+    // Templates endpoints (DEPRECATED - use WHATSAPP_EXTERNAL.APP.TEMPLATES instead)
+    // These are kept for backward compatibility but templatesService now uses Laravel endpoints
+    TEMPLATES: '/vendor/whatsapp/templates',
+    TEMPLATE_DETAIL: '/vendor/whatsapp/templates/:id',
+    TEMPLATE_CREATE: '/vendor/whatsapp/templates',
+    TEMPLATE_UPDATE: '/vendor/whatsapp/templates/:id',
+    TEMPLATE_DELETE: '/vendor/whatsapp/templates/:id',
+    TEMPLATE_BY_NAME: '/vendor/whatsapp/templates/name/:template_name',
+    TEMPLATE_LIBRARY_CREATE: '/vendor/whatsapp/templates/library',
+    TEMPLATE_SEND: '/vendor/whatsapp/templates/send',
+    TEMPLATE_SEND_BULK: '/vendor/whatsapp/templates/send/bulk',
+    TEMPLATE_ANALYTICS: '/vendor/whatsapp/templates/:id/analytics',
+    TEMPLATE_WEBHOOK_STATUS: '/vendor/whatsapp/templates/webhook/status',
+    TEMPLATE_SYNC: '/vendor/whatsapp/templates/:id/sync',
+    TEMPLATE_SYNC_ALL: '/vendor/whatsapp/templates/sync',
     
     // Campaigns endpoints (align with FastAPI router without trailing slashes)
     CAMPAIGN_BROADCAST: '/campaigns/broadcast',
@@ -619,47 +623,67 @@ export const API_CONFIG = {
     SEND_MEDIA_MESSAGE: '/:vendorUid/contact/send-media-message',
     SEND_TEMPLATE_MESSAGE: '/:vendorUid/contact/send-template-message',
     SEND_INTERACTIVE_MESSAGE: '/:vendorUid/contact/send-interactive-message',
-    
+
     // Contacts
     CREATE_CONTACT: '/:vendorUid/contact/create',
     UPDATE_CONTACT: '/:vendorUid/contact/update/:phoneNumber',
     ASSIGN_TEAM_MEMBER: '/:vendorUid/contact/assign-team-member',
-    
-    // Mobile App API endpoints
+
+    // Mobile App API endpoints (app_api.vendor.authenticate middleware)
     APP: {
       // Unread count
       UNREAD_COUNT: '/vendor/whatsapp/chat/unread-count',
-      
+
       // Contacts data
       CONTACTS_DATA: '/vendor/contact/contacts-data/:contactUid?',
-      
+
       // Chat
       CHAT_VIEW: '/vendor/whatsapp/contact/chat/:contactUid?',
       CHAT_DATA: '/vendor/whatsapp/contact/chat-data/:contactUid/:way?',
       SEND_CHAT: '/vendor/whatsapp/contact/chat/send',
-      
+
       // Chat box data (labels, team members)
       CHAT_BOX_DATA: '/vendor/whatsapp/contact/chat-box-data/:contactUid',
-      
+
       // Contact update data
       CONTACT_UPDATE_DATA: '/vendor/contacts/:contactIdOrUid/get-update-data',
-      
+
       // Media
       PREPARE_SEND_MEDIA: '/vendor/whatsapp/contact/chat/prepare-send-media/:mediaType?',
       SEND_MEDIA: '/vendor/whatsapp/contact/chat/send-media',
-      
+
       // Contact actions
       UPDATE_NOTES: '/vendor/whatsapp/contact/chat/update-notes',
       ASSIGN_USER: '/vendor/whatsapp/contact/chat/assign-user',
       ASSIGN_LABELS: '/vendor/whatsapp/contact/chat/assign-labels',
-      
+
       // Chat history
       CLEAR_HISTORY: '/vendor/whatsapp/contact/chat/clear-history/:contactUid',
-      
+
       // Labels
       CREATE_LABEL: '/vendor/whatsapp/contact/create-label',
       EDIT_LABEL: '/vendor/whatsapp/contact/chat/edit-label',
       DELETE_LABEL: '/vendor/whatsapp/contact/chat/delete-label/:labelUid',
+
+      // Templates (aligned with Laravel app API pattern)
+      TEMPLATES: '/vendor/whatsapp/templates',
+      TEMPLATE_DETAIL: '/vendor/whatsapp/templates/:id',
+      TEMPLATE_CREATE: '/vendor/whatsapp/templates',
+      TEMPLATE_UPDATE: '/vendor/whatsapp/templates/:id',
+      TEMPLATE_DELETE: '/vendor/whatsapp/templates/:id',
+      TEMPLATE_SYNC: '/vendor/whatsapp/templates/:id/sync',
+      TEMPLATE_SYNC_ALL: '/vendor/whatsapp/templates/sync',
+      TEMPLATE_SEND: '/vendor/whatsapp/templates/send',
+      TEMPLATE_SEND_BULK: '/vendor/whatsapp/templates/send/bulk',
+
+      // Messages (Laravel app API pattern)
+      MESSAGES_SEND: '/vendor/whatsapp/contact/chat/send',
+      MESSAGES_CONVERSATIONS: '/vendor/whatsapp/conversations',
+      MESSAGES_CONVERSATION_DETAIL: '/vendor/whatsapp/contact/chat/:contactUid',
+
+      // Contacts (Laravel app API pattern)
+      CONTACTS_LIST: '/vendor/contact/contacts-data',
+      CONTACTS_DETAIL: '/vendor/contacts/:contactIdOrUid/get-update-data',
     },
   },
 };

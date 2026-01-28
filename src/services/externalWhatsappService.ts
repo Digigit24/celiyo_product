@@ -258,6 +258,60 @@ class ExternalWhatsappService {
   getVendorUid(): string | null {
     return getWhatsappVendorUid();
   }
+
+  // ==================== TEMPLATE METHODS (for external API with vendor UID) ====================
+
+  // Get templates list
+  async getTemplates(params?: {
+    status?: string;
+    category?: string;
+    language?: string;
+    limit?: number;
+    skip?: number;
+  }): Promise<any> {
+    const vendorUid = getWhatsappVendorUid();
+    if (!vendorUid) {
+      throw new Error('WhatsApp Vendor UID not configured.');
+    }
+
+    const queryParams = new URLSearchParams();
+    if (params?.status) queryParams.append('status', params.status);
+    if (params?.category) queryParams.append('category', params.category);
+    if (params?.language) queryParams.append('language', params.language);
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    if (params?.skip) queryParams.append('skip', params.skip.toString());
+
+    const url = `/${vendorUid}/whatsapp/templates${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+    console.log('📥 Getting templates via external API:', url);
+    const response = await externalWhatsappClient.get(url);
+    return response.data;
+  }
+
+  // Get template by ID
+  async getTemplate(templateId: number | string): Promise<any> {
+    const vendorUid = getWhatsappVendorUid();
+    if (!vendorUid) {
+      throw new Error('WhatsApp Vendor UID not configured.');
+    }
+
+    const url = `/${vendorUid}/whatsapp/templates/${templateId}`;
+    console.log('📥 Getting template via external API:', url);
+    const response = await externalWhatsappClient.get(url);
+    return response.data;
+  }
+
+  // Sync templates with Meta API
+  async syncTemplates(): Promise<any> {
+    const vendorUid = getWhatsappVendorUid();
+    if (!vendorUid) {
+      throw new Error('WhatsApp Vendor UID not configured.');
+    }
+
+    const url = `/${vendorUid}/whatsapp/templates/sync`;
+    console.log('🔄 Syncing templates via external API:', url);
+    const response = await externalWhatsappClient.post(url);
+    return response.data;
+  }
 }
 
 export const externalWhatsappService = new ExternalWhatsappService();

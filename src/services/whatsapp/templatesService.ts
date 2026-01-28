@@ -1,6 +1,9 @@
 // src/services/whatsapp/templatesService.ts
-import { whatsappClient } from '@/lib/whatsappClient';
-import { API_CONFIG, buildUrl, buildQueryString } from '@/lib/apiConfig';
+// Templates Service - Uses Laravel backend API (whatsappapi.celiyo.com/api)
+// Aligned with Laravel route structure: /vendor/whatsapp/templates
+
+import { externalWhatsappClient } from '@/lib/externalWhatsappClient';
+import { API_CONFIG, buildQueryString } from '@/lib/apiConfig';
 import {
   Template,
   TemplatesListQuery,
@@ -20,241 +23,251 @@ import {
 
 class TemplatesService {
   /**
+   * Build URL with parameter replacement
+   */
+  private buildUrl(endpoint: string, params?: Record<string, string | number>): string {
+    let url = endpoint;
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        const encoded = encodeURIComponent(String(value));
+        url = url.replace(`:${key}`, encoded);
+      });
+    }
+    return url;
+  }
+
+  /**
    * Get all templates with optional filters
+   * Uses Laravel endpoint: GET /vendor/whatsapp/templates
    */
   async getTemplates(query?: TemplatesListQuery): Promise<TemplatesListResponse> {
     try {
-      console.log('📋 Fetching templates:', query);
-      
+      console.log('📋 Fetching templates from Laravel API:', query);
+
       const queryString = buildQueryString(query as unknown as Record<string, string | number | boolean>);
-      const url = `${API_CONFIG.WHATSAPP.TEMPLATES}${queryString}`;
-      
-      const response = await whatsappClient.get<TemplatesListResponse>(url);
-      
+      const url = `${API_CONFIG.WHATSAPP_EXTERNAL.APP.TEMPLATES}${queryString}`;
+
+      console.log('📤 Request URL:', url);
+
+      const response = await externalWhatsappClient.get<TemplatesListResponse>(url);
+
       console.log('✅ Templates fetched:', {
         total: response.data.total,
-        count: response.data.items.length
+        count: response.data.items?.length || 0
       });
-      
+
       return response.data;
     } catch (error: any) {
       console.error('❌ Failed to fetch templates:', error);
-      const message = error.response?.data?.detail || 'Failed to fetch templates';
+      const message = error.response?.data?.detail || error.response?.data?.message || 'Failed to fetch templates';
       throw new Error(message);
     }
   }
 
   /**
    * Get single template by ID
+   * Uses Laravel endpoint: GET /vendor/whatsapp/templates/:id
    */
   async getTemplate(id: number): Promise<Template> {
     try {
       console.log('📋 Fetching template:', id);
-      
-      const url = buildUrl(
-        API_CONFIG.WHATSAPP.TEMPLATE_DETAIL,
-        { id },
-        'whatsapp'
-      );
-      
-      const response = await whatsappClient.get<Template>(url);
-      
+
+      const url = this.buildUrl(API_CONFIG.WHATSAPP_EXTERNAL.APP.TEMPLATE_DETAIL, { id });
+
+      const response = await externalWhatsappClient.get<Template>(url);
+
       console.log('✅ Template fetched:', response.data.name);
-      
+
       return response.data;
     } catch (error: any) {
       console.error('❌ Failed to fetch template:', error);
-      
+
       if (error.response?.status === 404) {
         throw new Error('Template not found');
       }
-      
-      const message = error.response?.data?.detail || 'Failed to fetch template';
+
+      const message = error.response?.data?.detail || error.response?.data?.message || 'Failed to fetch template';
       throw new Error(message);
     }
   }
 
   /**
    * Get template by name and language
+   * Uses Laravel endpoint: GET /vendor/whatsapp/templates with query params
    */
   async getTemplateByName(name: string, language: string): Promise<Template> {
     try {
       console.log('📋 Fetching template by name:', { name, language });
-      
-      const url = buildUrl(
-        API_CONFIG.WHATSAPP.TEMPLATE_BY_NAME,
-        { template_name: name },
-        'whatsapp'
-      );
-      const qs = buildQueryString({ language });
-      const response = await whatsappClient.get<Template>(`${url}${qs}`);
-      
+
+      const qs = buildQueryString({ name, language });
+      const url = `${API_CONFIG.WHATSAPP_EXTERNAL.APP.TEMPLATES}${qs}`;
+
+      const response = await externalWhatsappClient.get<Template>(url);
+
       console.log('✅ Template fetched by name:', response.data.name);
-      
+
       return response.data;
     } catch (error: any) {
       console.error('❌ Failed to fetch template by name:', error);
-      
+
       if (error.response?.status === 404) {
         throw new Error(`Template '${name}' not found for language ${language}`);
       }
-      
-      const message = error.response?.data?.detail || 'Failed to fetch template';
+
+      const message = error.response?.data?.detail || error.response?.data?.message || 'Failed to fetch template';
       throw new Error(message);
     }
   }
 
   /**
    * Create a new template
+   * Uses Laravel endpoint: POST /vendor/whatsapp/templates
    */
   async createTemplate(payload: CreateTemplatePayload): Promise<Template> {
     try {
       console.log('➕ Creating template:', payload.name);
-      
-      const response = await whatsappClient.post<Template>(
-        API_CONFIG.WHATSAPP.TEMPLATE_CREATE,
+
+      const response = await externalWhatsappClient.post<Template>(
+        API_CONFIG.WHATSAPP_EXTERNAL.APP.TEMPLATE_CREATE,
         payload
       );
-      
+
       console.log('✅ Template created:', response.data.name);
-      
+
       return response.data;
     } catch (error: any) {
       console.error('❌ Failed to create template:', error);
-      
+
       if (error.response?.status === 409) {
         throw new Error('Template name already exists');
       }
-      
-      const message = error.response?.data?.detail || 'Failed to create template';
+
+      const message = error.response?.data?.detail || error.response?.data?.message || 'Failed to create template';
       throw new Error(message);
     }
   }
 
   /**
    * Update an existing template
+   * Uses Laravel endpoint: PATCH /vendor/whatsapp/templates/:id
    */
   async updateTemplate(id: number, payload: UpdateTemplatePayload): Promise<Template> {
     try {
       console.log('✏️ Updating template:', id);
-      
-      const url = buildUrl(
-        API_CONFIG.WHATSAPP.TEMPLATE_UPDATE,
-        { id },
-        'whatsapp'
-      );
-      
-      const response = await whatsappClient.patch<Template>(url, payload);
-      
+
+      const url = this.buildUrl(API_CONFIG.WHATSAPP_EXTERNAL.APP.TEMPLATE_UPDATE, { id });
+
+      const response = await externalWhatsappClient.patch<Template>(url, payload);
+
       console.log('✅ Template updated:', response.data.name);
-      
+
       return response.data;
     } catch (error: any) {
       console.error('❌ Failed to update template:', error);
-      
+
       if (error.response?.status === 404) {
         throw new Error('Template not found');
       }
-      
-      const message = error.response?.data?.detail || 'Failed to update template';
+
+      const message = error.response?.data?.detail || error.response?.data?.message || 'Failed to update template';
       throw new Error(message);
     }
   }
 
   /**
    * Delete a template
+   * Uses Laravel endpoint: DELETE /vendor/whatsapp/templates/:id
    */
   async deleteTemplate(id: number): Promise<DeleteTemplateResponse> {
     try {
       console.log('🗑️ Deleting template:', id);
-      
-      const url = buildUrl(
-        API_CONFIG.WHATSAPP.TEMPLATE_DELETE,
-        { id },
-        'whatsapp'
-      );
-      
-      const response = await whatsappClient.delete<DeleteTemplateResponse>(url);
-      
+
+      const url = this.buildUrl(API_CONFIG.WHATSAPP_EXTERNAL.APP.TEMPLATE_DELETE, { id });
+
+      const response = await externalWhatsappClient.delete<DeleteTemplateResponse>(url);
+
       console.log('✅ Template deleted:', id);
-      
+
       return response.data;
     } catch (error: any) {
       console.error('❌ Failed to delete template:', error);
-      
+
       if (error.response?.status === 404) {
         throw new Error('Template not found');
       }
-      
-      const message = error.response?.data?.detail || 'Failed to delete template';
+
+      const message = error.response?.data?.detail || error.response?.data?.message || 'Failed to delete template';
       throw new Error(message);
     }
   }
 
   /**
    * Send template message
+   * Uses Laravel endpoint: POST /vendor/whatsapp/templates/send
    */
   async sendTemplate(payload: TemplateSendRequest): Promise<TemplateSendResponse> {
     try {
       console.log('📤 Sending template:', payload.template_name, 'to', payload.to);
-      
-      const response = await whatsappClient.post<TemplateSendResponse>(
-        '/templates/send',
+
+      const response = await externalWhatsappClient.post<TemplateSendResponse>(
+        API_CONFIG.WHATSAPP_EXTERNAL.APP.TEMPLATE_SEND,
         payload
       );
-      
+
       console.log('✅ Template sent:', response.data.message_id);
-      
+
       return response.data;
     } catch (error: any) {
       console.error('❌ Failed to send template:', error);
-      
-      const message = error.response?.data?.detail || 'Failed to send template';
+
+      const message = error.response?.data?.detail || error.response?.data?.message || 'Failed to send template';
       throw new Error(message);
     }
   }
 
   /**
    * Send template to multiple recipients
+   * Uses Laravel endpoint: POST /vendor/whatsapp/templates/send/bulk
    */
   async sendTemplateBulk(payload: TemplateBulkSendRequest): Promise<TemplateBulkSendResponse> {
     try {
       console.log('📤 Sending template bulk:', payload.template_name, 'to', payload.recipients.length, 'recipients');
-      
-      const response = await whatsappClient.post<TemplateBulkSendResponse>(
-        '/templates/send/bulk',
+
+      const response = await externalWhatsappClient.post<TemplateBulkSendResponse>(
+        API_CONFIG.WHATSAPP_EXTERNAL.APP.TEMPLATE_SEND_BULK,
         payload
       );
-      
+
       console.log('✅ Template bulk sent:', response.data.sent, 'successful,', response.data.failed, 'failed');
-      
+
       return response.data;
     } catch (error: any) {
       console.error('❌ Failed to send template bulk:', error);
-      
-      const message = error.response?.data?.detail || 'Failed to send template bulk';
+
+      const message = error.response?.data?.detail || error.response?.data?.message || 'Failed to send template bulk';
       throw new Error(message);
     }
   }
 
   /**
    * Get template analytics
+   * Uses Laravel endpoint: GET /vendor/whatsapp/templates/:id/analytics
    */
   async getTemplateAnalytics(id: number): Promise<TemplateAnalytics> {
     try {
       console.log('📊 Fetching template analytics:', id);
-      
-      const response = await whatsappClient.get<TemplateAnalytics>(
-        `/templates/${id}/analytics`
-      );
-      
+
+      const url = `${this.buildUrl(API_CONFIG.WHATSAPP_EXTERNAL.APP.TEMPLATE_DETAIL, { id })}/analytics`;
+
+      const response = await externalWhatsappClient.get<TemplateAnalytics>(url);
+
       console.log('✅ Template analytics fetched:', response.data.template_name);
-      
+
       return response.data;
     } catch (error: any) {
       console.error('❌ Failed to fetch template analytics:', error);
-      
-      const message = error.response?.data?.detail || 'Failed to fetch template analytics';
+
+      const message = error.response?.data?.detail || error.response?.data?.message || 'Failed to fetch template analytics';
       throw new Error(message);
     }
   }
@@ -421,13 +434,14 @@ class TemplatesService {
 
   /**
    * Sync all templates with Meta API
+   * Uses Laravel endpoint: POST /vendor/whatsapp/templates/sync
    */
   async syncAllTemplates(): Promise<any> {
     try {
       console.log('🔄 Syncing all templates with Meta API...');
 
-      const response = await whatsappClient.post<any>(
-        API_CONFIG.WHATSAPP.TEMPLATE_SYNC_ALL
+      const response = await externalWhatsappClient.post<any>(
+        API_CONFIG.WHATSAPP_EXTERNAL.APP.TEMPLATE_SYNC_ALL
       );
 
       console.log('✅ Templates synced:', {
@@ -442,25 +456,22 @@ class TemplatesService {
     } catch (error: any) {
       console.error('❌ Failed to sync templates:', error);
 
-      const message = error.response?.data?.detail || 'Failed to sync templates';
+      const message = error.response?.data?.detail || error.response?.data?.message || 'Failed to sync templates';
       throw new Error(message);
     }
   }
 
   /**
    * Sync single template with Meta API
+   * Uses Laravel endpoint: POST /vendor/whatsapp/templates/:id/sync
    */
   async syncTemplate(id: number): Promise<any> {
     try {
       console.log('🔄 Syncing template:', id);
 
-      const url = buildUrl(
-        API_CONFIG.WHATSAPP.TEMPLATE_SYNC,
-        { id },
-        'whatsapp'
-      );
+      const url = this.buildUrl(API_CONFIG.WHATSAPP_EXTERNAL.APP.TEMPLATE_SYNC, { id });
 
-      const response = await whatsappClient.post<any>(url);
+      const response = await externalWhatsappClient.post<any>(url);
 
       console.log('✅ Template synced:', {
         template_id: response.data.template_id,
@@ -474,13 +485,14 @@ class TemplatesService {
     } catch (error: any) {
       console.error('❌ Failed to sync template:', error);
 
-      const message = error.response?.data?.detail || 'Failed to sync template';
+      const message = error.response?.data?.detail || error.response?.data?.message || 'Failed to sync template';
       throw new Error(message);
     }
   }
 
   /**
    * Create template from library
+   * Uses Laravel endpoint: POST /vendor/whatsapp/templates/library
    */
   async createFromLibrary(payload: {
     name: string;
@@ -492,8 +504,8 @@ class TemplatesService {
     try {
       console.log('➕ Creating template from library:', payload.name);
 
-      const response = await whatsappClient.post<Template>(
-        API_CONFIG.WHATSAPP.TEMPLATE_LIBRARY_CREATE,
+      const response = await externalWhatsappClient.post<Template>(
+        `${API_CONFIG.WHATSAPP_EXTERNAL.APP.TEMPLATES}/library`,
         payload
       );
 
@@ -507,7 +519,7 @@ class TemplatesService {
         throw new Error('Template name already exists');
       }
 
-      const message = error.response?.data?.detail || 'Failed to create template from library';
+      const message = error.response?.data?.detail || error.response?.data?.message || 'Failed to create template from library';
       throw new Error(message);
     }
   }

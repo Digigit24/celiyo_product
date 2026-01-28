@@ -106,6 +106,12 @@ class AuthService {
             user.tenant.whatsapp_vendor_uid = tenantSettings.whatsapp_vendor_uid;
             console.log('✅ WhatsApp Vendor UID fetched:', tenantSettings.whatsapp_vendor_uid);
           }
+
+          // Store whatsapp_api_token in tenant object
+          if (tenantSettings.whatsapp_api_token) {
+            user.tenant.whatsapp_api_token = tenantSettings.whatsapp_api_token;
+            console.log('✅ WhatsApp API Token fetched:', '****' + tenantSettings.whatsapp_api_token.slice(-4));
+          }
         } catch (tenantError) {
           console.warn('⚠️ Failed to fetch tenant settings:', tenantError);
         }

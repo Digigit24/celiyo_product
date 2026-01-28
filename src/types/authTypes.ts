@@ -39,6 +39,7 @@ export interface Tenant {
   settings?: TenantSettings;
   gallery_images?: TenantImage[];
   whatsapp_vendor_uid?: string;
+  whatsapp_api_token?: string;
 }
 
 export interface Role {

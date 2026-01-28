@@ -68,6 +68,7 @@ export const AdminSettings: React.FC = () => {
 
   // WhatsApp API settings
   const [whatsappVendorUid, setWhatsappVendorUid] = useState('');
+  const [whatsappApiToken, setWhatsappApiToken] = useState('');
 
   // Branding settings (all go into settings JSON)
   const [headerBgColor, setHeaderBgColor] = useState('#3b82f6');
@@ -125,6 +126,7 @@ export const AdminSettings: React.FC = () => {
 
       // WhatsApp API settings
       setWhatsappVendorUid(settings.whatsapp_vendor_uid || '');
+      setWhatsappApiToken(settings.whatsapp_api_token || '');
 
       // Currency settings
       setCurrencyCode(settings.currency_code || 'INR');
@@ -182,6 +184,7 @@ export const AdminSettings: React.FC = () => {
         logo: logoPreview, // Base64 or URL
         // WhatsApp API settings
         whatsapp_vendor_uid: whatsappVendorUid,
+        whatsapp_api_token: whatsappApiToken,
         // Currency settings
         currency_code: currencyCode,
         currency_symbol: currencySymbol,
@@ -571,6 +574,20 @@ export const AdminSettings: React.FC = () => {
                 />
                 <p className="text-xs text-muted-foreground">
                   Your WhatsApp API Vendor UID from the WhatsApp service dashboard
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="whatsappApiToken">WhatsApp API Access Token</Label>
+                <Input
+                  id="whatsappApiToken"
+                  type="password"
+                  placeholder="Enter your WhatsApp API access token"
+                  value={whatsappApiToken}
+                  onChange={(e) => setWhatsappApiToken(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Your WhatsApp API access token for authentication (stored securely)
                 </p>
               </div>
 

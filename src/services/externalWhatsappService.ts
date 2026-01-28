@@ -22,6 +22,20 @@ export const getWhatsappVendorUid = (): string | null => {
   return null;
 };
 
+// Get WhatsApp API Token from localStorage
+export const getWhatsappApiToken = (): string | null => {
+  try {
+    const userJson = localStorage.getItem(USER_KEY);
+    if (userJson) {
+      const user = JSON.parse(userJson);
+      return user?.tenant?.whatsapp_api_token || null;
+    }
+  } catch (error) {
+    console.error('Failed to get WhatsApp API Token:', error);
+  }
+  return null;
+};
+
 // Create axios instance for external WhatsApp API
 const createExternalWhatsappClient = (): AxiosInstance => {
   const client = axios.create({
@@ -32,12 +46,20 @@ const createExternalWhatsappClient = (): AxiosInstance => {
     },
   });
 
-  // Request interceptor - attach Bearer token
+  // Request interceptor - attach WhatsApp API token (NOT user auth token)
   client.interceptors.request.use(
     (config) => {
-      const token = tokenManager.getAccessToken();
+      // Use WhatsApp API token for external WhatsApp API calls
+      const whatsappApiToken = getWhatsappApiToken();
+      // Fallback to user auth token if WhatsApp API token is not set
+      const userAuthToken = tokenManager.getAccessToken();
+      const token = whatsappApiToken || userAuthToken;
+
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
+        console.log('🔑 Using token for WhatsApp API:', whatsappApiToken ? 'WhatsApp API Token' : 'User Auth Token (fallback)');
+      } else {
+        console.warn('⚠️ No token found for WhatsApp API request!');
       }
       return config;
     },

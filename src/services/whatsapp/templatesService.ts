@@ -121,21 +121,23 @@ class TemplatesService {
 
   /**
    * Get all templates with optional filters
-   * Uses Laravel WEB route: GET /vendor-console/whatsapp/templates/list-data
+   * Uses Laravel API route: GET /api/{vendorUid}/templates
    */
   async getTemplates(query?: TemplatesListQuery): Promise<TemplatesListResponse> {
     try {
-      console.log('📋 Fetching templates from Laravel web route:', query);
+      console.log('📋 Fetching templates via API route:', query);
 
-      const queryString = buildQueryString(query as unknown as Record<string, string | number | boolean>);
-      const url = `${API_CONFIG.WHATSAPP_EXTERNAL.APP.TEMPLATES}${queryString}`;
+      // Use externalWhatsappService which calls /{vendorUid}/templates
+      const response = await externalWhatsappService.getTemplates({
+        status: query?.status,
+        category: query?.category,
+        language: query?.language,
+        limit: query?.limit,
+        skip: query?.skip
+      });
 
-      console.log('📤 Request URL:', url);
-
-      const response = await laravelClient.get<LaravelTemplatesResponse>(url);
-
-      // Normalize the Laravel response to our standard format
-      const normalized = this.normalizeTemplatesResponse(response.data);
+      // Normalize the API response to our standard format
+      const normalized = this.normalizeTemplatesResponse(response);
 
       console.log('✅ Templates fetched:', {
         total: normalized.total,
@@ -151,25 +153,26 @@ class TemplatesService {
   }
 
   /**
-   * Get single template by ID
-   * Note: Laravel web routes may not have a direct detail endpoint
-   * This fetches from the list and filters
+   * Get single template by ID or UID
+   * Uses Laravel API route: GET /api/{vendorUid}/templates/{templateUid}
    */
-  async getTemplate(id: number): Promise<Template> {
+  async getTemplate(id: number | string): Promise<Template> {
     try {
-      console.log('📋 Fetching template:', id);
+      console.log('📋 Fetching template via API route:', id);
 
-      // Try to get all templates and find by ID
-      const response = await this.getTemplates({ limit: 100 });
-      const template = response.items.find(t => t.id === id);
+      // Use externalWhatsappService which calls /{vendorUid}/templates/{templateUid}
+      const response = await externalWhatsappService.getTemplate(id);
+
+      // Extract template from response (handles different response formats)
+      const template = response.data || response.template || response;
 
       if (!template) {
         throw new Error('Template not found');
       }
 
-      console.log('✅ Template fetched:', template.name);
+      console.log('✅ Template fetched:', template.name || template.template_name);
 
-      return template;
+      return template as Template;
     } catch (error: any) {
       console.error('❌ Failed to fetch template:', error);
 

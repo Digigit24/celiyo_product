@@ -721,21 +721,34 @@ class TemplatesService {
    * Frontend expects: { id, name, language, category, status, components, ... }
    */
   private mapLaravelTemplate(laravelTemplate: any): Template {
+    // Extract components from template_data if available
+    const components = laravelTemplate.template_data?.components || laravelTemplate.components || [];
+    const bodyComponent = components.find((c: any) => c.type === 'BODY');
+
     return {
-      id: laravelTemplate._uid || laravelTemplate.id,
-      name: laravelTemplate.template_name || laravelTemplate.name,
-      language: laravelTemplate.language,
-      category: laravelTemplate.category,
-      status: laravelTemplate.status,
-      // Extract components from template_data if available
-      components: laravelTemplate.template_data?.components || laravelTemplate.components || [],
-      // Keep additional fields
-      template_id: laravelTemplate.template_id,
-      body: laravelTemplate.template_data?.components?.find((c: any) => c.type === 'BODY')?.text || '',
+      // ID: prefer _uid (string UUID), fallback to _id or id
+      id: laravelTemplate._uid || laravelTemplate._id || laravelTemplate.id,
+      // Name: prefer template_name, fallback to name or template_data.name
+      name: laravelTemplate.template_name || laravelTemplate.name || laravelTemplate.template_data?.name || '',
+      // Language: direct field or from template_data
+      language: laravelTemplate.language || laravelTemplate.template_data?.language || 'en',
+      // Category: direct field or from template_data
+      category: laravelTemplate.category || laravelTemplate.template_data?.category || 'UTILITY',
+      // Status: direct field or from template_data
+      status: laravelTemplate.status || laravelTemplate.template_data?.status || 'PENDING',
+      // Components from template_data
+      components: components,
+      // Template ID (Meta's ID)
+      template_id: laravelTemplate.template_id || laravelTemplate.template_data?.id,
+      // Body text extracted from components
+      body: bodyComponent?.text || '',
+      // Usage count
       usage_count: laravelTemplate.usage_count || 0,
+      // Quality score
       quality_score: laravelTemplate.quality_score,
-      created_at: laravelTemplate.created_at,
-      updated_at: laravelTemplate.updated_at,
+      // Timestamps - provide defaults if missing
+      created_at: laravelTemplate.created_at || new Date().toISOString(),
+      updated_at: laravelTemplate.updated_at || new Date().toISOString(),
     } as Template;
   }
 

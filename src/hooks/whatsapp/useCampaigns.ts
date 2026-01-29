@@ -1,47 +1,28 @@
 // src/hooks/whatsapp/useCampaigns.ts
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { campaignsService } from '@/services/whatsapp/campaignsService';
-import type {
-  WACampaign,
-  CampaignListQuery,
-  CreateCampaignPayload,
-  CreateTemplateCampaignPayload,
-  TemplateBroadcastBulkPayload,
-  TemplateBroadcastBulkResponse,
-} from '@/types/whatsappTypes';
+import { campaignsService, CreateCampaignRequest } from '@/services/whatsapp/campaignsService';
+import type { Campaign, CampaignsListQuery } from '@/types/whatsappTypes';
 
 export interface UseCampaignsOptions {
-  initialQuery?: CampaignListQuery;
+  initialQuery?: CampaignsListQuery;
   autoFetch?: boolean;
 }
 
 export interface UseCampaignsReturn {
-  // Data
-  campaigns: WACampaign[];
-  count: number;
-
-  // Query
-  query: CampaignListQuery;
-
-  // Loading
+  campaigns: Campaign[];
+  total: number;
   isLoading: boolean;
   isCreating: boolean;
-
-  // Error
   error: string | null;
-
-  // Actions
-  fetchCampaigns: (newQuery?: CampaignListQuery) => Promise<void>;
-  createCampaign: (payload: CreateCampaignPayload) => Promise<WACampaign | null>;
-  createTemplateCampaign: (payload: CreateTemplateCampaignPayload) => Promise<WACampaign | null>;
-  sendTemplateBroadcastBulk: (payload: TemplateBroadcastBulkPayload) => Promise<TemplateBroadcastBulkResponse | null>;
-  getCampaign: (campaignId: string) => Promise<WACampaign | null>;
+  fetchCampaigns: (query?: CampaignsListQuery) => Promise<void>;
+  createCampaign: (payload: CreateCampaignRequest) => Promise<Campaign | null>;
+  deleteCampaign: (id: string) => Promise<boolean>;
+  archiveCampaign: (id: string) => Promise<boolean>;
+  unarchiveCampaign: (id: string) => Promise<boolean>;
+  getCampaign: (id: string) => Promise<Campaign | null>;
   refetch: () => Promise<void>;
-
-  // Helpers
-  successRate: (c: WACampaign) => number;
-  stats: (c: WACampaign) => {
+  getStats: (campaign: Campaign) => {
     total_recipients: number;
     sent: number;
     failed: number;
@@ -50,33 +31,22 @@ export interface UseCampaignsReturn {
   };
 }
 
-const defaultQuery: CampaignListQuery = {
-  skip: 0,
-  limit: 50,
-};
-
 export function useCampaigns(options: UseCampaignsOptions = {}): UseCampaignsReturn {
-  const { initialQuery = defaultQuery, autoFetch = true } = options;
+  const { initialQuery, autoFetch = true } = options;
 
-  // State
-  const [campaigns, setCampaigns] = useState<WACampaign[]>([]);
-  const [query, setQuery] = useState<CampaignListQuery>(initialQuery);
-
-  // Loading / error
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchCampaigns = useCallback(async (newQuery?: CampaignListQuery) => {
+  const fetchCampaigns = useCallback(async (query?: CampaignsListQuery) => {
     try {
       setIsLoading(true);
       setError(null);
-
-      const q = newQuery ?? query;
-      const data = await campaignsService.listCampaigns(q);
-
-      setCampaigns(Array.isArray(data) ? data : []);
-      if (newQuery) setQuery(newQuery);
+      const response = await campaignsService.getCampaigns(query || initialQuery);
+      setCampaigns(response.campaigns);
+      setTotal(response.total);
     } catch (err: any) {
       const msg = err?.message || 'Failed to fetch campaigns';
       setError(msg);
@@ -84,17 +54,16 @@ export function useCampaigns(options: UseCampaignsOptions = {}): UseCampaignsRet
     } finally {
       setIsLoading(false);
     }
-  }, [query]);
+  }, [initialQuery]);
 
-  const createCampaign = useCallback(async (payload: CreateCampaignPayload) => {
+  const createCampaign = useCallback(async (payload: CreateCampaignRequest) => {
     try {
       setIsCreating(true);
       setError(null);
-
-      const created = await campaignsService.createBroadcast(payload);
-      // Optimistic prepend
+      const created = await campaignsService.createCampaign(payload);
       setCampaigns((prev) => [created, ...prev]);
-      toast.success(`Campaign "${created.campaign_name || created.campaign_id}" created`);
+      setTotal((prev) => prev + 1);
+      toast.success(`Campaign "${payload.title}" created`);
       return created;
     } catch (err: any) {
       const msg = err?.message || 'Failed to create campaign';
@@ -106,66 +75,50 @@ export function useCampaigns(options: UseCampaignsOptions = {}): UseCampaignsRet
     }
   }, []);
 
-  const createTemplateCampaign = useCallback(async (payload: CreateTemplateCampaignPayload) => {
+  const deleteCampaign = useCallback(async (id: string) => {
     try {
-      setIsCreating(true);
-      setError(null);
-
-      const created = await campaignsService.createTemplateBroadcast(payload);
-      // Optimistic prepend
-      setCampaigns((prev) => [created, ...prev]);
-      toast.success(`Template campaign "${created.campaign_name || created.campaign_id}" created`);
-      return created;
+      await campaignsService.deleteCampaign(id);
+      setCampaigns((prev) => prev.filter((c) => c.campaign_id !== id && c.id !== id));
+      setTotal((prev) => prev - 1);
+      toast.success('Campaign deleted');
+      return true;
     } catch (err: any) {
-      const msg = err?.message || 'Failed to create template campaign';
-      setError(msg);
-      toast.error(msg);
-      return null;
-    } finally {
-      setIsCreating(false);
+      toast.error(err?.message || 'Failed to delete campaign');
+      return false;
     }
   }, []);
 
-  /**
-   * NEW: Send template broadcast using bulk send endpoint (bypasses 24hr window)
-   */
-  const sendTemplateBroadcastBulk = useCallback(async (payload: TemplateBroadcastBulkPayload) => {
+  const archiveCampaign = useCallback(async (id: string) => {
     try {
-      setIsCreating(true);
-      setError(null);
-
-      const result = await campaignsService.sendTemplateBroadcastBulk(payload);
-
-      toast.success(
-        `Campaign "${result.campaign_name}" sent: ${result.sent}/${result.total} successful`,
-        { duration: 5000 }
-      );
-
-      // Refresh campaigns list to show the new campaign
+      await campaignsService.archiveCampaign(id);
+      toast.success('Campaign archived');
       await fetchCampaigns();
-
-      return result;
+      return true;
     } catch (err: any) {
-      const msg = err?.message || 'Failed to send template broadcast';
-      setError(msg);
-      toast.error(msg);
-      return null;
-    } finally {
-      setIsCreating(false);
+      toast.error(err?.message || 'Failed to archive campaign');
+      return false;
     }
   }, [fetchCampaigns]);
 
-  const getCampaign = useCallback(async (campaignId: string) => {
+  const unarchiveCampaign = useCallback(async (id: string) => {
+    try {
+      await campaignsService.unarchiveCampaign(id);
+      toast.success('Campaign unarchived');
+      await fetchCampaigns();
+      return true;
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to unarchive campaign');
+      return false;
+    }
+  }, [fetchCampaigns]);
+
+  const getCampaign = useCallback(async (id: string) => {
     try {
       setIsLoading(true);
-      setError(null);
-
-      const item = await campaignsService.getCampaignById(campaignId);
-      return item;
+      const campaign = await campaignsService.getCampaign(id);
+      return campaign;
     } catch (err: any) {
-      const msg = err?.message || 'Failed to load campaign';
-      setError(msg);
-      toast.error(msg);
+      toast.error(err?.message || 'Failed to load campaign');
       return null;
     } finally {
       setIsLoading(false);
@@ -176,22 +129,10 @@ export function useCampaigns(options: UseCampaignsOptions = {}): UseCampaignsRet
     await fetchCampaigns();
   }, [fetchCampaigns]);
 
-  // Helpers
-  const successRate = useCallback((c: WACampaign) => {
-    return campaignsService.calculateSuccessRate(c);
+  const getStats = useCallback((campaign: Campaign) => {
+    return campaignsService.getCampaignStats(campaign);
   }, []);
 
-  const stats = useCallback((c: WACampaign) => {
-    return campaignsService.getCampaignStats(c) as {
-      total_recipients: number;
-      sent: number;
-      failed: number;
-      success_rate: number;
-      failure_rate: number;
-    };
-  }, []);
-
-  // Auto-load
   useEffect(() => {
     if (autoFetch) {
       fetchCampaigns();
@@ -200,18 +141,17 @@ export function useCampaigns(options: UseCampaignsOptions = {}): UseCampaignsRet
 
   return {
     campaigns,
-    count: campaigns.length,
-    query,
+    total,
     isLoading,
     isCreating,
     error,
     fetchCampaigns,
     createCampaign,
-    createTemplateCampaign,
-    sendTemplateBroadcastBulk,
+    deleteCampaign,
+    archiveCampaign,
+    unarchiveCampaign,
     getCampaign,
     refetch,
-    successRate,
-    stats,
+    getStats,
   };
 }

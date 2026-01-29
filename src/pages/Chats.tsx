@@ -86,14 +86,22 @@ export default function Chats() {
   useEffect(() => {
     if (contacts.length > 0 && !selectedContactUid && !isMobile) {
       const firstContact = contacts[0];
-      setSelectedContactUid(firstContact._uid || firstContact.phone_number);
+      // Prefer _uid over phone_number - chatService will resolve if needed
+      const contactId = firstContact._uid || firstContact.phone_number;
+      console.log('🔷 Auto-selecting first contact:', {
+        _uid: firstContact._uid,
+        phone: firstContact.phone_number,
+        selected: contactId
+      });
+      setSelectedContactUid(contactId);
     }
   }, [contacts, selectedContactUid, isMobile]);
 
   const handleConversationSelect = useCallback(async (contactId: string) => {
+    console.log('🔷 Selecting contact:', contactId);
     setSelectedContactUid(contactId);
 
-    // Mark as read when selecting
+    // Mark as read when selecting - chatService will resolve phone to UID if needed
     try {
       await markAsReadMutation.mutateAsync(contactId);
     } catch (e) {
@@ -125,16 +133,32 @@ export default function Chats() {
       queryClient.invalidateQueries({ queryKey: chatKeys.unreadCount() });
 
       // If the message is for the currently selected contact, refetch messages
+      // Match by phone number OR by contact UID from WebSocket payload
       const phoneKey = normalize(phone);
+      const wsContactUid = contact?._uid || contact?.uid;
       const selectedKey = normalize(selectedContactUid);
-      if (phoneKey && selectedKey && phoneKey === selectedKey) {
+
+      // Find the selected contact to get its phone number for comparison
+      const selectedContact = contacts.find(
+        (c: ChatContact) => (c._uid || c.phone_number) === selectedContactUid
+      );
+      const selectedPhone = normalize(selectedContact?.phone_number);
+
+      // Check if this message is for the selected contact
+      const isMatchingContact =
+        (phoneKey && selectedPhone && phoneKey === selectedPhone) ||
+        (phoneKey && selectedKey && phoneKey === selectedKey) ||
+        (wsContactUid && wsContactUid === selectedContactUid);
+
+      if (isMatchingContact) {
+        console.log('🔄 WebSocket message for selected contact - refreshing messages');
         queryClient.invalidateQueries({
           queryKey: chatKeys.messages(selectedContactUid, {}),
           exact: false,
         });
       }
     }
-  }, [payloads, selectedContactUid, queryClient]);
+  }, [payloads, selectedContactUid, contacts, queryClient]);
 
   if (isLoading) {
     return (

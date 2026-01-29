@@ -656,6 +656,39 @@ class ExternalWhatsappService {
     const response = await externalWhatsappClient.get(url);
     return handleResponse(response);
   }
+
+  // Helper: Get contact by phone number
+  async getContactByPhone(phoneNumber: string): Promise<any | null> {
+    try {
+      // Normalize phone number (remove + prefix if present)
+      const normalizedPhone = phoneNumber.replace(/^\+/, '');
+
+      // Search contacts by phone number
+      const response = await this.getContacts({ search: normalizedPhone, limit: 10 });
+
+      let contacts: any[] = [];
+      if (Array.isArray(response)) {
+        contacts = response;
+      } else if (response?.data) {
+        contacts = Array.isArray(response.data) ? response.data : [];
+      } else if (response?.contacts) {
+        contacts = response.contacts;
+      }
+
+      // Find exact match by phone number
+      const contact = contacts.find((c: any) => {
+        const contactPhone = (c.phone_number || c.phone || c.wa_id || '').replace(/^\+/, '');
+        return contactPhone === normalizedPhone ||
+               contactPhone.endsWith(normalizedPhone) ||
+               normalizedPhone.endsWith(contactPhone);
+      });
+
+      return contact || null;
+    } catch (error) {
+      console.warn('Failed to lookup contact by phone:', error);
+      return null;
+    }
+  }
 }
 
 export const externalWhatsappService = new ExternalWhatsappService();

@@ -4,6 +4,7 @@
 import { whatsappClient } from '@/lib/whatsappClient';
 import { API_CONFIG, buildUrl, buildQueryString } from '@/lib/apiConfig';
 import { externalWhatsappService, getWhatsappVendorUid } from '@/services/externalWhatsappService';
+import { chatService } from '@/services/whatsapp/chatService';
 import {
   SendTextMessagePayload,
   SendTextMessageResponse,
@@ -294,23 +295,11 @@ class MessagesService {
       if (this.useExternalApi()) {
         try {
           const cleanPhone = String(phone).trim().replace(/^\+/, '');
-          const response = await externalWhatsappService.getContactMessages(cleanPhone);
+          // Use chatService which properly resolves phone number to contact UID
+          const response = await chatService.getContactMessages(cleanPhone);
 
-          let messages: any[] = [];
-          let contact: any = null;
-
-          if (Array.isArray(response)) {
-            messages = response;
-          } else if (response?.data) {
-            messages = Array.isArray(response.data) ? response.data : [];
-            contact = response.contact;
-          } else if (response?.messages) {
-            messages = response.messages;
-            contact = response.contact;
-          }
-
-          // Transform messages
-          const transformedMessages = messages.map((m: any) => ({
+          // Transform messages from chatService format to messagesService format
+          const transformedMessages = response.messages.map((m: any) => ({
             id: String(m._uid || m.id || m.message_uid || `local-${Math.random().toString(36).slice(2)}`),
             from: m.from || (m.direction === 'incoming' ? phone : ''),
             to: m.to || (m.direction === 'outgoing' ? phone : null),
@@ -324,7 +313,7 @@ class MessagesService {
 
           const conversationDetail: ConversationDetail = {
             phone,
-            name: contact?.name || contact?.first_name || phone,
+            name: response.contact?.name || response.contact?.first_name || phone,
             messages: transformedMessages,
           };
 
@@ -445,7 +434,8 @@ class MessagesService {
       if (this.useExternalApi()) {
         try {
           const cleanPhone = String(phone).trim().replace(/^\+/, '');
-          await externalWhatsappService.clearChatHistory(cleanPhone);
+          // Use chatService which properly resolves phone number to contact UID
+          await chatService.clearChatHistory(cleanPhone);
 
           console.log('✅ Conversation deleted via external API');
           return { phone, deleted_count: 1 };

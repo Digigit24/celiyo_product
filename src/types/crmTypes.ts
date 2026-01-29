@@ -126,6 +126,7 @@ export interface Lead {
   status?: LeadStatus | number; // Can be either LeadStatus object or number ID
   status_name?: string; // From serializer
   priority: PriorityEnum;
+  lead_score?: number; // 0-100 score
   value_amount?: string; // DecimalField as string
   value_currency?: string;
   source?: string;
@@ -328,6 +329,7 @@ export interface CreateLeadPayload {
   title?: string;
   status?: number;
   priority?: PriorityEnum;
+  lead_score?: number;
   value_amount?: string;
   value_currency?: string;
   source?: string;

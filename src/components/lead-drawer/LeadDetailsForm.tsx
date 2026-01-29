@@ -32,6 +32,7 @@ import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 
 import { DynamicFieldRenderer } from '@/components/crm/DynamicFieldRenderer';
+import { LeadScoreSlider } from '@/components/crm/LeadScoreSlider';
 import type { Lead, CreateLeadPayload, PriorityEnum } from '@/types/crmTypes';
 import type { LeadFormHandle } from '../LeadsFormDrawer';
 import { useCRM } from '@/hooks/useCRM';
@@ -128,6 +129,9 @@ const LeadDetailsForm = forwardRef<LeadFormHandle, LeadDetailsFormProps>(
         }),
         ...(isFieldVisible('priority') && {
           priority: z.enum(['LOW', 'MEDIUM', 'HIGH']).default('MEDIUM'),
+        }),
+        ...(isFieldVisible('lead_score') && {
+          lead_score: z.number().min(0).max(100).default(0),
         }),
         ...(isFieldVisible('value_amount') && {
           value_amount: z.string().optional(),
@@ -228,6 +232,7 @@ const LeadDetailsForm = forwardRef<LeadFormHandle, LeadDetailsFormProps>(
         title: lead?.title || '',
         status: typeof lead?.status === 'object' ? lead.status?.id : lead?.status,
         priority: lead?.priority || 'MEDIUM',
+        lead_score: lead?.lead_score || 0,
         value_amount: lead?.value_amount || '',
         value_currency: lead?.value_currency || getCurrencyCode(),
         source: lead?.source || '',
@@ -464,6 +469,33 @@ const LeadDetailsForm = forwardRef<LeadFormHandle, LeadDetailsFormProps>(
               </div>
             )}
 
+            {/* Lead Score */}
+            {isFieldVisible('lead_score') && (
+              <div className="space-y-2">
+                <Label htmlFor="lead_score">Lead Score</Label>
+                <Controller
+                  name="lead_score"
+                  control={control}
+                  render={({ field }) => (
+                    <LeadScoreSlider
+                      score={field.value || 0}
+                      onSave={async (score) => {
+                        field.onChange(score);
+                        // In form context, we just update the field value
+                        // The actual save happens when the form is submitted
+                        return Promise.resolve();
+                      }}
+                      leadName=""
+                      size="md"
+                    />
+                  )}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Drag to adjust lead score (0-100)
+                </p>
+              </div>
+            )}
+
             {/* Assigned To */}
             {isFieldVisible('assigned_to') && (
               <div className="space-y-2">
@@ -556,36 +588,123 @@ const LeadDetailsForm = forwardRef<LeadFormHandle, LeadDetailsFormProps>(
 
             {/* Next Follow-up */}
             {isFieldVisible('next_follow_up_at') && (
-              <div className="space-y-2">
+              <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="next_follow_up_at">Next Follow-up</Label>
                 <Controller
                   name="next_follow_up_at"
                   control={control}
-                  render={({ field }) => (
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            'w-full justify-start text-left font-normal',
-                            !field.value && 'text-muted-foreground'
-                          )}
-                          disabled={isReadOnly}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {field.value ? format(new Date(field.value), 'PPP') : 'Pick a date'}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value ? new Date(field.value) : undefined}
-                          onSelect={(date) => field.onChange(date ? date.toISOString() : '')}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  )}
+                  render={({ field }) => {
+                    const selectedDate = field.value ? new Date(field.value) : undefined;
+                    const selectedTime = selectedDate
+                      ? `${selectedDate.getHours().toString().padStart(2, '0')}:${selectedDate.getMinutes().toString().padStart(2, '0')}`
+                      : '';
+
+                    const handleDateSelect = (date: Date | undefined) => {
+                      if (!date) {
+                        field.onChange('');
+                        return;
+                      }
+                      // Preserve existing time or default to 10:00 AM
+                      const hours = selectedDate?.getHours() || 10;
+                      const minutes = selectedDate?.getMinutes() || 0;
+                      const newDate = new Date(date);
+                      newDate.setHours(hours, minutes, 0, 0);
+                      field.onChange(newDate.toISOString());
+                    };
+
+                    const handleTimeSelect = (time: string) => {
+                      if (!selectedDate) {
+                        // If no date selected, default to today
+                        const today = new Date();
+                        const [hours, minutes] = time.split(':').map(Number);
+                        today.setHours(hours, minutes, 0, 0);
+                        field.onChange(today.toISOString());
+                        return;
+                      }
+                      const [hours, minutes] = time.split(':').map(Number);
+                      const newDate = new Date(selectedDate);
+                      newDate.setHours(hours, minutes, 0, 0);
+                      field.onChange(newDate.toISOString());
+                    };
+
+                    return (
+                      <div className="flex gap-2">
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                'flex-1 justify-start text-left font-normal',
+                                !field.value && 'text-muted-foreground'
+                              )}
+                              disabled={isReadOnly}
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {field.value ? format(new Date(field.value), 'PPP') : 'Pick a date'}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={selectedDate}
+                              onSelect={handleDateSelect}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                        
+                        {field.value && (
+                          <Select value={selectedTime} onValueChange={handleTimeSelect} disabled={isReadOnly}>
+                            <SelectTrigger className="w-[140px]">
+                              <SelectValue placeholder="Time" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {[
+                                { value: '09:00', label: '9:00 AM' },
+                                { value: '09:30', label: '9:30 AM' },
+                                { value: '10:00', label: '10:00 AM' },
+                                { value: '10:30', label: '10:30 AM' },
+                                { value: '11:00', label: '11:00 AM' },
+                                { value: '11:30', label: '11:30 AM' },
+                                { value: '12:00', label: '12:00 PM' },
+                                { value: '12:30', label: '12:30 PM' },
+                                { value: '13:00', label: '1:00 PM' },
+                                { value: '13:30', label: '1:30 PM' },
+                                { value: '14:00', label: '2:00 PM' },
+                                { value: '14:30', label: '2:30 PM' },
+                                { value: '15:00', label: '3:00 PM' },
+                                { value: '15:30', label: '3:30 PM' },
+                                { value: '16:00', label: '4:00 PM' },
+                                { value: '16:30', label: '4:30 PM' },
+                                { value: '17:00', label: '5:00 PM' },
+                                { value: '17:30', label: '5:30 PM' },
+                                { value: '18:00', label: '6:00 PM' },
+                                { value: '18:30', label: '6:30 PM' },
+                                { value: '19:00', label: '7:00 PM' },
+                              ].map((option) => (
+                                <SelectItem key={option.value} value={option.value}>
+                                  {option.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                        
+                        {field.value && !isReadOnly && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-10 w-10 text-muted-foreground hover:text-destructive"
+                            onClick={() => field.onChange('')}
+                            type="button"
+                          >
+                            <span className="sr-only">Clear</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                          </Button>
+                        )}
+                      </div>
+                    );
+                  }}
                 />
               </div>
             )}

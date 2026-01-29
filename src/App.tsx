@@ -18,7 +18,6 @@ import Dashboard from "./pages/Dashboard";
 import Inbox from "./pages/Inbox";
 import NotFound from "./pages/NotFound";
 import { CRMLeads } from "./pages/CRMLeads";
-import { CRMFollowups } from "./pages/CRMFollowups"; // ⬅️ ADDED
 import { CRMActivities } from "./pages/CRMActivities"; // ⬅️ ADDED
 import { CRMLeadStatuses } from "./pages/CRMLeadStatuses";
 import { CRMFieldConfigurations } from "./pages/CRMFieldConfigurations";
@@ -107,7 +106,6 @@ const AppLayout = () => {
               {/* CRM Routes */}
               <Route path="/crm/leads" element={<ModuleProtectedRoute requiredModule="crm"><CRMLeads /></ModuleProtectedRoute>} />
               <Route path="/crm/leads/:leadId" element={<ModuleProtectedRoute requiredModule="crm"><LeadDetailsPage /></ModuleProtectedRoute>} />
-              <Route path="/crm/followups" element={<ModuleProtectedRoute requiredModule="crm"><CRMFollowups /></ModuleProtectedRoute>} />
               <Route path="/crm/activities" element={<ModuleProtectedRoute requiredModule="crm"><CRMActivities /></ModuleProtectedRoute>} />
               <Route path="/crm/statuses" element={<ModuleProtectedRoute requiredModule="crm"><CRMLeadStatuses /></ModuleProtectedRoute>} />
               <Route path="/crm/settings" element={<ModuleProtectedRoute requiredModule="crm"><CRMFieldConfigurations /></ModuleProtectedRoute>} />

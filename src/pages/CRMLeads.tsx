@@ -1,5 +1,5 @@
 // src/pages/CRMLeads.tsx
-import { useState, useCallback, useMemo, useRef } from 'react';
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCRM } from '@/hooks/useCRM';
 import { useAuth } from '@/hooks/useAuth';
@@ -11,22 +11,26 @@ import { LeadStatusFormDrawer } from '@/components/LeadStatusFormDrawer';
 import { KanbanBoard } from '@/components/KanbanBoard';
 import { LeadImportMappingDialog } from '@/components/LeadImportMappingDialog';
 import { EditableNotesCell } from '@/components/crm/EditableNotesCell';
+import { EditableFollowupCell } from '@/components/crm/EditableFollowupCell';
+import { LeadScoreSlider } from '@/components/crm/LeadScoreSlider';
 import { WhatsAppTemplateModal } from '@/components/WhatsAppTemplateModal';
+import { FollowupsContent } from '@/components/crm/FollowupsContent';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, RefreshCw, Building2, Phone, Mail, IndianRupee, LayoutGrid, List, Download, Upload, FileSpreadsheet, ChevronDown, MessageCircle, Trash2, FileText } from 'lucide-react';
+import { Plus, RefreshCw, Building2, Phone, Mail, IndianRupee, LayoutGrid, List, Download, Upload, FileSpreadsheet, ChevronDown, MessageCircle, Trash2, FileText, CalendarClock } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 import type { Lead, LeadsQueryParams, PriorityEnum, LeadStatus } from '@/types/crmTypes';
 import type { RowActions } from '@/components/DataTable';
 import type { PatientCreateData } from '@/types/patient.types';
+import { leadStatusCache } from '@/lib/leadStatusCache';
 
 type DrawerMode = 'view' | 'edit' | 'create';
-type ViewMode = 'list' | 'kanban';
+type ViewMode = 'list' | 'kanban' | 'followups';
 
 export const CRMLeads: React.FC = () => {
   const navigate = useNavigate();
@@ -73,6 +77,13 @@ export const CRMLeads: React.FC = () => {
     ordering: 'display_order',
     page_size: 200,
   });
+
+  // Cache lead statuses when fetched
+  useEffect(() => {
+    if (statusesData?.results) {
+      leadStatusCache.updateFromApi(statusesData.results);
+    }
+  }, [statusesData]);
 
   if (!hasCRMAccess) {
     return (
@@ -205,6 +216,32 @@ export const CRMLeads: React.FC = () => {
         toast.success('Notes updated');
       } catch (error: any) {
         toast.error(error?.message || 'Failed to update notes');
+        throw error;
+      }
+    },
+    [patchLead, mutate]
+  );
+
+  const handleUpdateFollowup = useCallback(
+    async (leadId: number, nextFollowUpAt: string | null) => {
+      try {
+        await patchLead(leadId, { next_follow_up_at: nextFollowUpAt });
+        mutate();
+      } catch (error: any) {
+        toast.error(error?.message || 'Failed to update follow-up');
+        throw error;
+      }
+    },
+    [patchLead, mutate]
+  );
+
+  const handleUpdateLeadScore = useCallback(
+    async (leadId: number, score: number) => {
+      try {
+        await patchLead(leadId, { lead_score: score });
+        mutate();
+      } catch (error: any) {
+        toast.error(error?.message || 'Failed to update lead score');
         throw error;
       }
     },
@@ -814,6 +851,43 @@ export const CRMLeads: React.FC = () => {
         filterable: true,
         accessor: (lead) => lead.notes || '',
       },
+      next_follow_up_at: {
+        header: 'Next Follow-up',
+        key: 'next_follow_up_at',
+        cell: (lead) => (
+          <div onClick={(e) => e.stopPropagation()} className="w-[140px]">
+            <EditableFollowupCell
+              dateValue={lead.next_follow_up_at}
+              onSave={async (date) => {
+                await handleUpdateFollowup(lead.id, date);
+              }}
+              leadName={lead.name}
+            />
+          </div>
+        ),
+        sortable: true,
+        filterable: false,
+        accessor: (lead) => lead.next_follow_up_at || '',
+      },
+      lead_score: {
+        header: 'Score',
+        key: 'lead_score',
+        cell: (lead) => (
+          <div onClick={(e) => e.stopPropagation()}>
+            <LeadScoreSlider
+              score={lead.lead_score || 0}
+              onSave={async (score) => {
+                await handleUpdateLeadScore(lead.id, score);
+              }}
+              leadName={lead.name}
+              size="sm"
+            />
+          </div>
+        ),
+        sortable: true,
+        filterable: false,
+        accessor: (lead) => lead.lead_score || 0,
+      },
     };
 
     const visibleColumns: Array<{ column: DataTableColumn<Lead>; order: number }> = [];
@@ -826,12 +900,14 @@ export const CRMLeads: React.FC = () => {
       priority: 4,
       value_amount: 5,
       notes: 6,
+      next_follow_up_at: 7,
+      lead_score: 8,
     };
 
     Object.entries(columnDefinitions).forEach(([fieldName, columnDef]) => {
       const fieldConfig = standardFieldsMap.get(fieldName);
 
-      if (fieldName === 'notes') {
+      if (fieldName === 'notes' || fieldName === 'next_follow_up_at' || fieldName === 'lead_score') {
         const order = fieldConfig?.order ?? defaultFieldOrder[fieldName] ?? 6;
         visibleColumns.push({ column: columnDef, order });
         return;
@@ -865,7 +941,7 @@ export const CRMLeads: React.FC = () => {
     });
 
     return sortedColumns;
-  }, [configurationsData?.results, statusesData?.results, selectedLeadIds, toggleLeadSelection, filteredLeads, toggleAllLeads, handleUpdateNotes]);
+  }, [configurationsData?.results, statusesData?.results, selectedLeadIds, toggleLeadSelection, filteredLeads, toggleAllLeads, handleUpdateNotes, handleUpdateFollowup, handleUpdateLeadScore]);
 
   const columns: DataTableColumn<Lead>[] = dynamicColumns;
 
@@ -1142,7 +1218,7 @@ export const CRMLeads: React.FC = () => {
       <Card>
         <CardContent className="p-4">
           <Tabs value={viewMode} onValueChange={(value) => handleViewModeChange(value as ViewMode)}>
-            <TabsList className="grid w-full grid-cols-2 max-w-md">
+            <TabsList className="grid w-full grid-cols-3 max-w-lg">
               <TabsTrigger value="list" className="flex items-center gap-2">
                 <List className="h-4 w-4" />
                 List View
@@ -1151,12 +1227,22 @@ export const CRMLeads: React.FC = () => {
                 <LayoutGrid className="h-4 w-4" />
                 Kanban Board
               </TabsTrigger>
+              <TabsTrigger value="followups" className="flex items-center gap-2">
+                <CalendarClock className="h-4 w-4" />
+                Follow-ups
+              </TabsTrigger>
             </TabsList>
           </Tabs>
         </CardContent>
       </Card>
 
-      {viewMode === 'list' ? (
+      {viewMode === 'followups' ? (
+        <FollowupsContent
+          leads={filteredLeads}
+          isLoading={isLoading}
+          onMutate={mutate}
+        />
+      ) : viewMode === 'list' ? (
         <Card>
           <CardContent className="p-0">
             <DataTable

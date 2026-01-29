@@ -16,6 +16,7 @@ import LeadDetailsForm from '@/components/lead-drawer/LeadDetailsForm';
 import LeadActivities from '@/components/lead-drawer/LeadActivities';
 import LeadTasks from '@/components/lead-drawer/LeadTasks';
 import MeetingsFormDrawer from '@/components/MeetingsFormDrawer';
+import { LeadScoreSlider } from '@/components/crm/LeadScoreSlider';
 import type { Lead } from '@/types/crmTypes';
 import type { Meeting } from '@/types/meeting.types';
 import type { PatientCreateData } from '@/types/patient.types';
@@ -35,7 +36,7 @@ export const LeadDetailsPage = () => {
   const [meetingDrawerMode, setMeetingDrawerMode] = useState<'view' | 'edit' | 'create'>('view');
 
   // Hooks
-  const { useLead, useLeadStatuses, updateLead, deleteLead } = useCRM();
+  const { useLead, useLeadStatuses, updateLead, deleteLead, patchLead } = useCRM();
   const { useMeetingsByLead } = useMeeting();
   const { hasHMSAccess, createPatient } = usePatient();
 
@@ -229,6 +230,19 @@ export const LeadDetailsPage = () => {
     setMeetingDrawerOpen(true);
   }, []);
 
+  // Handle lead score update
+  const handleUpdateLeadScore = useCallback(async (score: number) => {
+    if (!lead) return;
+    try {
+      await patchLead(lead.id, { lead_score: score });
+      await mutateLead();
+      toast.success('Lead score updated');
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to update lead score');
+      throw error;
+    }
+  }, [lead, patchLead, mutateLead]);
+
   // Get meeting status badge
   const getMeetingStatusBadge = (meeting: Meeting) => {
     const now = new Date();
@@ -319,6 +333,15 @@ export const LeadDetailsPage = () => {
         <div className="flex flex-wrap gap-2">
           {!isEditing ? (
             <>
+              {/* Lead Score */}
+              <LeadScoreSlider
+                score={lead.lead_score || 0}
+                onSave={handleUpdateLeadScore}
+                leadName={lead.name}
+                size="md"
+                showLabel
+              />
+              
               {lead.phone && (
                 <Button onClick={handleCall} variant="outline" size="sm">
                   <Phone className="h-4 w-4 mr-2" />

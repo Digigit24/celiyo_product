@@ -1,123 +1,59 @@
-// src/pages/CRMFollowups.tsx
-import { useState, useMemo } from 'react';
+// src/components/crm/FollowupsContent.tsx
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useTheme } from 'next-themes';
 import { useCRM } from '@/hooks/useCRM';
 import { useCurrency } from '@/hooks/useCurrency';
 import { DataTable, type DataTableColumn } from '@/components/DataTable';
 import { FollowupScheduleDialog } from '@/components/FollowupScheduleDialog';
+import { EditableFollowupCell } from '@/components/crm/EditableFollowupCell';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calendar, Clock, AlertCircle, Phone, Mail, MessageCircle, Eye, CalendarClock, MoreVertical, Loader2 } from 'lucide-react';
+import { Phone, Mail, MessageCircle, Eye, CalendarClock, MoreVertical } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { format, isToday, isTomorrow, isPast, parseISO } from 'date-fns';
 import { toast } from 'sonner';
-import { format, formatDistanceToNow, isToday, isTomorrow, isPast, isWithinInterval, addDays, startOfDay, endOfDay, parseISO } from 'date-fns';
-import type { Lead, LeadsQueryParams } from '@/types/crmTypes';
+import type { Lead, LeadsQueryParams, LeadStatus } from '@/types/crmTypes';
+import { leadStatusCache } from '@/lib/leadStatusCache';
 
 type FollowupFilter = 'all' | 'overdue' | 'today' | 'tomorrow' | 'upcoming' | 'no-date';
 
-// Stats Card Component matching Dashboard style
-interface StatCardProps {
-  title: string;
-  value: string | number;
-  icon: React.ReactNode;
-  gradient: string;
-  isDark: boolean;
-  loading?: boolean;
-  onClick?: () => void;
-  isActive?: boolean;
+interface FollowupsContentProps {
+  leads: Lead[];
+  isLoading: boolean;
+  onMutate: () => void;
 }
 
-const StatCard = ({ title, value, icon, gradient, isDark, loading, onClick, isActive }: StatCardProps) => {
-  return (
-    <Card
-      className={`relative overflow-hidden cursor-pointer transition-all duration-300 ${
-        isDark ? 'border-gray-700' : 'border-gray-200'
-      } ${
-        isActive
-          ? 'ring-2 ring-primary shadow-lg scale-[1.02]'
-          : 'shadow-sm hover:shadow-md hover:scale-[1.01]'
-      }`}
-      onClick={onClick}
-    >
-      <div className="p-6 relative z-10">
-        <div className="flex items-center justify-between">
-          <div className="flex-1">
-            <p className={`text-sm font-medium ${isDark ? 'text-gray-400' : 'text-gray-600/80'}`}>
-              {title}
-            </p>
-            {loading ? (
-              <div className="mt-2">
-                <Loader2 className={`w-6 h-6 animate-spin ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
-              </div>
-            ) : (
-              <h3 className={`text-3xl font-bold mt-2 ${
-                isDark
-                  ? 'bg-gradient-to-br from-gray-100 to-gray-300 bg-clip-text text-transparent'
-                  : 'bg-gradient-to-br from-gray-900 to-gray-600 bg-clip-text text-transparent'
-              }`}>
-                {value}
-              </h3>
-            )}
-          </div>
-          <div className="p-4 rounded-2xl">
-            {icon}
-          </div>
-        </div>
-      </div>
-      <div className={`absolute inset-0 pointer-events-none ${gradient}`} />
-      <div className={`absolute inset-0 pointer-events-none ${
-        isDark
-          ? 'bg-gradient-to-br from-white/5 to-transparent'
-          : 'bg-gradient-to-br from-white/50 to-transparent'
-      }`} />
-    </Card>
-  );
-};
-
-export const CRMFollowups: React.FC = () => {
+export const FollowupsContent: React.FC<FollowupsContentProps> = ({
+  leads,
+  isLoading,
+  onMutate,
+}) => {
   const navigate = useNavigate();
-  const { theme } = useTheme();
-  const isDark = theme === 'dark';
-  const { hasCRMAccess, useLeads, patchLead } = useCRM();
+  const { useLeadStatuses, patchLead } = useCRM();
   const { formatCurrency: formatCurrencyDynamic } = useCurrency();
 
-  const [activeTab, setActiveTab] = useState<FollowupFilter>('all');
-  const [queryParams, setQueryParams] = useState<LeadsQueryParams>({
-    page: 1,
+  // Fetch and cache statuses
+  const { data: statusesData } = useLeadStatuses({
     page_size: 100,
-    ordering: 'next_follow_up_at',
+    ordering: 'order_index',
+    is_active: true
   });
+
+  // Cache statuses when data is loaded
+  useEffect(() => {
+    if (statusesData?.results) {
+      leadStatusCache.updateFromApi(statusesData.results);
+    }
+  }, [statusesData]);
+
+  const [activeTab, setActiveTab] = useState<FollowupFilter>('all');
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
 
-  const { data: leadsData, error, isLoading, mutate } = useLeads(queryParams);
-
-  if (!hasCRMAccess) {
-    return (
-      <div className="container mx-auto p-6">
-        <Card>
-          <CardContent className="p-6">
-            <div className="text-center">
-              <h2 className="text-xl font-semibold mb-2">CRM Access Required</h2>
-              <p className="text-gray-600">
-                CRM module is not enabled for your account. Please contact your administrator.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  const leads = leadsData?.results || [];
-
   // Filter leads based on follow-up status
   const filteredLeads = useMemo(() => {
-    const now = new Date();
-
     return leads.filter((lead) => {
       const followUpDate = lead.next_follow_up_at ? parseISO(lead.next_follow_up_at) : null;
 
@@ -141,7 +77,6 @@ export const CRMFollowups: React.FC = () => {
 
   // Count leads by category
   const counts = useMemo(() => {
-    const now = new Date();
     const result = {
       all: leads.length,
       overdue: 0,
@@ -193,51 +128,74 @@ export const CRMFollowups: React.FC = () => {
   };
 
   const handleFollowupSuccess = () => {
-    mutate();
+    onMutate();
   };
 
-  const getFollowupBadge = (lead: Lead) => {
-    if (!lead.next_follow_up_at) {
-      return <Badge variant="secondary">No Follow-up Set</Badge>;
+  const handleUpdateFollowup = async (leadId: number, nextFollowUpAt: string | null) => {
+    try {
+      await patchLead(leadId, { next_follow_up_at: nextFollowUpAt });
+      onMutate();
+      toast.success('Follow-up updated');
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to update follow-up');
+      throw error;
     }
+  };
 
-    const followUpDate = parseISO(lead.next_follow_up_at);
-    const isOverdue = isPast(followUpDate) && !isToday(followUpDate);
+  const getLeadStatusBadge = (lead: Lead) => {
+    // First try to use status_name from API response
+    if (lead.status_name) {
+      // Try to find the status object to get color
+      const statusObj = statusesData?.results.find(s => s.id === lead.status);
+      const bgColor = statusObj?.color_hex || '#6B7280';
 
-    if (isOverdue) {
       return (
-        <Badge variant="destructive" className="gap-1">
-          <AlertCircle className="h-3 w-3" />
-          Overdue
+        <Badge
+          variant="outline"
+          style={{
+            backgroundColor: `${bgColor}20`,
+            borderColor: bgColor,
+            color: bgColor,
+          }}
+        >
+          {lead.status_name}
         </Badge>
       );
     }
 
-    if (isToday(followUpDate)) {
-      return (
-        <Badge variant="default" className="gap-1 bg-orange-500">
-          <Clock className="h-3 w-3" />
-          Today
-        </Badge>
-      );
+    // Fallback to cache or ID lookup
+    if (!lead.status) {
+      return <Badge variant="outline">No Status</Badge>;
     }
 
-    if (isTomorrow(followUpDate)) {
-      return (
-        <Badge variant="secondary" className="gap-1 bg-blue-500 text-white">
-          <Calendar className="h-3 w-3" />
-          Tomorrow
-        </Badge>
-      );
+    // Try to get from current data
+    let statusObj = statusesData?.results.find(s => s.id === lead.status);
+
+    // If not found, try cache
+    if (!statusObj) {
+      statusObj = leadStatusCache.getById(lead.status as number);
     }
+
+    if (!statusObj) {
+      return <Badge variant="outline">Unknown Status</Badge>;
+    }
+
+    const bgColor = statusObj.color_hex || '#6B7280';
 
     return (
-      <Badge variant="outline" className="gap-1">
-        <Calendar className="h-3 w-3" />
-        {formatDistanceToNow(followUpDate, { addSuffix: true })}
+      <Badge
+        variant="outline"
+        style={{
+          backgroundColor: `${bgColor}20`,
+          borderColor: bgColor,
+          color: bgColor,
+        }}
+      >
+        {statusObj.name}
       </Badge>
     );
   };
+
 
   const columns: DataTableColumn<Lead>[] = [
     {
@@ -276,29 +234,24 @@ export const CRMFollowups: React.FC = () => {
       header: 'Follow-up Date',
       key: 'next_follow_up_at',
       cell: (lead) => (
-        <div className="space-y-1">
-          {lead.next_follow_up_at ? (
-            <>
-              <div className="text-sm font-medium">
-                {format(parseISO(lead.next_follow_up_at), 'MMM dd, yyyy')}
-              </div>
-              <div className="text-xs text-muted-foreground">
-                {format(parseISO(lead.next_follow_up_at), 'hh:mm a')}
-              </div>
-            </>
-          ) : (
-            <span className="text-sm text-muted-foreground">Not set</span>
-          )}
+        <div onClick={(e) => e.stopPropagation()} className="w-[140px]">
+          <EditableFollowupCell
+            dateValue={lead.next_follow_up_at}
+            onSave={async (date) => {
+              await handleUpdateFollowup(lead.id, date);
+            }}
+            leadName={lead.name}
+          />
         </div>
       ),
       accessor: (lead) => lead.next_follow_up_at || '',
       sortable: true,
     },
     {
-      header: 'Status',
-      key: 'status',
-      cell: (lead) => getFollowupBadge(lead),
-      accessor: (lead) => lead.next_follow_up_at || '',
+      header: 'Lead Status',
+      key: 'lead_status',
+      cell: (lead) => getLeadStatusBadge(lead),
+      accessor: (lead) => lead.status_name || '',
     },
     {
       header: 'Priority',
@@ -323,9 +276,11 @@ export const CRMFollowups: React.FC = () => {
       key: 'value_amount',
       cell: (lead) => {
         if (!lead.value_amount) return <span className="text-sm text-muted-foreground">-</span>;
+        const numericAmount = parseFloat(lead.value_amount);
+        if (isNaN(numericAmount)) return <span className="text-sm text-muted-foreground">-</span>;
         return (
           <div className="text-sm font-medium">
-            {formatCurrencyDynamic(parseFloat(lead.value_amount), lead.value_currency || 'INR')}
+            {formatCurrencyDynamic(numericAmount, true, 2)}
           </div>
         );
       },
@@ -395,17 +350,20 @@ export const CRMFollowups: React.FC = () => {
 
           {/* Follow-up Info */}
           <div className="space-y-2">
-            <div className="text-sm">
-              {lead.next_follow_up_at ? (
-                <>
-                  <div className="font-medium">{format(parseISO(lead.next_follow_up_at), 'MMM dd, yyyy')}</div>
-                  <div className="text-xs text-muted-foreground">{format(parseISO(lead.next_follow_up_at), 'hh:mm a')}</div>
-                </>
-              ) : (
-                <span className="text-muted-foreground">No follow-up set</span>
-              )}
+            <div onClick={(e) => e.stopPropagation()}>
+              <EditableFollowupCell
+                dateValue={lead.next_follow_up_at}
+                onSave={async (date) => {
+                  await handleUpdateFollowup(lead.id, date);
+                }}
+                leadName={lead.name}
+              />
             </div>
-            {getFollowupBadge(lead)}
+          </div>
+
+          {/* Status Info */}
+          <div className="flex flex-wrap items-center gap-2">
+            {getLeadStatusBadge(lead)}
           </div>
 
           {/* Priority & Value */}
@@ -419,7 +377,11 @@ export const CRMFollowups: React.FC = () => {
             </Badge>
             {lead.value_amount && (
               <span className="text-sm font-medium text-green-600">
-                {formatCurrencyDynamic(parseFloat(lead.value_amount), lead.value_currency || 'INR')}
+                {(() => {
+                  const numericAmount = parseFloat(lead.value_amount);
+                  if (isNaN(numericAmount)) return '-';
+                  return formatCurrencyDynamic(numericAmount, true, 2);
+                })()}
               </span>
             )}
           </div>
@@ -429,84 +391,8 @@ export const CRMFollowups: React.FC = () => {
   };
 
   return (
-    <div className="p-6 max-w-8xl mx-auto space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <CalendarClock className="h-8 w-8" />
-            Follow-ups
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Manage and track your lead follow-up schedule
-          </p>
-        </div>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-5">
-        <StatCard
-          title="Overdue"
-          value={counts.overdue}
-          icon={<AlertCircle className="w-7 h-7 text-red-600" />}
-          gradient={isDark
-            ? 'bg-gradient-to-br from-red-900/20 via-gray-800 to-red-900/10'
-            : 'bg-gradient-to-br from-red-50 via-white to-red-50/30'}
-          isDark={isDark}
-          loading={isLoading}
-          onClick={() => setActiveTab('overdue')}
-          isActive={activeTab === 'overdue'}
-        />
-        <StatCard
-          title="Today"
-          value={counts.today}
-          icon={<Clock className="w-7 h-7 text-orange-600" />}
-          gradient={isDark
-            ? 'bg-gradient-to-br from-orange-900/20 via-gray-800 to-orange-900/10'
-            : 'bg-gradient-to-br from-orange-50 via-white to-orange-50/30'}
-          isDark={isDark}
-          loading={isLoading}
-          onClick={() => setActiveTab('today')}
-          isActive={activeTab === 'today'}
-        />
-        <StatCard
-          title="Tomorrow"
-          value={counts.tomorrow}
-          icon={<Calendar className="w-7 h-7 text-blue-600" />}
-          gradient={isDark
-            ? 'bg-gradient-to-br from-blue-900/20 via-gray-800 to-blue-900/10'
-            : 'bg-gradient-to-br from-blue-50 via-white to-blue-50/30'}
-          isDark={isDark}
-          loading={isLoading}
-          onClick={() => setActiveTab('tomorrow')}
-          isActive={activeTab === 'tomorrow'}
-        />
-        <StatCard
-          title="Upcoming"
-          value={counts.upcoming}
-          icon={<Calendar className="w-7 h-7 text-green-600" />}
-          gradient={isDark
-            ? 'bg-gradient-to-br from-green-900/20 via-gray-800 to-green-900/10'
-            : 'bg-gradient-to-br from-green-50 via-white to-green-50/30'}
-          isDark={isDark}
-          loading={isLoading}
-          onClick={() => setActiveTab('upcoming')}
-          isActive={activeTab === 'upcoming'}
-        />
-        <StatCard
-          title="No Date"
-          value={counts.noDate}
-          icon={<Calendar className="w-7 h-7 text-gray-600" />}
-          gradient={isDark
-            ? 'bg-gradient-to-br from-gray-900/20 via-gray-800 to-gray-900/10'
-            : 'bg-gradient-to-br from-gray-50 via-white to-gray-50/30'}
-          isDark={isDark}
-          loading={isLoading}
-          onClick={() => setActiveTab('no-date')}
-          isActive={activeTab === 'no-date'}
-        />
-      </div>
-
-      {/* Tabs */}
+    <div className="space-y-6">
+      {/* Follow-up Filter Tabs */}
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as FollowupFilter)}>
         <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="all">

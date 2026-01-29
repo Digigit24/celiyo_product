@@ -1,5 +1,5 @@
 // src/pages/CRMLeadStatuses.tsx
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { useCRM } from '@/hooks/useCRM';
 import { useAuth } from '@/hooks/useAuth';
 import { DataTable, type DataTableColumn } from '@/components/DataTable';
@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 import type { LeadStatus, LeadStatusesQueryParams } from '@/types/crmTypes';
 import type { RowActions } from '@/components/DataTable';
+import { leadStatusCache } from '@/lib/leadStatusCache';
 
 type DrawerMode = 'view' | 'edit' | 'create';
 
@@ -37,6 +38,13 @@ export const CRMLeadStatuses: React.FC = () => {
 
   // Fetch lead statuses
   const { data: statusesData, error, isLoading, mutate } = useLeadStatuses(queryParams);
+
+  // Cache lead statuses when fetched
+  useEffect(() => {
+    if (statusesData?.results) {
+      leadStatusCache.updateFromApi(statusesData.results);
+    }
+  }, [statusesData]);
 
   // Check access
   if (!hasCRMAccess) {

@@ -74,6 +74,30 @@ export interface SendMessageResponse {
 // ==================== CHAT SERVICE ====================
 
 class ChatService {
+  // Extract message text from various formats
+  private extractLastMessage(lastMessage: any): string {
+    if (!lastMessage) return '';
+    // If it's already a string, return it
+    if (typeof lastMessage === 'string') return lastMessage;
+    // If it's an object like {message, is_incoming, messaged_at}
+    if (typeof lastMessage === 'object') {
+      return lastMessage.message || lastMessage.text || lastMessage.body || lastMessage.message_body || '';
+    }
+    return String(lastMessage);
+  }
+
+  // Extract last message timestamp from various formats
+  private extractLastMessageTime(data: any): string | undefined {
+    // Check for direct timestamp fields first
+    if (data.last_message_at) return data.last_message_at;
+    if (data.last_message_time) return data.last_message_time;
+    // Check if last_message is an object with messaged_at
+    if (data.last_message && typeof data.last_message === 'object') {
+      return data.last_message.messaged_at || data.last_message.timestamp || data.last_message.created_at;
+    }
+    return data.updated_at;
+  }
+
   private normalizeContact(data: any): ChatContact {
     return {
       _uid: data._uid || data.id || data.contact_uid,
@@ -83,8 +107,8 @@ class ChatService {
       name: data.name || (data.first_name ? `${data.first_name} ${data.last_name || ''}`.trim() : data.phone_number),
       email: data.email,
       avatar_url: data.avatar_url || data.profile_picture,
-      last_message: data.last_message || data.last_message_text,
-      last_message_at: data.last_message_at || data.last_message_time || data.updated_at,
+      last_message: this.extractLastMessage(data.last_message) || data.last_message_text || '',
+      last_message_at: this.extractLastMessageTime(data),
       unread_count: data.unread_count || 0,
       is_online: data.is_online || false,
       assigned_user_uid: data.assigned_user_uid || data.assigned_to,
@@ -141,11 +165,17 @@ class ChatService {
   }
 
   async getUnreadCount(): Promise<UnreadCount> {
-    const response = await externalWhatsappService.getUnreadCount();
-    return {
-      total: response?.total || response?.unread_count || 0,
-      contacts: response?.contacts || response?.per_contact || {},
-    };
+    try {
+      const response = await externalWhatsappService.getUnreadCount();
+      return {
+        total: response?.total || response?.unread_count || 0,
+        contacts: response?.contacts || response?.per_contact || {},
+      };
+    } catch (error) {
+      // Fail gracefully - return zeros if endpoint fails
+      console.warn('Failed to fetch unread count:', error);
+      return { total: 0, contacts: {} };
+    }
   }
 
   async getTeamMembers(): Promise<TeamMember[]> {

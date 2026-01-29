@@ -72,6 +72,8 @@ export function useUnreadCount(options: UseUnreadCountOptions = {}) {
     enabled,
     refetchInterval: pollInterval,
     staleTime: 10000, // 10 seconds
+    retry: false, // Don't retry on failure - endpoint may not be implemented
+    throwOnError: false, // Don't throw errors to prevent app crash
   });
 
   return {

@@ -1,9 +1,10 @@
 // src/pages/Templates.tsx
 import { useEffect, useMemo, useState } from 'react';
-import { Filter, Plus, Search, X, ArrowLeft, RefreshCw, RefreshCcw, Send, BarChart3 } from 'lucide-react';
+import { Filter, Plus, Search, X, RefreshCw, RefreshCcw, FileText, CheckCircle, Clock, XCircle } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Card, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
 
 import { useTemplates } from '@/hooks/whatsapp/useTemplates';
@@ -197,59 +198,120 @@ export default function Templates() {
     );
   }
 
+  // Calculate stats for display
+  const approvedCount = templates.filter(t => t.status === 'APPROVED').length;
+  const pendingCount = templates.filter(t => t.status === 'PENDING').length;
+  const rejectedCount = templates.filter(t => t.status === 'REJECTED').length;
+
+  // Filter templates based on search query
+  const filteredTemplates = searchQuery
+    ? templates.filter((t) => t.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    : templates;
+
   return (
-    <div className="flex flex-col h-screen bg-background">
+    <div className="p-6 max-w-8xl mx-auto space-y-6">
       {/* Header */}
-      <div className="border-b bg-background sticky top-0 z-10">
-        <div className="flex items-center justify-between px-4 py-3 md:px-6 md:py-4">
-          <div className="flex items-center gap-3">
-            {isMobile && (
-              <Button variant="ghost" size="icon" className="md:hidden">
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-            )}
-            <div>
-              <h1 className="text-xl md:text-2xl font-semibold">WhatsApp Templates</h1>
-              <p className="text-xs md:text-sm text-muted-foreground">
-                {total} total templates
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Button
-              onClick={handleSyncAll}
-              variant="outline"
-              size={isMobile ? 'sm' : 'default'}
-              disabled={isLoading}
-              title="Sync all templates with Meta API"
-            >
-              <RefreshCcw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''} ${!isMobile ? 'mr-2' : ''}`} />
-              {!isMobile && 'Sync All'}
-            </Button>
-            <Button
-              onClick={handleRefresh}
-              variant="outline"
-              size={isMobile ? 'sm' : 'default'}
-              disabled={isLoading}
-            >
-              <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''} ${!isMobile ? 'mr-2' : ''}`} />
-              {!isMobile && 'Refresh'}
-            </Button>
-            <Button onClick={handleCreateTemplate} size={isMobile ? 'sm' : 'default'}>
-              <Plus className="h-4 w-4 mr-2" />
-              {!isMobile && 'Create Template'}
-            </Button>
-          </div>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold">WhatsApp Templates</h1>
+          <p className="text-muted-foreground text-sm sm:text-base">
+            Manage your WhatsApp message templates
+          </p>
         </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            onClick={handleSyncAll}
+            variant="outline"
+            size="sm"
+            disabled={isLoading}
+            title="Sync all templates with Meta API"
+          >
+            <RefreshCcw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            Sync All
+          </Button>
+          <Button
+            onClick={handleRefresh}
+            variant="outline"
+            size="sm"
+            disabled={isLoading}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+          <Button onClick={handleCreateTemplate} size="default" className="w-full sm:w-auto">
+            <Plus className="h-4 w-4 mr-2" />
+            New Template
+          </Button>
+        </div>
+      </div>
 
-        {/* Search & Filters */}
-        <div className="px-4 pb-3 md:px-6 md:pb-4">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <FileText className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-xs sm:text-sm text-muted-foreground">Total Templates</p>
+                <p className="text-xl sm:text-2xl font-bold">{total}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <CheckCircle className="h-5 w-5 text-green-600" />
+              </div>
+              <div>
+                <p className="text-xs sm:text-sm text-muted-foreground">Approved</p>
+                <p className="text-xl sm:text-2xl font-bold">{approvedCount}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-yellow-100 rounded-lg">
+                <Clock className="h-5 w-5 text-yellow-600" />
+              </div>
+              <div>
+                <p className="text-xs sm:text-sm text-muted-foreground">Pending</p>
+                <p className="text-xl sm:text-2xl font-bold">{pendingCount}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-red-100 rounded-lg">
+                <XCircle className="h-5 w-5 text-red-600" />
+              </div>
+              <div>
+                <p className="text-xs sm:text-sm text-muted-foreground">Rejected</p>
+                <p className="text-xl sm:text-2xl font-bold">{rejectedCount}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Search & Filters Card */}
+      <Card>
+        <CardContent className="p-4">
           <div className="flex gap-2">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search templates by name (client-side)"
+                placeholder="Search templates by name..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyPress={handleKeyPress}
@@ -269,7 +331,6 @@ export default function Templates() {
 
             <Button
               variant="outline"
-              size={isMobile ? 'icon' : 'default'}
               onClick={() => setIsFiltersOpen(true)}
             >
               <Filter className="h-4 w-4" />
@@ -278,46 +339,51 @@ export default function Templates() {
           </div>
 
           {/* Active filter tags */}
-          <div className="flex flex-wrap gap-2 mt-3">
-            {filters.status && (
-              <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-primary/10 text-primary">
-                Status: {filters.status}
-              </span>
-            )}
-            {filters.category && (
-              <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
-                Category: {filters.category}
-              </span>
-            )}
-            {filters.language && (
-              <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400">
-                Language: {filters.language}
-              </span>
-            )}
-          </div>
-        </div>
-      </div>
+          {(filters.status || filters.category || filters.language) && (
+            <div className="flex flex-wrap gap-2 mt-3">
+              {filters.status && (
+                <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-primary/10 text-primary">
+                  Status: {filters.status}
+                </span>
+              )}
+              {filters.category && (
+                <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
+                  Category: {filters.category}
+                </span>
+              )}
+              {filters.language && (
+                <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400">
+                  Language: {filters.language}
+                </span>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
-      {/* Table */}
-      <div className="flex-1 overflow-auto">
-        <TemplatesTable
-          templates={
-            // Client-side visual search filter by name only (non-BE)
-            searchQuery
-              ? templates.filter((t) =>
-                  t.name.toLowerCase().includes(searchQuery.toLowerCase()),
-                )
-              : templates
-          }
-          isLoading={isLoading}
-          onView={handleViewTemplate}
-          onEdit={handleEditTemplate}
-          onDelete={handleDeleteTemplate}
-          onSync={handleSyncTemplate}
-          onViewAnalytics={handleViewAnalytics}
-          onSend={handleSendTemplate}
-        />
-      </div>
+      {/* Table Card */}
+      <Card>
+        <CardContent className="p-0">
+          <TemplatesTable
+            templates={filteredTemplates}
+            isLoading={isLoading}
+            onView={handleViewTemplate}
+            onEdit={handleEditTemplate}
+            onDelete={handleDeleteTemplate}
+            onSync={handleSyncTemplate}
+            onViewAnalytics={handleViewAnalytics}
+            onSend={handleSendTemplate}
+          />
+
+          {!isLoading && total > 0 && (
+            <div className="flex items-center justify-between px-6 py-4 border-t">
+              <p className="text-sm text-muted-foreground">
+                Showing {filteredTemplates.length} of {total} template(s)
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Filters Drawer */}
       <TemplatesFiltersDrawer
@@ -347,3 +413,5 @@ export default function Templates() {
     </div>
   );
 }
+
+export { Templates };

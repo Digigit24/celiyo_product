@@ -176,7 +176,7 @@ export function TemplatesTable({
       </div>
       
       <div className="text-sm text-muted-foreground">
-        {getBodyText(template.components)}
+        {getBodyText(template)}
       </div>
       
       <div className="flex items-center justify-between text-sm">

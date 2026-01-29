@@ -1,6 +1,10 @@
 // src/services/whatsapp/messagesService.ts
+// Uses external Laravel API with fallback to internal API
+
 import { whatsappClient } from '@/lib/whatsappClient';
 import { API_CONFIG, buildUrl, buildQueryString } from '@/lib/apiConfig';
+import { externalWhatsappService, getWhatsappVendorUid } from '@/services/externalWhatsappService';
+import { chatService } from '@/services/whatsapp/chatService';
 import {
   SendTextMessagePayload,
   SendTextMessageResponse,
@@ -29,6 +33,10 @@ class MessagesService {
     return `${withT}Z`;
   }
 
+  private useExternalApi(): boolean {
+    return !!getWhatsappVendorUid();
+  }
+
   /**
    * Send a text message
    */
@@ -36,12 +44,37 @@ class MessagesService {
     try {
       console.log('📤 Sending text message to:', payload.to);
 
+      // Try external API first if configured
+      if (this.useExternalApi()) {
+        try {
+          const response = await externalWhatsappService.sendMessage({
+            phone_number: payload.to,
+            message_body: payload.text,
+          });
+
+          console.log('✅ Message sent via external API:', {
+            message_id: response?.message_uid || response?._uid,
+            status: 'sent'
+          });
+
+          return {
+            message_id: response?.message_uid || response?._uid || response?.id,
+            status: 'sent',
+            to: payload.to,
+            text: payload.text,
+          };
+        } catch (externalError: any) {
+          console.warn('⚠️ External API failed, falling back to internal:', externalError.message);
+        }
+      }
+
+      // Fallback to internal API
       const response = await whatsappClient.post<SendTextMessageResponse>(
         API_CONFIG.WHATSAPP.SEND_TEXT,
         payload
       );
 
-      console.log('✅ Message sent:', {
+      console.log('✅ Message sent via internal API:', {
         message_id: response.data.message_id,
         status: response.data.status
       });
@@ -54,7 +87,7 @@ class MessagesService {
         throw new Error('WhatsApp module not enabled');
       }
 
-      const message = error.response?.data?.detail || 'Failed to send message';
+      const message = error.response?.data?.detail || error.message || 'Failed to send message';
       throw new Error(message);
     }
   }
@@ -66,12 +99,37 @@ class MessagesService {
     try {
       console.log('📤 Sending media message to:', payload.to, 'type:', payload.media_type);
 
+      // Try external API first if configured
+      if (this.useExternalApi()) {
+        try {
+          const response = await externalWhatsappService.sendMediaMessage({
+            phone_number: payload.to,
+            media_type: payload.media_type,
+            media_url: payload.media_id, // external API uses media_url
+            caption: payload.caption,
+          });
+
+          console.log('✅ Media message sent via external API');
+
+          return {
+            message_id: response?.message_uid || response?._uid || response?.id,
+            status: 'sent',
+            to: payload.to,
+            media_id: payload.media_id,
+            media_type: payload.media_type,
+          };
+        } catch (externalError: any) {
+          console.warn('⚠️ External API failed, falling back to internal:', externalError.message);
+        }
+      }
+
+      // Fallback to internal API
       const response = await whatsappClient.post<SendMediaMessageResponse>(
         API_CONFIG.WHATSAPP.SEND_MEDIA,
         payload
       );
 
-      console.log('✅ Media message sent:', {
+      console.log('✅ Media message sent via internal API:', {
         message_id: response.data.message_id,
         status: response.data.status,
         media_type: response.data.media_type
@@ -85,7 +143,7 @@ class MessagesService {
         throw new Error('WhatsApp module not enabled');
       }
 
-      const message = error.response?.data?.detail || 'Failed to send media message';
+      const message = error.response?.data?.detail || error.message || 'Failed to send media message';
       throw new Error(message);
     }
   }
@@ -127,13 +185,46 @@ class MessagesService {
   async getConversations(): Promise<Conversation[]> {
     try {
       console.log('📋 Fetching conversations');
-      
+
+      // Try external API first if configured
+      if (this.useExternalApi()) {
+        try {
+          const response = await externalWhatsappService.getChatContacts();
+
+          let contacts: any[] = [];
+          if (Array.isArray(response)) {
+            contacts = response;
+          } else if (response?.data) {
+            contacts = Array.isArray(response.data) ? response.data : [];
+          } else if (response?.contacts) {
+            contacts = response.contacts;
+          }
+
+          // Map to Conversation format
+          const conversations: Conversation[] = contacts.map((c: any) => ({
+            phone: c.phone_number || c.phone || c.wa_id || '',
+            name: c.name || (c.first_name ? `${c.first_name} ${c.last_name || ''}`.trim() : c.phone_number),
+            last_message: c.last_message || c.last_message_text || '',
+            last_timestamp: this.normalizeTimestamp(c.last_message_at || c.updated_at),
+            message_count: c.message_count || 0,
+            direction: c.last_direction || 'incoming',
+            unread_count: c.unread_count || 0,
+          }));
+
+          console.log('✅ Conversations fetched via external API:', conversations.length);
+          return conversations;
+        } catch (externalError: any) {
+          console.warn('⚠️ External API failed, falling back to internal:', externalError.message);
+        }
+      }
+
+      // Fallback to internal API
       const response = await whatsappClient.get<Conversation[]>(
         API_CONFIG.WHATSAPP.CONVERSATIONS
       );
 
       const raw = response.data || [];
-      
+
       // Deduplicate by phone number ignoring leading '+'
       const merged = new Map<string, Conversation>();
       for (const conv of raw) {
@@ -183,12 +274,12 @@ class MessagesService {
       }
 
       const deduped = Array.from(merged.values());
-      console.log('✅ Conversations fetched:', raw.length, '→ deduped to:', deduped.length);
-      
+      console.log('✅ Conversations fetched via internal API:', raw.length, '→ deduped to:', deduped.length);
+
       return deduped;
     } catch (error: any) {
       console.error('❌ Failed to fetch conversations:', error);
-      const message = error.response?.data?.detail || 'Failed to fetch conversations';
+      const message = error.response?.data?.detail || error.message || 'Failed to fetch conversations';
       throw new Error(message);
     }
   }
@@ -200,7 +291,40 @@ class MessagesService {
     try {
       console.log('📋 Fetching conversation messages for:', phone);
 
-      // Always call API with digits-only path segment (avoid '+' in URL to bypass upstream/CORS issues)
+      // Try external API first if configured
+      if (this.useExternalApi()) {
+        try {
+          const cleanPhone = String(phone).trim().replace(/^\+/, '');
+          // Use chatService which properly resolves phone number to contact UID
+          const response = await chatService.getContactMessages(cleanPhone);
+
+          // Transform messages from chatService format to messagesService format
+          const transformedMessages = response.messages.map((m: any) => ({
+            id: String(m._uid || m.id || m.message_uid || `local-${Math.random().toString(36).slice(2)}`),
+            from: m.from || (m.direction === 'incoming' ? phone : ''),
+            to: m.to || (m.direction === 'outgoing' ? phone : null),
+            text: m.message_body || m.text || m.body || '',
+            type: m.message_type || m.type || 'text',
+            direction: m.direction || (m.is_outgoing ? 'outgoing' : 'incoming'),
+            timestamp: this.normalizeTimestamp(m.created_at || m.timestamp),
+            status: m.status || m.delivery_status || (m.direction === 'outgoing' ? 'sent' : undefined),
+            metadata: m.metadata || m.meta_data || {},
+          }));
+
+          const conversationDetail: ConversationDetail = {
+            phone,
+            name: response.contact?.name || response.contact?.first_name || phone,
+            messages: transformedMessages,
+          };
+
+          console.log('✅ Conversation messages fetched via external API:', transformedMessages.length);
+          return conversationDetail;
+        } catch (externalError: any) {
+          console.warn('⚠️ External API failed, falling back to internal:', externalError.message);
+        }
+      }
+
+      // Fallback to internal API
       const cleanPhone = String(phone).trim().replace(/^\+/, '');
       const url = buildUrl(
         API_CONFIG.WHATSAPP.CONVERSATION_DETAIL,
@@ -209,13 +333,6 @@ class MessagesService {
       );
 
       const response = await whatsappClient.get(url);
-
-      // Log the actual response structure to understand the API format
-      console.log('🔍 Raw API response:', response.data);
-
-      // Normalize API response to support both shapes:
-      // 1) { phone, name?, contact_name?, messages: [...] }
-      // 2) [ ...messages ]
       const data = response.data as any;
       const rawMessages: any[] = Array.isArray(data)
         ? data
@@ -223,15 +340,12 @@ class MessagesService {
           ? data.messages
           : [];
 
-      // Best-effort contact name resolution
       const contactName =
         (Array.isArray(data) ? undefined : (data?.name || data?.contact_name)) ??
         rawMessages[0]?.contact_name ??
         phone;
 
-      // Transform API messages into WhatsAppMessage
       const messages = rawMessages.map((m: any) => {
-        // Ensure ID is always a string
         const id = String(
           m.message_id ||
           m.id ||
@@ -247,10 +361,8 @@ class MessagesService {
           m.updated_at;
         const timestamp = this.normalizeTimestamp(rawTimestamp);
 
-        // Attempt to infer phone/from/to
         const apiPhone = m.phone ?? m.from ?? (Array.isArray(data) ? undefined : data?.phone) ?? phone;
 
-        // Determine direction with multiple fallbacks
         let direction: 'incoming' | 'outgoing' = 'incoming';
         if (m.direction === 'incoming' || m.direction === 'outgoing') {
           direction = m.direction;
@@ -262,13 +374,11 @@ class MessagesService {
           direction = (m.phone === phone) ? 'incoming' : 'outgoing';
         }
 
-        // Type fallback
         const type: 'text' | 'image' | 'video' | 'audio' | 'document' =
           ['text', 'image', 'video', 'audio', 'document'].includes(m.message_type)
             ? m.message_type
             : 'text';
 
-        // Status mapping from API response
         const status: 'sent' | 'delivered' | 'read' | 'failed' | undefined =
           m.status || m.delivery_status || (direction === 'outgoing' ? 'sent' : undefined);
 
@@ -297,11 +407,7 @@ class MessagesService {
         messages,
       };
 
-      console.log('✅ Conversation messages processed:', {
-        phone: conversationDetail.phone,
-        name: conversationDetail.name,
-        messageCount: conversationDetail.messages.length,
-      });
+      console.log('✅ Conversation messages fetched via internal API:', messages.length);
 
       return conversationDetail;
     } catch (error: any) {
@@ -312,7 +418,7 @@ class MessagesService {
       }
 
       const message =
-        error.response?.data?.detail || 'Failed to fetch conversation messages';
+        error.response?.data?.detail || error.message || 'Failed to fetch conversation messages';
       throw new Error(message);
     }
   }
@@ -323,31 +429,45 @@ class MessagesService {
   async deleteConversation(phone: string): Promise<DeleteConversationResponse> {
     try {
       console.log('🗑️ Deleting conversation:', phone);
-      
-      // Always call API with digits-only path segment (avoid '+' in URL to bypass upstream/CORS issues)
+
+      // Try external API first if configured
+      if (this.useExternalApi()) {
+        try {
+          const cleanPhone = String(phone).trim().replace(/^\+/, '');
+          // Use chatService which properly resolves phone number to contact UID
+          await chatService.clearChatHistory(cleanPhone);
+
+          console.log('✅ Conversation deleted via external API');
+          return { phone, deleted_count: 1 };
+        } catch (externalError: any) {
+          console.warn('⚠️ External API failed, falling back to internal:', externalError.message);
+        }
+      }
+
+      // Fallback to internal API
       const cleanPhone = String(phone).trim().replace(/^\+/, '');
       const url = buildUrl(
         API_CONFIG.WHATSAPP.DELETE_CONVERSATION,
         { phone: cleanPhone },
         'whatsapp'
       );
-      
+
       const response = await whatsappClient.delete<DeleteConversationResponse>(url);
-      
-      console.log('✅ Conversation deleted:', {
+
+      console.log('✅ Conversation deleted via internal API:', {
         phone: response.data.phone,
         deleted_count: response.data.deleted_count
       });
-      
+
       return response.data;
     } catch (error: any) {
       console.error('❌ Failed to delete conversation:', error);
-      
+
       if (error.response?.status === 404) {
         throw new Error('Conversation not found');
       }
-      
-      const message = error.response?.data?.detail || 'Failed to delete conversation';
+
+      const message = error.response?.data?.detail || error.message || 'Failed to delete conversation';
       throw new Error(message);
     }
   }
@@ -358,17 +478,17 @@ class MessagesService {
   async getRecentMessages(query?: RecentMessagesQuery): Promise<RecentMessagesResponse> {
     try {
       console.log('📋 Fetching recent messages:', query);
-      
+
       const queryString = buildQueryString(query as unknown as Record<string, string | number | boolean>);
       const url = `${API_CONFIG.WHATSAPP.MESSAGES}${queryString}`;
-      
+
       const response = await whatsappClient.get<RecentMessagesResponse>(url);
-      
+
       console.log('✅ Recent messages fetched:', {
         total: response.data.total,
         count: response.data.messages.length
       });
-      
+
       return response.data;
     } catch (error: any) {
       console.error('❌ Failed to fetch recent messages:', error);
@@ -383,16 +503,16 @@ class MessagesService {
   async getMessageStats(): Promise<MessageStats> {
     try {
       console.log('📊 Fetching message statistics');
-      
+
       const response = await whatsappClient.get<MessageStats>(
         API_CONFIG.WHATSAPP.STATS
       );
-      
+
       console.log('✅ Message stats fetched:', {
         total_messages: response.data.total_messages,
         total_conversations: response.data.total_conversations
       });
-      
+
       return response.data;
     } catch (error: any) {
       console.error('❌ Failed to fetch message stats:', error);

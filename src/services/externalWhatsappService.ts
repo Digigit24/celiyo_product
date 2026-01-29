@@ -532,6 +532,130 @@ class ExternalWhatsappService {
     const response = await externalWhatsappClient.post(url, payload);
     return handleResponse(response);
   }
+
+  // ==================== CHAT API METHODS ====================
+
+  // GET /chat/contacts - Get inbox contacts list
+  async getChatContacts(params?: { page?: number; limit?: number; search?: string }): Promise<any> {
+    const queryParams = new URLSearchParams();
+    if (params?.page) queryParams.append('page', params.page.toString());
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    if (params?.search) queryParams.append('search', params.search);
+
+    const url = buildVendorUrl(`/chat/contacts${queryParams.toString() ? '?' + queryParams.toString() : ''}`);
+    const response = await externalWhatsappClient.get(url);
+    return handleResponse(response);
+  }
+
+  // GET /chat/unread-count - Get unread message counts
+  async getUnreadCount(): Promise<any> {
+    const url = buildVendorUrl('/chat/unread-count');
+    const response = await externalWhatsappClient.get(url);
+    return handleResponse(response);
+  }
+
+  // GET /chat/team-members - Get team members for assignment
+  async getTeamMembers(): Promise<any> {
+    const url = buildVendorUrl('/chat/team-members');
+    const response = await externalWhatsappClient.get(url);
+    return handleResponse(response);
+  }
+
+  // GET /contacts/{uid}/messages - Get chat messages
+  async getContactMessages(contactUid: string, params?: { page?: number; limit?: number }): Promise<any> {
+    const queryParams = new URLSearchParams();
+    if (params?.page) queryParams.append('page', params.page.toString());
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+
+    const url = buildVendorUrl(`/contacts/${contactUid}/messages${queryParams.toString() ? '?' + queryParams.toString() : ''}`);
+    const response = await externalWhatsappClient.get(url);
+    return handleResponse(response);
+  }
+
+  // POST /contacts/{uid}/messages - Send text message
+  async sendChatMessage(contactUid: string, payload: { message_body: string }): Promise<any> {
+    const url = buildVendorUrl(`/contacts/${contactUid}/messages`);
+    const response = await externalWhatsappClient.post(url, payload);
+    return handleResponse(response);
+  }
+
+  // POST /contacts/{uid}/messages/media - Send media message
+  async sendChatMediaMessage(contactUid: string, payload: {
+    media_type: 'image' | 'video' | 'audio' | 'document';
+    media_url: string;
+    caption?: string;
+    file_name?: string;
+  }): Promise<any> {
+    const url = buildVendorUrl(`/contacts/${contactUid}/messages/media`);
+    const response = await externalWhatsappClient.post(url, payload);
+    return handleResponse(response);
+  }
+
+  // POST /contacts/{uid}/messages/template - Send template message
+  async sendChatTemplateMessage(contactUid: string, payload: {
+    template_name: string;
+    template_language: string;
+    components?: any[];
+  }): Promise<any> {
+    const url = buildVendorUrl(`/contacts/${contactUid}/messages/template`);
+    const response = await externalWhatsappClient.post(url, payload);
+    return handleResponse(response);
+  }
+
+  // POST /contacts/{uid}/messages/read - Mark messages as read
+  async markMessagesAsRead(contactUid: string): Promise<any> {
+    const url = buildVendorUrl(`/contacts/${contactUid}/messages/read`);
+    const response = await externalWhatsappClient.post(url);
+    return handleResponse(response);
+  }
+
+  // DELETE /contacts/{uid}/messages - Clear chat history
+  async clearChatHistory(contactUid: string): Promise<any> {
+    const url = buildVendorUrl(`/contacts/${contactUid}/messages`);
+    const response = await externalWhatsappClient.delete(url);
+    return handleResponse(response);
+  }
+
+  // POST /contacts/{uid}/assign-user - Assign team member
+  async assignUserToContact(contactUid: string, payload: { user_uid: string }): Promise<any> {
+    const url = buildVendorUrl(`/contacts/${contactUid}/assign-user`);
+    const response = await externalWhatsappClient.post(url, payload);
+    return handleResponse(response);
+  }
+
+  // POST /contacts/{uid}/assign-labels - Assign labels
+  async assignLabelsToContact(contactUid: string, payload: { label_uids: string[] }): Promise<any> {
+    const url = buildVendorUrl(`/contacts/${contactUid}/assign-labels`);
+    const response = await externalWhatsappClient.post(url, payload);
+    return handleResponse(response);
+  }
+
+  // PUT /contacts/{uid}/notes - Update contact notes
+  async updateContactNotes(contactUid: string, payload: { notes: string }): Promise<any> {
+    const url = buildVendorUrl(`/contacts/${contactUid}/notes`);
+    const response = await externalWhatsappClient.put(url, payload);
+    return handleResponse(response);
+  }
+
+  // GET /message-log - Get message log
+  async getMessageLog(params?: { page?: number; limit?: number; contact_uid?: string; direction?: string }): Promise<any> {
+    const queryParams = new URLSearchParams();
+    if (params?.page) queryParams.append('page', params.page.toString());
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    if (params?.contact_uid) queryParams.append('contact_uid', params.contact_uid);
+    if (params?.direction) queryParams.append('direction', params.direction);
+
+    const url = buildVendorUrl(`/message-log${queryParams.toString() ? '?' + queryParams.toString() : ''}`);
+    const response = await externalWhatsappClient.get(url);
+    return handleResponse(response);
+  }
+
+  // GET /messages/{uid} - Get single message
+  async getMessage(messageUid: string): Promise<any> {
+    const url = buildVendorUrl(`/messages/${messageUid}`);
+    const response = await externalWhatsappClient.get(url);
+    return handleResponse(response);
+  }
 }
 
 export const externalWhatsappService = new ExternalWhatsappService();

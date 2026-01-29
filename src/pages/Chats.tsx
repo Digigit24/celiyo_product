@@ -1,22 +1,58 @@
-import { useEffect, useState } from 'react';
-import { messagesService } from '@/services/whatsapp/messagesService';
-import type { Conversation } from '@/types/whatsappTypes';
+import { useEffect, useState, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { ConversationList } from '@/components/ConversationList';
 import { ChatWindow } from '@/components/ChatWindow';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { useWebSocket } from '@/context/WebSocketProvider';
 import { MessageCircle } from 'lucide-react';
+import {
+  useChatContacts,
+  useUnreadCount,
+  useChatMessages,
+  useMarkAsRead,
+  chatKeys,
+} from '@/hooks/whatsapp/useChat';
+import type { ChatContact } from '@/services/whatsapp/chatService';
 
 export default function Chats() {
-  const [conversations, setConversations] = useState<Conversation[] | null>(null);
-  const [selectedConversationId, setSelectedConversationId] = useState<string>('');
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
+  const [selectedContactUid, setSelectedContactUid] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useState('');
   const isMobile = useIsMobile();
   const { payloads } = useWebSocket();
+  const queryClient = useQueryClient();
+
+  // React Query hooks
+  const {
+    contacts,
+    total: contactsTotal,
+    isLoading,
+    isError,
+    error,
+    refetch: refetchContacts,
+  } = useChatContacts({
+    search: searchQuery || undefined,
+  });
+
+  // Unread count with polling every 30 seconds
+  const { total: unreadTotal, contacts: unreadByContact } = useUnreadCount({
+    pollInterval: 30000,
+  });
+
+  // Messages for selected contact
+  const {
+    messages,
+    contact: currentContact,
+    isLoading: messagesLoading,
+    refetch: refetchMessages,
+  } = useChatMessages({
+    contactUid: selectedContactUid || null,
+    enabled: !!selectedContactUid,
+  });
+
+  // Mark as read mutation
+  const markAsReadMutation = useMarkAsRead();
 
   const normalize = (p?: string) => (p ? String(p).replace(/^\+/, '') : '');
-  const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
 
   const formatLastTimestamp = (ts?: string | null) => {
     if (!ts) return '';
@@ -46,63 +82,30 @@ export default function Chats() {
     return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
   };
 
-  const formatTimeRemaining = (seconds?: number | null) => {
-    if (!seconds || seconds <= 0) return null;
-    const hrs = Math.floor(seconds / 3600);
-    const mins = Math.floor((seconds % 3600) / 60);
-    if (hrs > 0) return `${hrs}h ${mins.toString().padStart(2, '0')}m`;
-    return `${mins}m`;
-  };
-
-  // Load conversations on mount
+  // Auto-select first contact on desktop when contacts load
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const data = await messagesService.getConversations();
-        if (!cancelled) {
-          setConversations(data);
-          // Auto-select first conversation if available on desktop
-          if (data.length > 0 && !isMobile) {
-            setSelectedConversationId(data[0].phone);
-          }
-        }
-      } catch (e: any) {
-        if (!cancelled) setError(new Error(e.message || 'Failed to load conversations'));
-      } finally {
-        if (!cancelled) setIsLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [isMobile]);
-
-  const handleConversationSelect = (phone: string) => {
-    setSelectedConversationId(phone);
-    // Reset unread counter for this conversation
-    const phoneKey = normalize(phone);
-    setUnreadCounts(prev => {
-      const copy = { ...prev };
-      copy[phoneKey] = 0;
-      return copy;
-    });
-
-    // Also reset unread_count in the conversation object
-    setConversations(prev => {
-      if (!prev) return prev;
-      return prev.map(conv => {
-        if (normalize(conv.phone) === phoneKey) {
-          return { ...conv, unread_count: 0 };
-        }
-        return conv;
-      });
-    });
-  };
-
-  const handleBackToList = () => {
-    if (isMobile) {
-      setSelectedConversationId('');
+    if (contacts.length > 0 && !selectedContactUid && !isMobile) {
+      const firstContact = contacts[0];
+      setSelectedContactUid(firstContact._uid || firstContact.phone_number);
     }
-  };
+  }, [contacts, selectedContactUid, isMobile]);
+
+  const handleConversationSelect = useCallback(async (contactId: string) => {
+    setSelectedContactUid(contactId);
+
+    // Mark as read when selecting
+    try {
+      await markAsReadMutation.mutateAsync(contactId);
+    } catch (e) {
+      // Silent fail
+    }
+  }, [markAsReadMutation]);
+
+  const handleBackToList = useCallback(() => {
+    if (isMobile) {
+      setSelectedContactUid('');
+    }
+  }, [isMobile]);
 
   // Live updates via persistent WhatsApp WebSocket
   useEffect(() => {
@@ -110,90 +113,28 @@ export default function Chats() {
       const latestPayload = payloads[payloads.length - 1];
       const { phone, name, contact, message } = latestPayload;
 
-      // Normalize phone number for comparison
-      const phoneKey = normalize(phone);
-
       console.log('🔄 Processing WebSocket payload:', {
         phone,
         name,
         is_new: contact?.is_new,
-        exists: contact?.exists,
-        message_text: message?.text
+        message_text: message?.text,
       });
 
-      setConversations(prev => {
-        const list = prev ? [...prev] : [];
-        const idx = list.findIndex(c => normalize(c.phone) === phoneKey);
+      // Invalidate queries to refetch data
+      queryClient.invalidateQueries({ queryKey: chatKeys.contacts() });
+      queryClient.invalidateQueries({ queryKey: chatKeys.unreadCount() });
 
-        // If contact exists (idx !== -1), always update it - don't create new
-        if (idx !== -1) {
-          console.log('✅ Updating existing conversation:', phoneKey);
-          const existing = list[idx];
-
-          // Calculate unread count: increment if incoming and not on selected conversation
-          const isIncomingMessage = message?.direction === 'incoming';
-          const isSelectedConversation = normalize(selectedConversationId) === phoneKey;
-          const currentUnreadCount = existing.unread_count || 0;
-          const newUnreadCount = isIncomingMessage && !isSelectedConversation
-            ? currentUnreadCount + 1
-            : currentUnreadCount;
-
-          console.log('📊 Unread count calculation:', {
-            phoneKey,
-            isIncomingMessage,
-            isSelectedConversation,
-            selectedConversationId: normalize(selectedConversationId),
-            currentUnreadCount,
-            newUnreadCount
-          });
-
-          const updated: Conversation = {
-            ...existing,
-            name: name || existing.name, // Use contact name from payload
-            last_message: message?.text || '',
-            last_timestamp: message?.timestamp || new Date().toISOString(),
-            message_count: (existing.message_count || 0) + 1,
-            unread_count: newUnreadCount,
-            direction: message?.direction || 'incoming',
-          };
-          // Move to top of list
-          list.splice(idx, 1);
-          list.unshift(updated);
-        } else {
-          // Only create new if contact doesn't exist AND is marked as new
-          if (contact?.is_new !== false) {
-            console.log('➕ Creating new conversation:', phoneKey);
-            const isIncomingMessage = message?.direction === 'incoming';
-            list.unshift({
-              phone: phone,
-              name: name || phone,
-              last_message: message?.text || '',
-              last_timestamp: message?.timestamp || new Date().toISOString(),
-              message_count: 1,
-              unread_count: isIncomingMessage ? 1 : 0,
-              direction: message?.direction || 'incoming',
-            });
-          } else {
-            console.log('⚠️ Skipping - contact not in local list but exists on server:', phoneKey);
-          }
-        }
-        return list;
-      });
-
-      // Update unread counts for incoming messages
-      if (message?.direction === 'incoming') {
-        setUnreadCounts(prev => {
-          const next = { ...prev };
-          if (normalize(selectedConversationId) === phoneKey) {
-            next[phoneKey] = 0;
-          } else {
-            next[phoneKey] = (next[phoneKey] || 0) + 1;
-          }
-          return next;
+      // If the message is for the currently selected contact, refetch messages
+      const phoneKey = normalize(phone);
+      const selectedKey = normalize(selectedContactUid);
+      if (phoneKey && selectedKey && phoneKey === selectedKey) {
+        queryClient.invalidateQueries({
+          queryKey: chatKeys.messages(selectedContactUid, {}),
+          exact: false,
         });
       }
     }
-  }, [payloads, selectedConversationId]);
+  }, [payloads, selectedContactUid, queryClient]);
 
   if (isLoading) {
     return (
@@ -207,7 +148,7 @@ export default function Chats() {
     );
   }
 
-  if (error) {
+  if (isError) {
     return (
       <div className="flex items-center justify-center h-full bg-background">
         <div className="text-center max-w-md px-4">
@@ -215,9 +156,11 @@ export default function Chats() {
             <span className="text-3xl">⚠️</span>
           </div>
           <div className="text-lg font-semibold mb-2 text-destructive">Failed to Load Chats</div>
-          <div className="text-sm text-muted-foreground mb-6">{error.message}</div>
+          <div className="text-sm text-muted-foreground mb-6">
+            {(error as any)?.message || 'Unable to load conversations'}
+          </div>
           <button
-            onClick={() => window.location.reload()}
+            onClick={() => refetchContacts()}
             className="px-6 py-2.5 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium"
           >
             Retry
@@ -227,36 +170,50 @@ export default function Chats() {
     );
   }
 
-  // Transform API conversations to match ConversationList format with unread counters
-  const transformedConversations = (conversations || []).map(conv => {
-    const key = normalize(conv.phone);
-    const unreadCount = unreadCounts[key] || conv.unread_count || 0;
-    const formattedTime = formatLastTimestamp(conv.last_timestamp);
-    const formattedRemaining = formatTimeRemaining(conv.time_remaining_seconds);
+  // Transform contacts to match ConversationList format
+  const transformedConversations = contacts.map((contact: ChatContact) => {
+    const contactId = contact._uid || contact.phone_number;
+    const unreadCount = unreadByContact[contactId] || contact.unread_count || 0;
+    const formattedTime = formatLastTimestamp(contact.last_message_at);
+
     return {
-      id: conv.phone,
-      name: conv.name || conv.phone,
-      lastMessage: conv.last_message,
+      id: contactId,
+      name: contact.name || contact.first_name || contact.phone_number,
+      lastMessage: contact.last_message || '',
       time: formattedTime,
-      lastTimestamp: conv.last_timestamp,
+      lastTimestamp: contact.last_message_at,
       channel: 'whatsapp' as const,
       unread: unreadCount > 0,
       unreadCount,
-      windowIsOpen: conv.window_is_open,
-      windowExpiresAt: conv.window_expires_at,
-      timeRemainingLabel: formattedRemaining,
-      requiresTemplate: conv.requires_template,
+      phone: contact.phone_number,
     };
   });
 
+  // Find selected conversation for ChatWindow
+  const selectedConversation = contacts.find(
+    (c: ChatContact) => (c._uid || c.phone_number) === selectedContactUid
+  );
+
+  // Convert to format ChatWindow expects
+  const chatWindowConversation = selectedConversation
+    ? {
+        phone: selectedConversation.phone_number,
+        name: selectedConversation.name || selectedConversation.first_name || selectedConversation.phone_number,
+        last_message: selectedConversation.last_message || '',
+        last_timestamp: selectedConversation.last_message_at || '',
+        message_count: 0,
+        direction: 'incoming' as const,
+      }
+    : undefined;
+
   // Mobile view: show either conversation list or chat window
   if (isMobile) {
-    if (selectedConversationId) {
+    if (selectedContactUid) {
       return (
         <div className="h-full w-full bg-background overflow-hidden">
           <ChatWindow
-            conversationId={selectedConversationId}
-            selectedConversation={conversations?.find(c => c.phone === selectedConversationId)}
+            conversationId={selectedConversation?.phone_number || selectedContactUid}
+            selectedConversation={chatWindowConversation}
             isMobile={true}
             onBack={handleBackToList}
           />
@@ -268,7 +225,7 @@ export default function Chats() {
       <div className="h-full w-full bg-background overflow-hidden">
         <ConversationList
           conversations={transformedConversations}
-          selectedId={selectedConversationId}
+          selectedId={selectedContactUid}
           onSelect={handleConversationSelect}
           isMobile={true}
         />
@@ -283,17 +240,17 @@ export default function Chats() {
       <div className="w-80 lg:w-96 h-full flex-shrink-0">
         <ConversationList
           conversations={transformedConversations}
-          selectedId={selectedConversationId}
+          selectedId={selectedContactUid}
           onSelect={handleConversationSelect}
         />
       </div>
 
       {/* Chat Area */}
       <div className="flex-1 h-full min-w-0">
-        {selectedConversationId ? (
+        {selectedContactUid ? (
           <ChatWindow
-            conversationId={selectedConversationId}
-            selectedConversation={conversations?.find(c => c.phone === selectedConversationId)}
+            conversationId={selectedConversation?.phone_number || selectedContactUid}
+            selectedConversation={chatWindowConversation}
           />
         ) : (
           <div className="flex items-center justify-center h-full bg-muted/10">

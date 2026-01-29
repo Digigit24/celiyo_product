@@ -42,10 +42,10 @@ export interface RoleListParams {
 
 // WhatsApp default templates interface
 export interface WhatsAppDefaults {
-  followup?: number;           // Template ID for followup reminders
-  leadNotification?: number;   // Template ID for lead notifications
-  appointmentReminder?: number; // Template ID for appointment reminders
-  welcomeMessage?: number;     // Template ID for welcome messages
+  followup?: number | string;           // Template ID for followup reminders
+  leadNotification?: number | string;   // Template ID for lead notifications
+  appointmentReminder?: number | string; // Template ID for appointment reminders
+  welcomeMessage?: number | string;     // Template ID for welcome messages
 }
 
 // User preferences interface - flexible key-value structure

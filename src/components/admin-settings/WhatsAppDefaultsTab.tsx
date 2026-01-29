@@ -69,24 +69,28 @@ export const WhatsAppDefaultsTab: React.FC<WhatsAppDefaultsTabProps> = ({
     if (templateId === 'none') {
       delete newDefaults[purpose];
     } else {
-      newDefaults[purpose] = parseInt(templateId, 10);
+      // Store as number if numeric, otherwise as string
+      const numId = parseInt(templateId, 10);
+      newDefaults[purpose] = isNaN(numId) ? templateId : numId;
     }
     onWhatsAppDefaultsChange(newDefaults);
   };
 
   // Get template preview text
-  const getTemplatePreview = (templateId: number | undefined): string => {
+  const getTemplatePreview = (templateId: number | string | undefined): string => {
     if (!templateId) return '';
-    const template = templates.find(t => t.id === templateId);
+    // Compare as strings to handle both number and string IDs
+    const template = templates.find(t => String(t.id) === String(templateId));
     if (!template) return '';
-    const bodyComponent = template.components.find(c => c.type === 'BODY');
-    return bodyComponent?.text || '';
+    const bodyComponent = template.components?.find(c => c.type === 'BODY');
+    return bodyComponent?.text || template.body || '';
   };
 
   // Get template name by ID
-  const getTemplateName = (templateId: number | undefined): string => {
+  const getTemplateName = (templateId: number | string | undefined): string => {
     if (!templateId) return 'None selected';
-    const template = templates.find(t => t.id === templateId);
+    // Compare as strings to handle both number and string IDs
+    const template = templates.find(t => String(t.id) === String(templateId));
     return template?.name || 'Unknown template';
   };
 

@@ -198,85 +198,108 @@ class TemplatesService {
 
   /**
    * Create a new template
-   * Uses Laravel WEB route: POST /vendor-console/whatsapp/templates/create-process
+   * Uses API route: POST /api/{vendorUid}/templates
    */
   async createTemplate(payload: CreateTemplatePayload): Promise<Template> {
     try {
       console.log('➕ Creating template:', payload.name);
 
-      const response = await laravelClient.post<Template>(
-        API_CONFIG.WHATSAPP_EXTERNAL.APP.TEMPLATE_CREATE,
-        payload
-      );
+      // Convert frontend payload to API format
+      const apiPayload = {
+        template_name: payload.name,
+        language_code: payload.language,
+        category: payload.category,
+        template_body: this.extractBodyText(payload.components),
+        header_type: this.extractHeaderType(payload.components),
+        header_text: this.extractHeaderText(payload.components),
+        footer_text: this.extractFooterText(payload.components),
+        buttons: this.extractButtons(payload.components),
+      };
 
-      console.log('✅ Template created:', response.data.name);
+      const response = await externalWhatsappService.createTemplate(apiPayload);
 
-      return response.data;
+      console.log('✅ Template created:', response);
+
+      // Map response back to frontend format
+      return this.mapLaravelTemplate(response.data || response);
     } catch (error: any) {
       console.error('❌ Failed to create template:', error);
-
-      if (error.response?.status === 409) {
-        throw new Error('Template name already exists');
-      }
-
-      const message = error.response?.data?.detail || error.response?.data?.message || 'Failed to create template';
-      throw new Error(message);
+      throw error;
     }
   }
 
   /**
    * Update an existing template
-   * Uses Laravel WEB route: POST /vendor-console/whatsapp/templates/update-process
+   * Uses API route: PUT /api/{vendorUid}/templates/{templateUid}
    */
-  async updateTemplate(id: number, payload: UpdateTemplatePayload): Promise<Template> {
+  async updateTemplate(id: number | string, payload: UpdateTemplatePayload): Promise<Template> {
     try {
       console.log('✏️ Updating template:', id);
 
-      const response = await laravelClient.post<Template>(
-        API_CONFIG.WHATSAPP_EXTERNAL.APP.TEMPLATE_UPDATE,
-        { ...payload, template_uid: id }
-      );
+      // Convert frontend payload to API format
+      const apiPayload: any = {};
 
-      console.log('✅ Template updated:', response.data.name);
+      if (payload.status) apiPayload.status = payload.status;
+      if (payload.usage_count !== undefined) apiPayload.usage_count = payload.usage_count;
 
-      return response.data;
+      const response = await externalWhatsappService.updateTemplate(id, apiPayload);
+
+      console.log('✅ Template updated:', response);
+
+      // Map response back to frontend format
+      return this.mapLaravelTemplate(response.data || response);
     } catch (error: any) {
       console.error('❌ Failed to update template:', error);
-
-      if (error.response?.status === 404) {
-        throw new Error('Template not found');
-      }
-
-      const message = error.response?.data?.detail || error.response?.data?.message || 'Failed to update template';
-      throw new Error(message);
+      throw error;
     }
   }
 
   /**
    * Delete a template
-   * Uses Laravel WEB route: POST /vendor-console/whatsapp/templates/delete/:whatsappTemplateUid
+   * Uses API route: DELETE /api/{vendorUid}/templates/{templateUid}
    */
-  async deleteTemplate(id: number): Promise<DeleteTemplateResponse> {
+  async deleteTemplate(id: number | string): Promise<DeleteTemplateResponse> {
     try {
       console.log('🗑️ Deleting template:', id);
 
-      const url = this.buildUrl(API_CONFIG.WHATSAPP_EXTERNAL.APP.TEMPLATE_DELETE, { whatsappTemplateUid: id });
-
-      const response = await laravelClient.post<DeleteTemplateResponse>(url);
+      const response = await externalWhatsappService.deleteTemplate(id);
 
       console.log('✅ Template deleted:', id);
 
-      return response.data;
+      return {
+        ok: true,
+        message: response?.message || 'Template deleted successfully'
+      };
     } catch (error: any) {
       console.error('❌ Failed to delete template:', error);
-
-      if (error.response?.status === 404) {
-        throw new Error('Template not found');
-      }
-
-      const message = error.response?.data?.detail || error.response?.data?.message || 'Failed to delete template';
-      throw new Error(message);
+      throw error;
     }
+  }
+
+  // Helper methods to extract component data for API
+  private extractBodyText(components: any[]): string {
+    const body = components?.find(c => c.type === 'BODY');
+    return body?.text || '';
+  }
+
+  private extractHeaderType(components: any[]): string | undefined {
+    const header = components?.find(c => c.type === 'HEADER');
+    return header?.format || undefined;
+  }
+
+  private extractHeaderText(components: any[]): string | undefined {
+    const header = components?.find(c => c.type === 'HEADER');
+    return header?.text || undefined;
+  }
+
+  private extractFooterText(components: any[]): string | undefined {
+    const footer = components?.find(c => c.type === 'FOOTER');
+    return footer?.text || undefined;
+  }
+
+  private extractButtons(components: any[]): any[] | undefined {
+    const buttons = components?.find(c => c.type === 'BUTTONS');
+    return buttons?.buttons || undefined;
   }
 
   /**
@@ -541,38 +564,32 @@ class TemplatesService {
 
   /**
    * Sync all templates with Meta API
-   * Uses Laravel WEB route: POST /vendor-console/whatsapp/templates/sync
+   * Uses API route: POST /api/{vendorUid}/templates/sync
    */
   async syncAllTemplates(): Promise<any> {
     try {
       console.log('🔄 Syncing all templates with Meta API...');
 
-      const response = await laravelClient.post<any>(
-        API_CONFIG.WHATSAPP_EXTERNAL.APP.TEMPLATE_SYNC
-      );
+      const response = await externalWhatsappService.syncTemplates();
 
-      console.log('✅ Templates synced:', response.data);
+      console.log('✅ Templates synced:', response);
 
-      return response.data;
+      return response;
     } catch (error: any) {
       console.error('❌ Failed to sync templates:', error);
-
-      const message = error.response?.data?.detail || error.response?.data?.message || 'Failed to sync templates';
-      throw new Error(message);
+      throw error;
     }
   }
 
   /**
    * Sync single template with Meta API
-   * Note: Laravel web routes may not have per-template sync
    * Falls back to syncing all templates
    */
-  async syncTemplate(id: number): Promise<any> {
+  async syncTemplate(id: number | string): Promise<any> {
     try {
       console.log('🔄 Syncing template:', id);
 
-      // Laravel web routes don't have per-template sync
-      // Sync all and return the matching template
+      // Sync all templates (API doesn't have per-template sync)
       const result = await this.syncAllTemplates();
 
       return {
@@ -582,15 +599,13 @@ class TemplatesService {
       };
     } catch (error: any) {
       console.error('❌ Failed to sync template:', error);
-
-      const message = error.response?.data?.detail || error.response?.data?.message || 'Failed to sync template';
-      throw new Error(message);
+      throw error;
     }
   }
 
   /**
    * Create template from library
-   * Note: May not be available in Laravel web routes
+   * Uses API route: POST /api/{vendorUid}/templates
    */
   async createFromLibrary(payload: {
     name: string;
@@ -602,24 +617,24 @@ class TemplatesService {
     try {
       console.log('➕ Creating template from library:', payload.name);
 
-      // Use the standard create template endpoint
-      const response = await laravelClient.post<Template>(
-        API_CONFIG.WHATSAPP_EXTERNAL.APP.TEMPLATE_CREATE,
-        payload
-      );
+      // Use the API create endpoint
+      const apiPayload = {
+        template_name: payload.name,
+        language_code: payload.language,
+        category: payload.category,
+        library_template_name: payload.library_template_name,
+        template_body: '', // Will be filled from library template
+        buttons: payload.button_inputs,
+      };
 
-      console.log('✅ Template created from library:', response.data.name);
+      const response = await externalWhatsappService.createTemplate(apiPayload);
 
-      return response.data;
+      console.log('✅ Template created from library:', response);
+
+      return this.mapLaravelTemplate(response.data || response);
     } catch (error: any) {
       console.error('❌ Failed to create template from library:', error);
-
-      if (error.response?.status === 409) {
-        throw new Error('Template name already exists');
-      }
-
-      const message = error.response?.data?.detail || error.response?.data?.message || 'Failed to create template from library';
-      throw new Error(message);
+      throw error;
     }
   }
 

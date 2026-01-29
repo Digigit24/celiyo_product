@@ -428,6 +428,152 @@ class ExternalWhatsappService {
       throw error;
     }
   }
+
+  /**
+   * Create a new template
+   * API Endpoint: POST /api/{vendorUid}/templates
+   * @param payload - Template creation data
+   * @returns Promise with created template data
+   */
+  async createTemplate(payload: CreateTemplatePayload): Promise<any> {
+    const vendorUid = getWhatsappVendorUid();
+    if (!vendorUid) {
+      throw new Error('WhatsApp Vendor UID not configured. Please set it in Admin Settings > Tenant Settings.');
+    }
+
+    const url = `/${vendorUid}/templates`;
+    console.log('➕ Creating template via external API:', url, payload);
+
+    try {
+      const response = await externalWhatsappClient.post(url, payload);
+      console.log('✅ Template created successfully:', response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ Failed to create template:', error);
+
+      if (error.response?.status === 409) {
+        throw new Error('Template name already exists');
+      }
+      if (error.response?.status === 422) {
+        const validationErrors = error.response?.data?.errors || error.response?.data?.message;
+        throw new Error(typeof validationErrors === 'object' ? JSON.stringify(validationErrors) : validationErrors || 'Validation failed');
+      }
+
+      const message = error.response?.data?.message || error.response?.data?.error || 'Failed to create template';
+      throw new Error(message);
+    }
+  }
+
+  /**
+   * Update an existing template
+   * API Endpoint: PUT /api/{vendorUid}/templates/{templateUid}
+   * @param templateUid - The template UID to update
+   * @param payload - Template update data
+   * @returns Promise with updated template data
+   */
+  async updateTemplate(templateUid: number | string, payload: UpdateTemplatePayload): Promise<any> {
+    const vendorUid = getWhatsappVendorUid();
+    if (!vendorUid) {
+      throw new Error('WhatsApp Vendor UID not configured. Please set it in Admin Settings > Tenant Settings.');
+    }
+
+    const url = `/${vendorUid}/templates/${templateUid}`;
+    console.log('✏️ Updating template via external API:', url, payload);
+
+    try {
+      const response = await externalWhatsappClient.put(url, payload);
+      console.log('✅ Template updated successfully:', response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ Failed to update template:', error);
+
+      if (error.response?.status === 404) {
+        throw new Error('Template not found');
+      }
+      if (error.response?.status === 422) {
+        const validationErrors = error.response?.data?.errors || error.response?.data?.message;
+        throw new Error(typeof validationErrors === 'object' ? JSON.stringify(validationErrors) : validationErrors || 'Validation failed');
+      }
+
+      const message = error.response?.data?.message || error.response?.data?.error || 'Failed to update template';
+      throw new Error(message);
+    }
+  }
+
+  /**
+   * Delete a template
+   * API Endpoint: DELETE /api/{vendorUid}/templates/{templateUid}
+   * @param templateUid - The template UID to delete
+   * @returns Promise with deletion response
+   */
+  async deleteTemplate(templateUid: number | string): Promise<any> {
+    const vendorUid = getWhatsappVendorUid();
+    if (!vendorUid) {
+      throw new Error('WhatsApp Vendor UID not configured. Please set it in Admin Settings > Tenant Settings.');
+    }
+
+    const url = `/${vendorUid}/templates/${templateUid}`;
+    console.log('🗑️ Deleting template via external API:', url);
+
+    try {
+      const response = await externalWhatsappClient.delete(url);
+      console.log('✅ Template deleted successfully');
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ Failed to delete template:', error);
+
+      if (error.response?.status === 404) {
+        throw new Error('Template not found');
+      }
+
+      const message = error.response?.data?.message || error.response?.data?.error || 'Failed to delete template';
+      throw new Error(message);
+    }
+  }
+}
+
+// ==================== TEMPLATE CRUD PAYLOAD TYPES ====================
+
+/**
+ * Payload for creating a new template
+ * Based on API: POST /api/{vendorUid}/templates
+ */
+export interface CreateTemplatePayload {
+  template_name: string;
+  language_code: string;
+  category: 'UTILITY' | 'MARKETING' | 'AUTHENTICATION';
+  template_type?: string;
+  template_body: string;
+  header_type?: 'TEXT' | 'IMAGE' | 'VIDEO' | 'DOCUMENT' | 'NONE';
+  header_text?: string;
+  footer_text?: string;
+  buttons?: Array<{
+    type: 'QUICK_REPLY' | 'URL' | 'PHONE_NUMBER' | 'COPY_CODE';
+    text: string;
+    url?: string;
+    phone_number?: string;
+  }>;
+}
+
+/**
+ * Payload for updating a template
+ * Based on API: PUT /api/{vendorUid}/templates/{templateUid}
+ */
+export interface UpdateTemplatePayload {
+  template_name?: string;
+  language_code?: string;
+  category?: 'UTILITY' | 'MARKETING' | 'AUTHENTICATION';
+  template_type?: string;
+  template_body?: string;
+  header_type?: 'TEXT' | 'IMAGE' | 'VIDEO' | 'DOCUMENT' | 'NONE';
+  header_text?: string;
+  footer_text?: string;
+  buttons?: Array<{
+    type: 'QUICK_REPLY' | 'URL' | 'PHONE_NUMBER' | 'COPY_CODE';
+    text: string;
+    url?: string;
+    phone_number?: string;
+  }>;
 }
 
 // ==================== TEMPLATE API RESPONSE TYPES ====================

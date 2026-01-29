@@ -530,6 +530,355 @@ class ExternalWhatsappService {
       throw new Error(message);
     }
   }
+
+  // ==================== CAMPAIGN METHODS ====================
+
+  /**
+   * Get all campaigns
+   * API Endpoint: GET /api/{vendorUid}/campaigns
+   * @param params - Optional query parameters (status: 'active' | 'archived')
+   */
+  async getCampaigns(params?: { status?: 'active' | 'archived' }): Promise<CampaignsApiResponse> {
+    const vendorUid = getWhatsappVendorUid();
+    if (!vendorUid) {
+      throw new Error('WhatsApp Vendor UID not configured.');
+    }
+
+    const queryParams = new URLSearchParams();
+    if (params?.status) queryParams.append('status', params.status);
+
+    const url = `/${vendorUid}/campaigns${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+    console.log('📥 Getting campaigns via external API:', url);
+
+    try {
+      const response = await externalWhatsappClient.get(url);
+      console.log('✅ Campaigns fetched successfully');
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ Failed to fetch campaigns:', error);
+      const message = error.response?.data?.message || 'Failed to fetch campaigns';
+      throw new Error(message);
+    }
+  }
+
+  /**
+   * Get single campaign by UID
+   * API Endpoint: GET /api/{vendorUid}/campaigns/{uid}
+   */
+  async getCampaign(campaignUid: string): Promise<any> {
+    const vendorUid = getWhatsappVendorUid();
+    if (!vendorUid) {
+      throw new Error('WhatsApp Vendor UID not configured.');
+    }
+
+    const url = `/${vendorUid}/campaigns/${campaignUid}`;
+    console.log('📥 Getting campaign via external API:', url);
+
+    try {
+      const response = await externalWhatsappClient.get(url);
+      console.log('✅ Campaign fetched successfully');
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ Failed to fetch campaign:', error);
+      if (error.response?.status === 404) {
+        throw new Error('Campaign not found');
+      }
+      const message = error.response?.data?.message || 'Failed to fetch campaign';
+      throw new Error(message);
+    }
+  }
+
+  /**
+   * Get campaign status/stats
+   * API Endpoint: GET /api/{vendorUid}/campaigns/{uid}/status
+   */
+  async getCampaignStatus(campaignUid: string): Promise<CampaignStatusResponse> {
+    const vendorUid = getWhatsappVendorUid();
+    if (!vendorUid) {
+      throw new Error('WhatsApp Vendor UID not configured.');
+    }
+
+    const url = `/${vendorUid}/campaigns/${campaignUid}/status`;
+    console.log('📊 Getting campaign status via external API:', url);
+
+    try {
+      const response = await externalWhatsappClient.get(url);
+      console.log('✅ Campaign status fetched successfully');
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ Failed to fetch campaign status:', error);
+      const message = error.response?.data?.message || 'Failed to fetch campaign status';
+      throw new Error(message);
+    }
+  }
+
+  /**
+   * Delete a campaign
+   * API Endpoint: DELETE /api/{vendorUid}/campaigns/{uid}
+   */
+  async deleteCampaign(campaignUid: string): Promise<any> {
+    const vendorUid = getWhatsappVendorUid();
+    if (!vendorUid) {
+      throw new Error('WhatsApp Vendor UID not configured.');
+    }
+
+    const url = `/${vendorUid}/campaigns/${campaignUid}`;
+    console.log('🗑️ Deleting campaign via external API:', url);
+
+    try {
+      const response = await externalWhatsappClient.delete(url);
+      console.log('✅ Campaign deleted successfully');
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ Failed to delete campaign:', error);
+      if (error.response?.status === 404) {
+        throw new Error('Campaign not found');
+      }
+      const message = error.response?.data?.message || 'Failed to delete campaign';
+      throw new Error(message);
+    }
+  }
+
+  /**
+   * Archive a campaign
+   * API Endpoint: POST /api/{vendorUid}/campaigns/{uid}/archive
+   */
+  async archiveCampaign(campaignUid: string): Promise<any> {
+    const vendorUid = getWhatsappVendorUid();
+    if (!vendorUid) {
+      throw new Error('WhatsApp Vendor UID not configured.');
+    }
+
+    const url = `/${vendorUid}/campaigns/${campaignUid}/archive`;
+    console.log('📦 Archiving campaign via external API:', url);
+
+    try {
+      const response = await externalWhatsappClient.post(url);
+      console.log('✅ Campaign archived successfully');
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ Failed to archive campaign:', error);
+      const message = error.response?.data?.message || 'Failed to archive campaign';
+      throw new Error(message);
+    }
+  }
+
+  /**
+   * Unarchive a campaign
+   * API Endpoint: POST /api/{vendorUid}/campaigns/{uid}/unarchive
+   */
+  async unarchiveCampaign(campaignUid: string): Promise<any> {
+    const vendorUid = getWhatsappVendorUid();
+    if (!vendorUid) {
+      throw new Error('WhatsApp Vendor UID not configured.');
+    }
+
+    const url = `/${vendorUid}/campaigns/${campaignUid}/unarchive`;
+    console.log('📤 Unarchiving campaign via external API:', url);
+
+    try {
+      const response = await externalWhatsappClient.post(url);
+      console.log('✅ Campaign unarchived successfully');
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ Failed to unarchive campaign:', error);
+      const message = error.response?.data?.message || 'Failed to unarchive campaign';
+      throw new Error(message);
+    }
+  }
+
+  // ==================== CONTACT METHODS ====================
+
+  /**
+   * Get all contacts with pagination
+   * API Endpoint: GET /api/{vendorUid}/contacts
+   * @param params - Query parameters (page, limit, search)
+   */
+  async getContacts(params?: { page?: number; limit?: number; search?: string }): Promise<ContactsApiResponse> {
+    const vendorUid = getWhatsappVendorUid();
+    if (!vendorUid) {
+      throw new Error('WhatsApp Vendor UID not configured.');
+    }
+
+    const queryParams = new URLSearchParams();
+    if (params?.page) queryParams.append('page', params.page.toString());
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    if (params?.search) queryParams.append('search', params.search);
+
+    const url = `/${vendorUid}/contacts${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+    console.log('📥 Getting contacts via external API:', url);
+
+    try {
+      const response = await externalWhatsappClient.get(url);
+      console.log('✅ Contacts fetched successfully');
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ Failed to fetch contacts:', error);
+      const message = error.response?.data?.message || 'Failed to fetch contacts';
+      throw new Error(message);
+    }
+  }
+
+  /**
+   * Get single contact by UID
+   * API Endpoint: GET /api/{vendorUid}/contacts/{uid}
+   */
+  async getContact(contactUid: string): Promise<any> {
+    const vendorUid = getWhatsappVendorUid();
+    if (!vendorUid) {
+      throw new Error('WhatsApp Vendor UID not configured.');
+    }
+
+    const url = `/${vendorUid}/contacts/${contactUid}`;
+    console.log('📥 Getting contact via external API:', url);
+
+    try {
+      const response = await externalWhatsappClient.get(url);
+      console.log('✅ Contact fetched successfully');
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ Failed to fetch contact:', error);
+      if (error.response?.status === 404) {
+        throw new Error('Contact not found');
+      }
+      const message = error.response?.data?.message || 'Failed to fetch contact';
+      throw new Error(message);
+    }
+  }
+
+  /**
+   * Delete a contact
+   * API Endpoint: DELETE /api/{vendorUid}/contacts/{uid}
+   */
+  async deleteContact(contactUid: string): Promise<any> {
+    const vendorUid = getWhatsappVendorUid();
+    if (!vendorUid) {
+      throw new Error('WhatsApp Vendor UID not configured.');
+    }
+
+    const url = `/${vendorUid}/contacts/${contactUid}`;
+    console.log('🗑️ Deleting contact via external API:', url);
+
+    try {
+      const response = await externalWhatsappClient.delete(url);
+      console.log('✅ Contact deleted successfully');
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ Failed to delete contact:', error);
+      if (error.response?.status === 404) {
+        throw new Error('Contact not found');
+      }
+      const message = error.response?.data?.message || 'Failed to delete contact';
+      throw new Error(message);
+    }
+  }
+
+  /**
+   * Create a new contact
+   * API Endpoint: POST /api/{vendorUid}/contact/create
+   */
+  async createContact(payload: CreateContactPayload): Promise<any> {
+    const vendorUid = getWhatsappVendorUid();
+    if (!vendorUid) {
+      throw new Error('WhatsApp Vendor UID not configured.');
+    }
+
+    const url = `/${vendorUid}/contact/create`;
+    console.log('➕ Creating contact via external API:', url);
+
+    try {
+      const response = await externalWhatsappClient.post(url, payload);
+      console.log('✅ Contact created successfully');
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ Failed to create contact:', error);
+      if (error.response?.status === 422) {
+        const validationErrors = error.response?.data?.errors || error.response?.data?.message;
+        throw new Error(typeof validationErrors === 'object' ? JSON.stringify(validationErrors) : validationErrors || 'Validation failed');
+      }
+      const message = error.response?.data?.message || 'Failed to create contact';
+      throw new Error(message);
+    }
+  }
+
+  /**
+   * Update a contact by phone number
+   * API Endpoint: POST /api/{vendorUid}/contact/update/{phone}
+   */
+  async updateContact(phoneNumber: string, payload: UpdateContactPayload): Promise<any> {
+    const vendorUid = getWhatsappVendorUid();
+    if (!vendorUid) {
+      throw new Error('WhatsApp Vendor UID not configured.');
+    }
+
+    const url = `/${vendorUid}/contact/update/${phoneNumber}`;
+    console.log('✏️ Updating contact via external API:', url);
+
+    try {
+      const response = await externalWhatsappClient.post(url, payload);
+      console.log('✅ Contact updated successfully');
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ Failed to update contact:', error);
+      if (error.response?.status === 404) {
+        throw new Error('Contact not found');
+      }
+      if (error.response?.status === 422) {
+        const validationErrors = error.response?.data?.errors || error.response?.data?.message;
+        throw new Error(typeof validationErrors === 'object' ? JSON.stringify(validationErrors) : validationErrors || 'Validation failed');
+      }
+      const message = error.response?.data?.message || 'Failed to update contact';
+      throw new Error(message);
+    }
+  }
+
+  /**
+   * Get all labels
+   * API Endpoint: GET /api/{vendorUid}/labels
+   */
+  async getLabels(): Promise<LabelsApiResponse> {
+    const vendorUid = getWhatsappVendorUid();
+    if (!vendorUid) {
+      throw new Error('WhatsApp Vendor UID not configured.');
+    }
+
+    const url = `/${vendorUid}/labels`;
+    console.log('🏷️ Getting labels via external API:', url);
+
+    try {
+      const response = await externalWhatsappClient.get(url);
+      console.log('✅ Labels fetched successfully');
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ Failed to fetch labels:', error);
+      const message = error.response?.data?.message || 'Failed to fetch labels';
+      throw new Error(message);
+    }
+  }
+
+  /**
+   * Get all contact groups
+   * API Endpoint: GET /api/{vendorUid}/contact-groups
+   */
+  async getContactGroups(): Promise<ContactGroupsApiResponse> {
+    const vendorUid = getWhatsappVendorUid();
+    if (!vendorUid) {
+      throw new Error('WhatsApp Vendor UID not configured.');
+    }
+
+    const url = `/${vendorUid}/contact-groups`;
+    console.log('👥 Getting contact groups via external API:', url);
+
+    try {
+      const response = await externalWhatsappClient.get(url);
+      console.log('✅ Contact groups fetched successfully');
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ Failed to fetch contact groups:', error);
+      const message = error.response?.data?.message || 'Failed to fetch contact groups';
+      throw new Error(message);
+    }
+  }
 }
 
 // ==================== TEMPLATE CRUD PAYLOAD TYPES ====================
@@ -603,6 +952,96 @@ export interface TemplateApiResponse {
   data?: any;
   template?: any;
   // Direct object response
+  [key: string]: any;
+}
+
+// ==================== CAMPAIGN API TYPES ====================
+
+/**
+ * Response structure for campaigns list API
+ */
+export interface CampaignsApiResponse {
+  data?: any[];
+  campaigns?: any[];
+  total?: number;
+  current_page?: number;
+  per_page?: number;
+  [key: string]: any;
+}
+
+/**
+ * Response structure for campaign status API
+ */
+export interface CampaignStatusResponse {
+  total_recipients?: number;
+  sent?: number;
+  delivered?: number;
+  read?: number;
+  failed?: number;
+  pending?: number;
+  status?: string;
+  [key: string]: any;
+}
+
+// ==================== CONTACT API TYPES ====================
+
+/**
+ * Response structure for contacts list API
+ */
+export interface ContactsApiResponse {
+  data?: any[];
+  contacts?: any[];
+  total?: number;
+  current_page?: number;
+  per_page?: number;
+  last_page?: number;
+  [key: string]: any;
+}
+
+/**
+ * Payload for creating a new contact
+ */
+export interface CreateContactPayload {
+  phone_number: string;
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  country?: string;
+  language_code?: string;
+  groups?: string[];
+  labels?: string[];
+  [key: string]: any;
+}
+
+/**
+ * Payload for updating a contact
+ */
+export interface UpdateContactPayload {
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  country?: string;
+  language_code?: string;
+  groups?: string[];
+  labels?: string[];
+  [key: string]: any;
+}
+
+/**
+ * Response structure for labels API
+ */
+export interface LabelsApiResponse {
+  data?: any[];
+  labels?: any[];
+  [key: string]: any;
+}
+
+/**
+ * Response structure for contact groups API
+ */
+export interface ContactGroupsApiResponse {
+  data?: any[];
+  groups?: any[];
   [key: string]: any;
 }
 

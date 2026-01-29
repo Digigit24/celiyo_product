@@ -69,9 +69,9 @@ export const WhatsAppDefaultsTab: React.FC<WhatsAppDefaultsTabProps> = ({
     if (templateId === 'none') {
       delete newDefaults[purpose];
     } else {
-      // Store as number if numeric, otherwise as string
-      const numId = parseInt(templateId, 10);
-      newDefaults[purpose] = isNaN(numId) ? templateId : numId;
+      // Always store as string to preserve UUIDs like "858d35c1-..."
+      // parseInt("858d35c1-...") incorrectly returns 858, not the full UUID
+      newDefaults[purpose] = templateId;
     }
     onWhatsAppDefaultsChange(newDefaults);
   };

@@ -236,17 +236,40 @@ class ChatService {
   }
 
   private normalizeMessage(data: any): ChatMessage {
+    // Extract message text from various possible field names
+    const messageText =
+      data.message_body ||
+      data.message ||
+      data.text ||
+      data.body ||
+      data.content ||
+      data.message_text ||
+      '';
+
+    // Log for debugging
+    console.log('📨 Normalizing message:', {
+      id: data._uid || data.id,
+      direction: data.direction,
+      hasMessageBody: !!data.message_body,
+      hasMessage: !!data.message,
+      hasText: !!data.text,
+      hasBody: !!data.body,
+      hasContent: !!data.content,
+      extractedText: messageText?.substring(0, 50),
+      rawKeys: Object.keys(data),
+    });
+
     return {
       _uid: data._uid || data.id || data.message_uid,
       contact_uid: data.contact_uid || data.contact_id,
-      direction: data.direction || (data.is_outgoing ? 'outgoing' : 'incoming'),
+      direction: data.direction || (data.is_outgoing ? 'outgoing' : data.is_incoming ? 'incoming' : 'incoming'),
       message_type: data.message_type || data.type || 'text',
-      message_body: data.message_body || data.text || data.body || '',
-      media_url: data.media_url,
-      media_type: data.media_type,
+      message_body: messageText,
+      media_url: data.media_url || data.media?.url,
+      media_type: data.media_type || data.media?.type,
       template_name: data.template_name,
       status: data.status || data.delivery_status,
-      created_at: data.created_at || data.timestamp || new Date().toISOString(),
+      created_at: data.created_at || data.timestamp || data.messaged_at || new Date().toISOString(),
       updated_at: data.updated_at,
       metadata: data.metadata || data.meta_data,
     };
@@ -314,6 +337,13 @@ class ChatService {
 
     const response = await externalWhatsappService.getContactMessages(contactUid, params);
 
+    console.log('📬 chatService received response:', {
+      isArray: Array.isArray(response),
+      hasData: !!response?.data,
+      hasMessages: !!response?.messages,
+      topKeys: response ? Object.keys(response) : [],
+    });
+
     let messages: any[] = [];
     let total = 0;
     let contact: any = null;
@@ -331,8 +361,30 @@ class ChatService {
       contact = response.contact;
     }
 
+    console.log('📬 Extracted messages:', {
+      count: messages.length,
+      firstMessageKeys: messages[0] ? Object.keys(messages[0]) : [],
+      firstMessageSample: messages[0] ? {
+        message_body: messages[0].message_body,
+        message: messages[0].message,
+        text: messages[0].text,
+        body: messages[0].body,
+        content: messages[0].content,
+      } : 'none',
+    });
+
+    const normalizedMessages = messages.map((m: any) => this.normalizeMessage(m));
+
+    console.log('📬 Normalized messages:', {
+      count: normalizedMessages.length,
+      firstNormalized: normalizedMessages[0] ? {
+        message_body: normalizedMessages[0].message_body,
+        direction: normalizedMessages[0].direction,
+      } : 'none',
+    });
+
     return {
-      messages: messages.map((m: any) => this.normalizeMessage(m)),
+      messages: normalizedMessages,
       total,
       page: params?.page || 1,
       limit: params?.limit || 50,

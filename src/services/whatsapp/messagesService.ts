@@ -298,18 +298,49 @@ class MessagesService {
           // Use chatService which properly resolves phone number to contact UID
           const response = await chatService.getContactMessages(cleanPhone);
 
+          console.log('📬 Raw messages from chatService:', {
+            count: response.messages?.length,
+            sampleMessage: response.messages?.[0] ? {
+              keys: Object.keys(response.messages[0]),
+              message_body: response.messages[0].message_body,
+              text: response.messages[0].text,
+              body: response.messages[0].body,
+              message: response.messages[0].message,
+            } : 'no messages'
+          });
+
           // Transform messages from chatService format to messagesService format
-          const transformedMessages = response.messages.map((m: any) => ({
-            id: String(m._uid || m.id || m.message_uid || `local-${Math.random().toString(36).slice(2)}`),
-            from: m.from || (m.direction === 'incoming' ? phone : ''),
-            to: m.to || (m.direction === 'outgoing' ? phone : null),
-            text: m.message_body || m.text || m.body || '',
-            type: m.message_type || m.type || 'text',
-            direction: m.direction || (m.is_outgoing ? 'outgoing' : 'incoming'),
-            timestamp: this.normalizeTimestamp(m.created_at || m.timestamp),
-            status: m.status || m.delivery_status || (m.direction === 'outgoing' ? 'sent' : undefined),
-            metadata: m.metadata || m.meta_data || {},
-          }));
+          const transformedMessages = response.messages.map((m: any) => {
+            // Extract text from various possible field names
+            const text =
+              m.message_body ||
+              m.message ||
+              m.text ||
+              m.body ||
+              m.content ||
+              m.message_text ||
+              '';
+
+            return {
+              id: String(m._uid || m.id || m.message_uid || `local-${Math.random().toString(36).slice(2)}`),
+              from: m.from || (m.direction === 'incoming' ? phone : ''),
+              to: m.to || (m.direction === 'outgoing' ? phone : null),
+              text,
+              type: m.message_type || m.type || 'text',
+              direction: m.direction || (m.is_outgoing ? 'outgoing' : m.is_incoming ? 'incoming' : 'incoming'),
+              timestamp: this.normalizeTimestamp(m.created_at || m.timestamp || m.messaged_at),
+              status: m.status || m.delivery_status || (m.direction === 'outgoing' ? 'sent' : undefined),
+              metadata: m.metadata || m.meta_data || {},
+            };
+          });
+
+          console.log('📬 Transformed messages:', {
+            count: transformedMessages.length,
+            sample: transformedMessages[0] ? {
+              text: transformedMessages[0].text?.substring(0, 30),
+              direction: transformedMessages[0].direction,
+            } : 'no messages'
+          });
 
           const conversationDetail: ConversationDetail = {
             phone,

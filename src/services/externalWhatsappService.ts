@@ -569,7 +569,33 @@ class ExternalWhatsappService {
 
     const url = buildVendorUrl(`/contacts/${contactUid}/messages${queryParams.toString() ? '?' + queryParams.toString() : ''}`);
     const response = await externalWhatsappClient.get(url);
-    return handleResponse(response);
+    const result = handleResponse(response);
+
+    // Debug: Log the raw API response structure
+    console.log('🔍 Raw API response for messages:', {
+      url,
+      isArray: Array.isArray(result),
+      hasData: !!result?.data,
+      hasMessages: !!result?.messages,
+      topLevelKeys: result ? Object.keys(result) : [],
+      sampleMessage: (() => {
+        const messages = Array.isArray(result) ? result : (result?.data || result?.messages || []);
+        if (messages.length > 0) {
+          const msg = messages[0];
+          return {
+            keys: Object.keys(msg),
+            message_body: msg.message_body,
+            message: msg.message,
+            text: msg.text,
+            body: msg.body,
+            content: msg.content,
+          };
+        }
+        return 'no messages found';
+      })(),
+    });
+
+    return result;
   }
 
   // POST /contacts/{uid}/messages - Send text message

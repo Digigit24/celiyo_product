@@ -1,18 +1,31 @@
 // src/components/ContactsTable.tsx
+import React from 'react';
 import { DataTable, type DataTableColumn, type RowActions } from '@/components/DataTable';
+import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Phone, MessageCircle, Building2, User } from 'lucide-react';
+import { Phone, MessageCircle, Building2, User, Tag, Users } from 'lucide-react';
 import type { Contact } from '@/types/whatsappTypes';
 
 interface ContactsTableProps {
   contacts: Contact[];
   isLoading: boolean;
-  onView: (contact: Contact) => void;
-  onEdit: (contact: Contact) => void;
-  onDelete: (contact: Contact) => Promise<void>;
-  onRefresh: () => void;
+  onView?: (contact: Contact) => void;
+  onEdit?: (contact: Contact) => void;
+  onDelete?: (contact: Contact) => Promise<void>;
+  onMessage?: (contact: Contact) => void;
+  onCall?: (contact: Contact) => void;
+  onAddToGroup?: (contact: Contact) => void;
+  onAddLabel?: (contact: Contact) => void;
+}
+
+function formatDate(dateString: string) {
+  return new Date(dateString).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
 }
 
 export default function ContactsTable({
@@ -21,7 +34,10 @@ export default function ContactsTable({
   onView,
   onEdit,
   onDelete,
-  onRefresh,
+  onMessage,
+  onCall,
+  onAddToGroup,
+  onAddLabel,
 }: ContactsTableProps) {
   // Define columns for desktop table
   const columns: DataTableColumn<Contact>[] = [
@@ -33,7 +49,7 @@ export default function ContactsTable({
           <Avatar className="h-10 w-10">
             <AvatarImage src={contact.profile_pic_url || undefined} />
             <AvatarFallback>
-              {contact.name 
+              {contact.name
                 ? contact.name.charAt(0).toUpperCase()
                 : contact.phone.slice(-2)
               }
@@ -55,6 +71,8 @@ export default function ContactsTable({
         </div>
       ),
       className: 'min-w-[200px]',
+      sortable: true,
+      accessor: (contact) => contact.name || contact.phone,
     },
     {
       header: 'Labels',
@@ -110,7 +128,7 @@ export default function ContactsTable({
           </div>
           {contact.last_seen && (
             <div className="text-xs text-muted-foreground">
-              Last seen: {new Date(contact.last_seen).toLocaleDateString()}
+              Last seen: {formatDate(contact.last_seen)}
             </div>
           )}
         </div>
@@ -121,22 +139,24 @@ export default function ContactsTable({
       key: 'created_at',
       cell: (contact) => (
         <div className="text-sm text-muted-foreground">
-          {new Date(contact.created_at).toLocaleDateString()}
+          {formatDate(contact.created_at)}
         </div>
       ),
+      sortable: true,
+      accessor: (contact) => new Date(contact.created_at).getTime(),
     },
   ];
 
   // Mobile card renderer
   const renderMobileCard = (contact: Contact, actions: RowActions<Contact>) => (
-    <div className="space-y-3">
+    <>
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-3 flex-1 min-w-0">
           <Avatar className="h-12 w-12 flex-shrink-0">
             <AvatarImage src={contact.profile_pic_url || undefined} />
             <AvatarFallback>
-              {contact.name 
+              {contact.name
                 ? contact.name.charAt(0).toUpperCase()
                 : contact.phone.slice(-2)
               }
@@ -189,32 +209,33 @@ export default function ContactsTable({
       {/* Status & Date */}
       <div className="flex justify-between items-center text-xs text-muted-foreground">
         <span>{contact.status || 'No status'}</span>
-        <span>Created: {new Date(contact.created_at).toLocaleDateString()}</span>
+        <span>Created: {formatDate(contact.created_at)}</span>
       </div>
 
       {/* Actions */}
       <div className="flex gap-2 pt-2 border-t">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => window.open(`tel:${contact.phone}`, '_self')}
-          className="flex-1"
-        >
-          <Phone className="h-4 w-4 mr-1" />
-          Call
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            // Navigate to chat
-            console.log('Open chat with:', contact.phone);
-          }}
-          className="flex-1"
-        >
-          <MessageCircle className="h-4 w-4 mr-1" />
-          Message
-        </Button>
+        {onCall && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onCall(contact)}
+            className="flex-1"
+          >
+            <Phone className="h-4 w-4 mr-1" />
+            Call
+          </Button>
+        )}
+        {onMessage && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onMessage(contact)}
+            className="flex-1"
+          >
+            <MessageCircle className="h-4 w-4 mr-1" />
+            Message
+          </Button>
+        )}
         {actions.view && (
           <Button
             variant="outline"
@@ -227,7 +248,36 @@ export default function ContactsTable({
           </Button>
         )}
       </div>
-    </div>
+    </>
+  );
+
+  const getExtraActions = (contact: Contact) => (
+    <>
+      {onMessage && (
+        <DropdownMenuItem onClick={() => onMessage(contact)}>
+          <MessageCircle className="mr-2 h-4 w-4" />
+          Send Message
+        </DropdownMenuItem>
+      )}
+      {onCall && (
+        <DropdownMenuItem onClick={() => onCall(contact)}>
+          <Phone className="mr-2 h-4 w-4" />
+          Call Contact
+        </DropdownMenuItem>
+      )}
+      {onAddLabel && (
+        <DropdownMenuItem onClick={() => onAddLabel(contact)}>
+          <Tag className="mr-2 h-4 w-4" />
+          Add Label
+        </DropdownMenuItem>
+      )}
+      {onAddToGroup && (
+        <DropdownMenuItem onClick={() => onAddToGroup(contact)}>
+          <Users className="mr-2 h-4 w-4" />
+          Add to Group
+        </DropdownMenuItem>
+      )}
+    </>
   );
 
   return (
@@ -238,9 +288,11 @@ export default function ContactsTable({
       renderMobileCard={renderMobileCard}
       getRowId={(contact) => contact.id.toString()}
       getRowLabel={(contact) => contact.name || contact.phone}
+      onRowClick={onView}
       onView={onView}
       onEdit={onEdit}
       onDelete={onDelete}
+      extraActions={getExtraActions}
       emptyTitle="No contacts found"
       emptySubtitle="Try adjusting your search criteria or create a new contact"
     />

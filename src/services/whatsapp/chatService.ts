@@ -237,25 +237,57 @@ class ChatService {
 
   private normalizeMessage(data: any): ChatMessage {
     // Extract message text from various possible field names
-    const messageText =
-      data.message_body ||
-      data.message ||
-      data.text ||
-      data.body ||
-      data.content ||
-      data.message_text ||
-      '';
+    // WhatsApp API can have nested structures like text.body, message.text.body, etc.
+    let messageText = '';
+
+    // Direct field checks
+    if (data.message_body) {
+      messageText = data.message_body;
+    } else if (typeof data.message === 'string') {
+      messageText = data.message;
+    } else if (typeof data.text === 'string') {
+      messageText = data.text;
+    } else if (typeof data.body === 'string') {
+      messageText = data.body;
+    } else if (data.content) {
+      messageText = data.content;
+    } else if (data.message_text) {
+      messageText = data.message_text;
+    }
+    // Nested structure checks (WhatsApp Cloud API format)
+    else if (data.text?.body) {
+      messageText = data.text.body;
+    } else if (data.message?.text?.body) {
+      messageText = data.message.text.body;
+    } else if (data.message?.body) {
+      messageText = data.message.body;
+    } else if (data.message?.text && typeof data.message.text === 'string') {
+      messageText = data.message.text;
+    }
+    // Interactive message formats
+    else if (data.interactive?.body?.text) {
+      messageText = data.interactive.body.text;
+    } else if (data.button?.text) {
+      messageText = data.button.text;
+    }
+    // Template message formats
+    else if (data.template?.name) {
+      messageText = `[Template: ${data.template.name}]`;
+    }
 
     // Log for debugging
     console.log('📨 Normalizing message:', {
       id: data._uid || data.id,
       direction: data.direction,
+      type: data.type || data.message_type,
       hasMessageBody: !!data.message_body,
       hasMessage: !!data.message,
       hasText: !!data.text,
       hasBody: !!data.body,
       hasContent: !!data.content,
-      extractedText: messageText?.substring(0, 50),
+      hasNestedTextBody: !!data.text?.body,
+      hasNestedMessageText: !!data.message?.text,
+      extractedText: messageText?.substring(0, 50) || '(empty)',
       rawKeys: Object.keys(data),
     });
 

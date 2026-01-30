@@ -312,14 +312,31 @@ class MessagesService {
           // Transform messages from chatService format to messagesService format
           const transformedMessages = response.messages.map((m: any) => {
             // Extract text from various possible field names
-            const text =
-              m.message_body ||
-              m.message ||
-              m.text ||
-              m.body ||
-              m.content ||
-              m.message_text ||
-              '';
+            // The chatService.normalizeMessage already extracts to message_body, so check that first
+            let text = '';
+            if (m.message_body) {
+              text = m.message_body;
+            } else if (typeof m.message === 'string') {
+              text = m.message;
+            } else if (typeof m.text === 'string') {
+              text = m.text;
+            } else if (typeof m.body === 'string') {
+              text = m.body;
+            } else if (m.content) {
+              text = m.content;
+            } else if (m.message_text) {
+              text = m.message_text;
+            }
+            // Nested structure checks
+            else if (m.text?.body) {
+              text = m.text.body;
+            } else if (m.message?.text?.body) {
+              text = m.message.text.body;
+            } else if (m.message?.body) {
+              text = m.message.body;
+            } else if (m.message?.text && typeof m.message.text === 'string') {
+              text = m.message.text;
+            }
 
             return {
               id: String(m._uid || m.id || m.message_uid || `local-${Math.random().toString(36).slice(2)}`),

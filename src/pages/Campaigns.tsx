@@ -20,7 +20,7 @@ import { useCampaigns } from '@/hooks/whatsapp/useCampaigns';
 import { useTemplates } from '@/hooks/whatsapp/useTemplates';
 import { useContacts } from '@/hooks/whatsapp/useContacts';
 import { useGroups } from '@/hooks/whatsapp/useGroups';
-import type { WACampaign, CreateCampaignPayload, CreateTemplateCampaignPayload, Template, TemplateStatus, Contact, Group } from '@/types/whatsappTypes';
+import type { WACampaign, Template, TemplateStatus, Contact, Group } from '@/types/whatsappTypes';
 import CampaignsTable from '@/components/CampaignsTable';
 import { SideDrawer } from '@/components/SideDrawer';
 
@@ -69,8 +69,6 @@ export default function Campaigns() {
     isLoading,
     error,
     refetch,
-    createCampaign,
-    createTemplateCampaign,
     sendTemplateBroadcastBulk,
     getCampaign,
     stats,
@@ -240,11 +238,10 @@ export default function Campaigns() {
     }
 
     // Build payload for template broadcast bulk send (bypasses 24hr window)
-    const payload: any = {
-      campaign_name: campaignTitle.trim() || selectedTemplate.name,
+    const payload = {
       template_name: selectedTemplate.name,
-      template_language: selectedTemplate.language,
-      recipients: uniquePhoneNumbers, // Only send phone numbers
+      language: selectedTemplate.language as any,
+      recipients: uniquePhoneNumbers,
     };
 
     try {

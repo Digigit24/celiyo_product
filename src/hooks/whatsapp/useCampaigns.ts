@@ -2,7 +2,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { campaignsService, CreateCampaignRequest } from '@/services/whatsapp/campaignsService';
-import type { Campaign, CampaignsListQuery } from '@/types/whatsappTypes';
+import { templatesService } from '@/services/whatsapp/templatesService';
+import type { Campaign, CampaignsListQuery, TemplateBulkSendRequest, TemplateBulkSendResponse } from '@/types/whatsappTypes';
 
 export interface UseCampaignsOptions {
   initialQuery?: CampaignsListQuery;
@@ -17,12 +18,13 @@ export interface UseCampaignsReturn {
   error: string | null;
   fetchCampaigns: (query?: CampaignsListQuery) => Promise<void>;
   createCampaign: (payload: CreateCampaignRequest) => Promise<Campaign | null>;
+  sendTemplateBroadcastBulk: (payload: TemplateBulkSendRequest) => Promise<TemplateBulkSendResponse | null>;
   deleteCampaign: (id: string) => Promise<boolean>;
   archiveCampaign: (id: string) => Promise<boolean>;
   unarchiveCampaign: (id: string) => Promise<boolean>;
   getCampaign: (id: string) => Promise<Campaign | null>;
   refetch: () => Promise<void>;
-  getStats: (campaign: Campaign) => {
+  stats: (campaign: Campaign) => {
     total_recipients: number;
     sent: number;
     failed: number;
@@ -74,6 +76,23 @@ export function useCampaigns(options: UseCampaignsOptions = {}): UseCampaignsRet
       setIsCreating(false);
     }
   }, []);
+
+  const sendTemplateBroadcastBulk = useCallback(async (payload: TemplateBulkSendRequest) => {
+    try {
+      setIsCreating(true);
+      setError(null);
+      const result = await templatesService.sendTemplateBulk(payload);
+      await fetchCampaigns();
+      return result;
+    } catch (err: any) {
+      const msg = err?.message || 'Failed to send template broadcast';
+      setError(msg);
+      toast.error(msg);
+      return null;
+    } finally {
+      setIsCreating(false);
+    }
+  }, [fetchCampaigns]);
 
   const deleteCampaign = useCallback(async (id: string) => {
     try {
@@ -129,7 +148,7 @@ export function useCampaigns(options: UseCampaignsOptions = {}): UseCampaignsRet
     await fetchCampaigns();
   }, [fetchCampaigns]);
 
-  const getStats = useCallback((campaign: Campaign) => {
+  const stats = useCallback((campaign: Campaign) => {
     return campaignsService.getCampaignStats(campaign);
   }, []);
 
@@ -147,11 +166,12 @@ export function useCampaigns(options: UseCampaignsOptions = {}): UseCampaignsRet
     error,
     fetchCampaigns,
     createCampaign,
+    sendTemplateBroadcastBulk,
     deleteCampaign,
     archiveCampaign,
     unarchiveCampaign,
     getCampaign,
     refetch,
-    getStats,
+    stats,
   };
 }

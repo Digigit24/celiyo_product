@@ -119,13 +119,15 @@ class TemplatesService {
     let sent = 0;
     let failed = 0;
 
-    for (const recipient of payload.recipients) {
+    for (let i = 0; i < payload.recipients.length; i++) {
+      const phone = payload.recipients[i];
+      const parameters = payload.parameters_per_recipient?.[i] || payload.default_parameters;
       try {
         await this.sendTemplate({
           template_name: payload.template_name,
-          to: recipient.phone,
+          to: phone,
           language: payload.language,
-          components: recipient.components || payload.components,
+          parameters,
         });
         sent++;
       } catch {

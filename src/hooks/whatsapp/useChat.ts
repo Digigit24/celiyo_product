@@ -9,6 +9,9 @@ import {
   ChatMessagesResponse,
   UnreadCount,
   TeamMember,
+  ChatLabel,
+  ChatContext,
+  ReplyWindowStatus,
 } from '@/services/whatsapp/chatService';
 
 // ==================== QUERY KEYS ====================
@@ -24,6 +27,7 @@ export const chatKeys = {
   messageLog: (params?: { page?: number; limit?: number; contact_uid?: string; direction?: string }) =>
     [...chatKeys.all, 'message-log', params] as const,
   message: (messageUid: string) => [...chatKeys.all, 'message', messageUid] as const,
+  chatContext: (contactUid: string) => [...chatKeys.all, 'context', contactUid] as const,
 };
 
 // ==================== CHAT CONTACTS HOOK ====================
@@ -328,6 +332,94 @@ export function useUpdateNotes() {
       toast.error(error?.message || 'Failed to update notes');
     },
   });
+}
+
+// ==================== BLOCK CONTACT MUTATION ====================
+
+export function useBlockContact() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (contactUid: string) => chatService.blockContact(contactUid),
+    onSuccess: (_, contactUid) => {
+      queryClient.invalidateQueries({ queryKey: chatKeys.contacts() });
+      queryClient.invalidateQueries({ queryKey: chatKeys.chatContext(contactUid) });
+      toast.success('Contact blocked');
+    },
+    onError: (error: any) => {
+      toast.error(error?.message || 'Failed to block contact');
+    },
+  });
+}
+
+// ==================== UNBLOCK CONTACT MUTATION ====================
+
+export function useUnblockContact() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (contactUid: string) => chatService.unblockContact(contactUid),
+    onSuccess: (_, contactUid) => {
+      queryClient.invalidateQueries({ queryKey: chatKeys.contacts() });
+      queryClient.invalidateQueries({ queryKey: chatKeys.chatContext(contactUid) });
+      toast.success('Contact unblocked');
+    },
+    onError: (error: any) => {
+      toast.error(error?.message || 'Failed to unblock contact');
+    },
+  });
+}
+
+// ==================== BOT SETTINGS MUTATION ====================
+
+export function useBotSettings() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ contactUid, botEnabled }: { contactUid: string; botEnabled: boolean }) =>
+      chatService.updateBotSettings(contactUid, botEnabled),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: chatKeys.contacts() });
+      queryClient.invalidateQueries({ queryKey: chatKeys.chatContext(variables.contactUid) });
+      toast.success(variables.botEnabled ? 'Bot enabled' : 'Bot disabled');
+    },
+    onError: (error: any) => {
+      toast.error(error?.message || 'Failed to update bot settings');
+    },
+  });
+}
+
+// ==================== CHAT CONTEXT HOOK ====================
+
+export interface UseChatContextOptions {
+  contactUid: string | null;
+  enabled?: boolean;
+}
+
+export function useChatContext(options: UseChatContextOptions) {
+  const { contactUid, enabled = true } = options;
+
+  const query = useQuery({
+    queryKey: chatKeys.chatContext(contactUid || ''),
+    queryFn: async () => {
+      if (!contactUid) throw new Error('Contact UID required');
+      return chatService.getChatContext(contactUid);
+    },
+    enabled: enabled && !!contactUid,
+    staleTime: 30000, // 30 seconds
+    gcTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  return {
+    contact: query.data?.contact || null,
+    labels: query.data?.labels || [],
+    teamMembers: query.data?.teamMembers || [],
+    replyWindowStatus: query.data?.replyWindowStatus || null,
+    isLoading: query.isLoading,
+    isError: query.isError,
+    error: query.error,
+    refetch: query.refetch,
+  };
 }
 
 // ==================== MESSAGE LOG HOOK ====================

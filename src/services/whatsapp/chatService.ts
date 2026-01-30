@@ -15,6 +15,13 @@ const phoneToUidCache = new Map<string, string>();
 
 // ==================== TYPE DEFINITIONS ====================
 
+export interface ChatLabel {
+  _uid: string;
+  title: string;
+  text_color?: string;
+  bg_color?: string;
+}
+
 export interface ChatContact {
   _uid: string;
   phone_number: string;
@@ -27,10 +34,15 @@ export interface ChatContact {
   last_message_at?: string;
   unread_count: number;
   is_online?: boolean;
+  is_blocked?: boolean;
+  bot_enabled?: boolean;
   assigned_user_uid?: string;
   assigned_user_name?: string;
-  labels?: string[];
+  labels?: ChatLabel[];
   notes?: string;
+  reply_window_open?: boolean;
+  reply_window_expires_at?: string | null;
+  requires_template?: boolean;
   created_at?: string;
   updated_at?: string;
 }
@@ -81,6 +93,19 @@ export interface ChatMessagesResponse {
 export interface SendMessageResponse {
   message_uid: string;
   status: string;
+}
+
+export interface ReplyWindowStatus {
+  is_open: boolean;
+  expires_at: string | null;
+  requires_template: boolean;
+}
+
+export interface ChatContext {
+  contact: ChatContact;
+  labels: ChatLabel[];
+  teamMembers: TeamMember[];
+  replyWindowStatus: ReplyWindowStatus;
 }
 
 // ==================== CHAT SERVICE ====================
@@ -176,6 +201,14 @@ class ChatService {
       this.updateUidCache(contactUid, phoneNumber);
     }
 
+    // Normalize labels to ChatLabel format
+    const normalizedLabels: ChatLabel[] = (data.labels || []).map((label: any) => ({
+      _uid: label._uid || label.id || label.uid,
+      title: label.title || label.name || label.label,
+      text_color: label.text_color,
+      bg_color: label.bg_color || label.color,
+    }));
+
     return {
       _uid: contactUid, // This should be a real UID, not a phone number
       phone_number: phoneNumber,
@@ -188,10 +221,15 @@ class ChatService {
       last_message_at: this.extractLastMessageTime(data),
       unread_count: data.unread_count || 0,
       is_online: data.is_online || false,
+      is_blocked: data.is_blocked ?? false,
+      bot_enabled: data.bot_enabled ?? true,
       assigned_user_uid: data.assigned_user_uid || data.assigned_to,
       assigned_user_name: data.assigned_user_name,
-      labels: data.labels || [],
+      labels: normalizedLabels,
       notes: data.notes,
+      reply_window_open: data.reply_window_open ?? data.window_is_open ?? true,
+      reply_window_expires_at: data.reply_window_expires_at ?? data.window_expires_at ?? null,
+      requires_template: data.requires_template ?? false,
       created_at: data.created_at,
       updated_at: data.updated_at,
     };
@@ -380,6 +418,58 @@ class ChatService {
   async updateNotes(contactIdOrPhone: string, notes: string): Promise<void> {
     const contactUid = await this.resolveContactUid(contactIdOrPhone);
     await externalWhatsappService.updateContactNotes(contactUid, { notes });
+  }
+
+  // ==================== CONTACT ACTIONS ====================
+
+  async blockContact(contactIdOrPhone: string): Promise<void> {
+    const contactUid = await this.resolveContactUid(contactIdOrPhone);
+    console.log('🚫 Blocking contact:', { input: contactIdOrPhone, resolved: contactUid });
+    await externalWhatsappService.blockContact(contactUid);
+  }
+
+  async unblockContact(contactIdOrPhone: string): Promise<void> {
+    const contactUid = await this.resolveContactUid(contactIdOrPhone);
+    console.log('✅ Unblocking contact:', { input: contactIdOrPhone, resolved: contactUid });
+    await externalWhatsappService.unblockContact(contactUid);
+  }
+
+  async updateBotSettings(contactIdOrPhone: string, botEnabled: boolean): Promise<void> {
+    const contactUid = await this.resolveContactUid(contactIdOrPhone);
+    console.log('🤖 Updating bot settings:', { input: contactIdOrPhone, resolved: contactUid, botEnabled });
+    await externalWhatsappService.updateBotSettings(contactUid, { bot_enabled: botEnabled });
+  }
+
+  async getChatContext(contactIdOrPhone: string): Promise<{
+    contact: ChatContact;
+    labels: Array<{ _uid: string; title: string; text_color?: string; bg_color?: string }>;
+    teamMembers: TeamMember[];
+    replyWindowStatus: {
+      is_open: boolean;
+      expires_at: string | null;
+      requires_template: boolean;
+    };
+  }> {
+    const contactUid = await this.resolveContactUid(contactIdOrPhone);
+    console.log('📋 Fetching chat context:', { input: contactIdOrPhone, resolved: contactUid });
+    const response = await externalWhatsappService.getChatContext(contactUid);
+
+    return {
+      contact: this.normalizeContact(response?.contact || response),
+      labels: response?.labels || [],
+      teamMembers: (response?.team_members || []).map((m: any) => ({
+        _uid: m._uid || m.id || m.user_uid,
+        name: m.name || `${m.first_name || ''} ${m.last_name || ''}`.trim(),
+        email: m.email || '',
+        avatar_url: m.avatar_url || m.profile_picture,
+        role: m.role,
+      })),
+      replyWindowStatus: {
+        is_open: response?.reply_window?.is_open ?? response?.window_is_open ?? true,
+        expires_at: response?.reply_window?.expires_at ?? response?.window_expires_at ?? null,
+        requires_template: response?.reply_window?.requires_template ?? response?.requires_template ?? false,
+      },
+    };
   }
 
   // ==================== MESSAGE LOG ====================

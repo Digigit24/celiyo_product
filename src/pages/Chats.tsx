@@ -2,9 +2,12 @@ import { useEffect, useState, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { ConversationList } from '@/components/ConversationList';
 import { ChatWindow } from '@/components/ChatWindow';
+import { ContactDetailPanel } from '@/components/ContactDetailPanel';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { useWebSocket } from '@/context/WebSocketProvider';
-import { MessageCircle } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { MessageCircle, PanelRightClose, PanelRightOpen } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import {
   useChatContacts,
   useUnreadCount,
@@ -14,12 +17,21 @@ import {
 } from '@/hooks/whatsapp/useChat';
 import type { ChatContact } from '@/services/whatsapp/chatService';
 
+// Polling intervals (in milliseconds)
+const UNREAD_POLL_INTERVAL = 5000; // 5 seconds for unread count
+const MESSAGES_POLL_INTERVAL = 3000; // 3 seconds for messages when chat is open
+
 export default function Chats() {
   const [selectedContactUid, setSelectedContactUid] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [showContactPanel, setShowContactPanel] = useState(false);
   const isMobile = useIsMobile();
   const { payloads } = useWebSocket();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  // Get current user UID for filtering "Mine" conversations
+  const currentUserUid = user?._uid || user?.id || '';
 
   // React Query hooks
   const {
@@ -33,12 +45,12 @@ export default function Chats() {
     search: searchQuery || undefined,
   });
 
-  // Unread count with polling every 30 seconds
+  // Unread count with faster polling (5 seconds as per API guide)
   const { total: unreadTotal, contacts: unreadByContact } = useUnreadCount({
-    pollInterval: 30000,
+    pollInterval: UNREAD_POLL_INTERVAL,
   });
 
-  // Messages for selected contact
+  // Messages for selected contact with polling
   const {
     messages,
     contact: currentContact,
@@ -86,9 +98,8 @@ export default function Chats() {
   useEffect(() => {
     if (contacts.length > 0 && !selectedContactUid && !isMobile) {
       const firstContact = contacts[0];
-      // Prefer _uid over phone_number - chatService will resolve if needed
       const contactId = firstContact._uid || firstContact.phone_number;
-      console.log('🔷 Auto-selecting first contact:', {
+      console.log('Auto-selecting first contact:', {
         _uid: firstContact._uid,
         phone: firstContact.phone_number,
         selected: contactId
@@ -97,11 +108,26 @@ export default function Chats() {
     }
   }, [contacts, selectedContactUid, isMobile]);
 
+  // Poll messages for active conversation every 3 seconds
+  useEffect(() => {
+    if (!selectedContactUid) return;
+
+    const interval = setInterval(() => {
+      // Invalidate messages query to trigger refetch
+      queryClient.invalidateQueries({
+        queryKey: chatKeys.messages(selectedContactUid, {}),
+        exact: false,
+      });
+    }, MESSAGES_POLL_INTERVAL);
+
+    return () => clearInterval(interval);
+  }, [selectedContactUid, queryClient]);
+
   const handleConversationSelect = useCallback(async (contactId: string) => {
-    console.log('🔷 Selecting contact:', contactId);
+    console.log('Selecting contact:', contactId);
     setSelectedContactUid(contactId);
 
-    // Mark as read when selecting - chatService will resolve phone to UID if needed
+    // Mark as read when selecting
     try {
       await markAsReadMutation.mutateAsync(contactId);
     } catch (e) {
@@ -115,13 +141,21 @@ export default function Chats() {
     }
   }, [isMobile]);
 
+  const handleSearchChange = useCallback((search: string) => {
+    setSearchQuery(search);
+  }, []);
+
+  const toggleContactPanel = useCallback(() => {
+    setShowContactPanel(prev => !prev);
+  }, []);
+
   // Live updates via persistent WhatsApp WebSocket
   useEffect(() => {
     if (payloads.length > 0) {
       const latestPayload = payloads[payloads.length - 1];
       const { phone, name, contact, message } = latestPayload;
 
-      console.log('🔄 Processing WebSocket payload:', {
+      console.log('Processing WebSocket payload:', {
         phone,
         name,
         is_new: contact?.is_new,
@@ -133,7 +167,6 @@ export default function Chats() {
       queryClient.invalidateQueries({ queryKey: chatKeys.unreadCount() });
 
       // If the message is for the currently selected contact, refetch messages
-      // Match by phone number OR by contact UID from WebSocket payload
       const phoneKey = normalize(phone);
       const wsContactUid = contact?._uid || contact?.uid;
       const selectedKey = normalize(selectedContactUid);
@@ -151,7 +184,7 @@ export default function Chats() {
         (wsContactUid && wsContactUid === selectedContactUid);
 
       if (isMatchingContact) {
-        console.log('🔄 WebSocket message for selected contact - refreshing messages');
+        console.log('WebSocket message for selected contact - refreshing messages');
         queryClient.invalidateQueries({
           queryKey: chatKeys.messages(selectedContactUid, {}),
           exact: false,
@@ -177,7 +210,7 @@ export default function Chats() {
       <div className="flex items-center justify-center h-full bg-background">
         <div className="text-center max-w-md px-4">
           <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mx-auto mb-4">
-            <span className="text-3xl">⚠️</span>
+            <span className="text-3xl">!</span>
           </div>
           <div className="text-lg font-semibold mb-2 text-destructive">Failed to Load Chats</div>
           <div className="text-sm text-muted-foreground mb-6">
@@ -194,7 +227,7 @@ export default function Chats() {
     );
   }
 
-  // Transform contacts to match ConversationList format
+  // Transform contacts to match ConversationList format with new fields
   const transformedConversations = contacts.map((contact: ChatContact) => {
     const contactId = contact._uid || contact.phone_number;
     const unreadCount = unreadByContact[contactId] || contact.unread_count || 0;
@@ -210,6 +243,11 @@ export default function Chats() {
       unread: unreadCount > 0,
       unreadCount,
       phone: contact.phone_number,
+      labels: contact.labels || [],
+      assignedUserUid: contact.assigned_user_uid,
+      windowIsOpen: contact.reply_window_open,
+      windowExpiresAt: contact.reply_window_expires_at,
+      requiresTemplate: contact.requires_template,
     };
   });
 
@@ -229,6 +267,11 @@ export default function Chats() {
         direction: 'incoming' as const,
       }
     : undefined;
+
+  // Unread counts for ConversationList
+  const unreadCounts = {
+    total: unreadTotal,
+  };
 
   // Mobile view: show either conversation list or chat window
   if (isMobile) {
@@ -252,30 +295,54 @@ export default function Chats() {
           selectedId={selectedContactUid}
           onSelect={handleConversationSelect}
           isMobile={true}
+          currentUserUid={currentUserUid}
+          unreadCounts={unreadCounts}
+          onSearchChange={handleSearchChange}
         />
       </div>
     );
   }
 
-  // Desktop view: split layout
+  // Desktop view: three-panel layout
   return (
     <div className="flex h-full w-full bg-background overflow-hidden">
       {/* Conversations Sidebar */}
-      <div className="w-80 lg:w-96 h-full flex-shrink-0">
+      <div className="w-80 lg:w-96 h-full flex-shrink-0 border-r border-border">
         <ConversationList
           conversations={transformedConversations}
           selectedId={selectedContactUid}
           onSelect={handleConversationSelect}
+          currentUserUid={currentUserUid}
+          unreadCounts={unreadCounts}
+          onSearchChange={handleSearchChange}
         />
       </div>
 
       {/* Chat Area */}
-      <div className="flex-1 h-full min-w-0">
+      <div className="flex-1 h-full min-w-0 flex flex-col">
         {selectedContactUid ? (
-          <ChatWindow
-            conversationId={selectedConversation?.phone_number || selectedContactUid}
-            selectedConversation={chatWindowConversation}
-          />
+          <>
+            {/* Contact Panel Toggle Button */}
+            <div className="absolute top-4 right-4 z-10">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={toggleContactPanel}
+                title={showContactPanel ? 'Hide contact details' : 'Show contact details'}
+              >
+                {showContactPanel ? (
+                  <PanelRightClose className="h-4 w-4" />
+                ) : (
+                  <PanelRightOpen className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
+            <ChatWindow
+              conversationId={selectedConversation?.phone_number || selectedContactUid}
+              selectedConversation={chatWindowConversation}
+            />
+          </>
         ) : (
           <div className="flex items-center justify-center h-full bg-muted/10">
             <div className="text-center max-w-sm px-4">
@@ -290,6 +357,16 @@ export default function Chats() {
           </div>
         )}
       </div>
+
+      {/* Contact Detail Panel - Right Sidebar */}
+      {showContactPanel && selectedContactUid && (
+        <div className="w-80 h-full flex-shrink-0">
+          <ContactDetailPanel
+            contactUid={selectedContactUid}
+            onClose={toggleContactPanel}
+          />
+        </div>
+      )}
     </div>
   );
 }

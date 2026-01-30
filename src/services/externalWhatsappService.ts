@@ -637,6 +637,34 @@ class ExternalWhatsappService {
     return handleResponse(response);
   }
 
+  // POST /contacts/{uid}/block - Block contact
+  async blockContact(contactUid: string): Promise<any> {
+    const url = buildVendorUrl(`/contacts/${contactUid}/block`);
+    const response = await externalWhatsappClient.post(url);
+    return handleResponse(response);
+  }
+
+  // POST /contacts/{uid}/unblock - Unblock contact
+  async unblockContact(contactUid: string): Promise<any> {
+    const url = buildVendorUrl(`/contacts/${contactUid}/unblock`);
+    const response = await externalWhatsappClient.post(url);
+    return handleResponse(response);
+  }
+
+  // PUT /contacts/{uid}/bot-settings - Toggle bot settings
+  async updateBotSettings(contactUid: string, payload: { bot_enabled: boolean }): Promise<any> {
+    const url = buildVendorUrl(`/contacts/${contactUid}/bot-settings`);
+    const response = await externalWhatsappClient.put(url, payload);
+    return handleResponse(response);
+  }
+
+  // GET /contacts/{uid}/chat-context - Get full chat context (contact details, labels, team members)
+  async getChatContext(contactUid: string): Promise<any> {
+    const url = buildVendorUrl(`/contacts/${contactUid}/chat-context`);
+    const response = await externalWhatsappClient.get(url);
+    return handleResponse(response);
+  }
+
   // GET /message-log - Get message log
   async getMessageLog(params?: { page?: number; limit?: number; contact_uid?: string; direction?: string }): Promise<any> {
     const queryParams = new URLSearchParams();

@@ -1,6 +1,6 @@
 // src/pages/Campaigns.tsx
 import { useEffect, useMemo, useState } from 'react';
-import { Plus, RefreshCw, ArrowLeft, Phone, Send, AlertTriangle, Calendar, Clock, Users, FileText, ChevronRight, ChevronLeft, Search, X } from 'lucide-react';
+import { Plus, RefreshCw, Phone, Send, AlertTriangle, Calendar, Clock, Users, FileText, ChevronRight, ChevronLeft, Search, X, CheckCircle, XCircle, Megaphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Card, CardContent } from '@/components/ui/card';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { toast } from 'sonner';
 
@@ -812,58 +813,147 @@ export default function Campaigns() {
     }
   };
 
+  // Calculate stats
+  const totalSent = campaigns.reduce((sum, c) => sum + (c.sent_count ?? 0), 0);
+  const totalFailed = campaigns.reduce((sum, c) => sum + (c.failed_count ?? 0), 0);
+  const totalRecipients = campaigns.reduce((sum, c) => sum + (c.total_recipients ?? 0), 0);
+
+  // Loading state
+  if (isLoading && campaigns.length === 0) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading campaigns...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error && campaigns.length === 0) {
+    return (
+      <div className="flex items-center justify-center min-h-screen p-4">
+        <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-6 max-w-md">
+          <h3 className="text-lg font-semibold text-destructive mb-2">Error Loading Campaigns</h3>
+          <p className="text-sm text-destructive/80">{error}</p>
+          <Button onClick={handleRefresh} variant="outline" className="mt-4 w-full">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Try Again
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col h-screen bg-background">
+    <div className="p-6 max-w-8xl mx-auto space-y-6">
       {/* Header */}
-      <div className="border-b bg-background sticky top-0 z-10">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-4 py-3 md:px-6 md:py-4 gap-3 sm:gap-0">
-          <div className="flex items-center gap-3">
-            {isMobile && (
-              <Button variant="ghost" size="icon" className="md:hidden">
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-            )}
-            <div>
-              <h1 className="text-xl md:text-2xl font-semibold">WhatsApp Campaigns</h1>
-              <p className="text-xs md:text-sm text-muted-foreground">
-                {total} total campaign{total === 1 ? '' : 's'}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold">WhatsApp Campaigns</h1>
+          <p className="text-muted-foreground text-sm sm:text-base">
+            Manage your WhatsApp broadcast campaigns
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            onClick={handleRefresh}
+            variant="outline"
+            size="sm"
+            disabled={isLoading}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+          <Button onClick={openCreate} size="default" className="w-full sm:w-auto">
+            <Plus className="h-4 w-4 mr-2" />
+            New Campaign
+          </Button>
+        </div>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <Megaphone className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-xs sm:text-sm text-muted-foreground">Total Campaigns</p>
+                <p className="text-xl sm:text-2xl font-bold">{total}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <Users className="h-5 w-5 text-purple-600" />
+              </div>
+              <div>
+                <p className="text-xs sm:text-sm text-muted-foreground">Total Recipients</p>
+                <p className="text-xl sm:text-2xl font-bold">{totalRecipients}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <CheckCircle className="h-5 w-5 text-green-600" />
+              </div>
+              <div>
+                <p className="text-xs sm:text-sm text-muted-foreground">Sent</p>
+                <p className="text-xl sm:text-2xl font-bold">{totalSent}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-red-100 rounded-lg">
+                <XCircle className="h-5 w-5 text-red-600" />
+              </div>
+              <div>
+                <p className="text-xs sm:text-sm text-muted-foreground">Failed</p>
+                <p className="text-xl sm:text-2xl font-bold">{totalFailed}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Error banner */}
+      {error && (
+        <div className="flex items-center gap-2 rounded-md border border-destructive/20 bg-destructive/10 text-destructive px-4 py-3 text-sm">
+          <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
+
+      {/* Table Card */}
+      <Card>
+        <CardContent className="p-0">
+          <CampaignsTable campaigns={campaigns} isLoading={isLoading} onView={onView} />
+
+          {!isLoading && total > 0 && (
+            <div className="flex items-center justify-between px-6 py-4 border-t">
+              <p className="text-sm text-muted-foreground">
+                Showing {campaigns.length} campaign{campaigns.length !== 1 ? 's' : ''}
               </p>
             </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Button
-              onClick={handleRefresh}
-              variant="outline"
-              size={isMobile ? 'sm' : 'default'}
-              disabled={isLoading}
-              title="Refresh"
-            >
-              <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''} ${!isMobile ? 'mr-2' : ''}`} />
-              {!isMobile && 'Refresh'}
-            </Button>
-            <Button onClick={openCreate} size={isMobile ? 'sm' : 'default'}>
-              <Plus className="h-4 w-4 mr-2" />
-              {isMobile ? 'New' : 'New Campaign'}
-            </Button>
-          </div>
-        </div>
-
-        {/* Error banner */}
-        {error && (
-          <div className="px-4 md:px-6 pb-3">
-            <div className="flex items-center gap-2 rounded-md border border-destructive/20 bg-destructive/10 text-destructive px-3 py-2 text-sm">
-              <AlertTriangle className="h-4 w-4 flex-shrink-0" />
-              <span>{error}</span>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Table */}
-      <div className="flex-1 overflow-auto">
-        <CampaignsTable campaigns={campaigns} isLoading={isLoading} onView={onView} />
-      </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Create Campaign Drawer with Steps */}
       <SideDrawer

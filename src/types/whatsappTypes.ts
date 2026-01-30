@@ -380,6 +380,8 @@ export interface TemplateBulkSendRequest {
   recipients: string[];
   parameters_per_recipient?: Record<string, string>[];
   default_parameters?: Record<string, string>;
+  schedule_at?: string; // ISO datetime for scheduled campaigns
+  campaign_name?: string;
 }
 
 export interface TemplateBulkSendResponse {

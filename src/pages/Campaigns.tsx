@@ -121,6 +121,11 @@ export default function Campaigns() {
   const [selectedContactIds, setSelectedContactIds] = useState<string[]>([]); // For contact IDs
   const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([]); // For group IDs
 
+  // Scheduling
+  const [isScheduled, setIsScheduled] = useState(false);
+  const [scheduleDate, setScheduleDate] = useState('');
+  const [scheduleTime, setScheduleTime] = useState('');
+
   const total = campaigns.length;
 
   const handleRefresh = async () => {
@@ -138,6 +143,9 @@ export default function Campaigns() {
     setSelectedContactIds([]);
     setSelectedGroupIds([]);
     setTemplateSearchQuery('');
+    setIsScheduled(false);
+    setScheduleDate('');
+    setScheduleTime('');
     setCreateOpen(true);
   };
 
@@ -204,6 +212,19 @@ export default function Campaigns() {
       return;
     }
 
+    // Validate scheduling if enabled
+    if (isScheduled) {
+      if (!scheduleDate || !scheduleTime) {
+        toast.error('Please select both date and time for scheduling');
+        return;
+      }
+      const scheduledDateTime = new Date(`${scheduleDate}T${scheduleTime}`);
+      if (scheduledDateTime <= new Date()) {
+        toast.error('Scheduled time must be in the future');
+        return;
+      }
+    }
+
     // Collect all phone numbers based on selected method
     let allPhoneNumbers: string[] = [];
 
@@ -237,21 +258,34 @@ export default function Campaigns() {
       return;
     }
 
-    // Build payload for template broadcast bulk send (bypasses 24hr window)
-    const payload = {
+    // Build payload for template broadcast bulk send
+    const payload: any = {
       template_name: selectedTemplate.name,
-      language: selectedTemplate.language as any,
+      language: selectedTemplate.language,
       recipients: uniquePhoneNumbers,
+      campaign_name: campaignTitle.trim() || selectedTemplate.name,
     };
+
+    // Add scheduling if enabled
+    if (isScheduled && scheduleDate && scheduleTime) {
+      payload.schedule_at = new Date(`${scheduleDate}T${scheduleTime}`).toISOString();
+    }
 
     try {
       setCreating(true);
-      console.log(`Sending campaign to ${uniquePhoneNumbers.length} unique recipients`);
+      const isScheduledSend = isScheduled && scheduleDate && scheduleTime;
+      console.log(`${isScheduledSend ? 'Scheduling' : 'Sending'} campaign to ${uniquePhoneNumbers.length} unique recipients`);
       const result = await sendTemplateBroadcastBulk(payload);
       if (result) {
-        toast.success(`Campaign sent! ${result.sent}/${result.total} messages delivered successfully`, {
-          duration: 5000
-        });
+        if (isScheduledSend) {
+          toast.success(`Campaign scheduled for ${new Date(`${scheduleDate}T${scheduleTime}`).toLocaleString()}`, {
+            duration: 5000
+          });
+        } else {
+          toast.success(`Campaign sent! ${result.sent}/${result.total} messages delivered successfully`, {
+            duration: 5000
+          });
+        }
         setCreateOpen(false);
       }
     } finally {
@@ -613,6 +647,54 @@ export default function Campaigns() {
                   )}
                 </div>
               )}
+
+              <Separator />
+
+              {/* Scheduling Section */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-base font-semibold">Schedule Campaign</Label>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Send later at a specific date and time
+                    </p>
+                  </div>
+                  <Switch
+                    checked={isScheduled}
+                    onCheckedChange={setIsScheduled}
+                  />
+                </div>
+
+                {isScheduled && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="schedule-date">
+                        <Calendar className="h-3 w-3 inline mr-1" />
+                        Date
+                      </Label>
+                      <Input
+                        id="schedule-date"
+                        type="date"
+                        value={scheduleDate}
+                        onChange={(e) => setScheduleDate(e.target.value)}
+                        min={new Date().toISOString().split('T')[0]}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="schedule-time">
+                        <Clock className="h-3 w-3 inline mr-1" />
+                        Time
+                      </Label>
+                      <Input
+                        id="schedule-time"
+                        type="time"
+                        value={scheduleTime}
+                        onChange={(e) => setScheduleTime(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         );
@@ -680,6 +762,21 @@ export default function Campaigns() {
                     <span className="text-muted-foreground">Category:</span>
                     <span className="col-span-2">
                       <Badge variant="secondary">{selectedTemplate?.category}</Badge>
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-sm">
+                    <span className="text-muted-foreground">Delivery:</span>
+                    <span className="col-span-2">
+                      {isScheduled && scheduleDate && scheduleTime ? (
+                        <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                          <Calendar className="h-3 w-3 mr-1" />
+                          Scheduled: {new Date(`${scheduleDate}T${scheduleTime}`).toLocaleString()}
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary" className="bg-green-100 text-green-800">
+                          Send Immediately
+                        </Badge>
+                      )}
                     </span>
                   </div>
                 </div>
@@ -855,8 +952,17 @@ export default function Campaigns() {
                 </Button>
               ) : (
                 <Button onClick={handleCreate} disabled={creating}>
-                  <Send className="h-4 w-4 mr-2" />
-                  {creating ? 'Sending...' : 'Send Campaign'}
+                  {isScheduled && scheduleDate && scheduleTime ? (
+                    <>
+                      <Calendar className="h-4 w-4 mr-2" />
+                      {creating ? 'Scheduling...' : 'Schedule Campaign'}
+                    </>
+                  ) : (
+                    <>
+                      <Send className="h-4 w-4 mr-2" />
+                      {creating ? 'Sending...' : 'Send Campaign'}
+                    </>
+                  )}
                 </Button>
               )}
             </div>

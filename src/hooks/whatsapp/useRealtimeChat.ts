@@ -7,6 +7,7 @@ import {
   subscribeToVendorChannel,
   disconnectEcho,
   getCurrentVendorUid,
+  getConnectionState,
   ContactMessageEvent,
   ContactUpdatedEvent,
   MessageStatusEvent,
@@ -39,6 +40,7 @@ export interface UseRealtimeChatReturn {
   isConnected: boolean;
   lastMessage: RealtimeMessage | null;
   connectionError: string | null;
+  connectionState: string;
 }
 
 export function useRealtimeChat(options: UseRealtimeChatOptions = {}): UseRealtimeChatReturn {
@@ -215,6 +217,7 @@ export function useRealtimeChat(options: UseRealtimeChatOptions = {}): UseRealti
     isConnected,
     lastMessage,
     connectionError,
+    connectionState: getConnectionState(),
   };
 }
 

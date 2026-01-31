@@ -21,6 +21,15 @@ const PUSHER_CONFIG = {
   key: '649db422ae8f2e9c7a9d',
   cluster: 'ap2',
   forceTLS: true,
+  // Enable logging in development
+  enableLogging: import.meta.env.DEV,
+};
+
+// Get the Laravel app base URL (without /api suffix for broadcasting)
+const getLaravelBaseUrl = (): string => {
+  // Use the LARAVEL_APP_URL which doesn't have /api suffix
+  const laravelUrl = API_CONFIG.LARAVEL_APP_URL || 'https://whatsappapi.celiyo.com';
+  return laravelUrl;
 };
 
 // Get vendor UID from localStorage
@@ -113,7 +122,7 @@ export const initEcho = (): Echo<any> | null => {
   const accessToken = getAccessToken();
 
   if (!accessToken) {
-    console.warn('No access token available for Pusher authentication');
+    console.warn('Pusher: No access token available for authentication');
     return null;
   }
 
@@ -122,29 +131,61 @@ export const initEcho = (): Echo<any> | null => {
     return echoInstance;
   }
 
+  // Broadcasting auth endpoint - Laravel uses /broadcasting/auth (not under /api)
+  const laravelBaseUrl = getLaravelBaseUrl();
+  const authEndpoint = `${laravelBaseUrl}/broadcasting/auth`;
+
+  console.log('Pusher: Initializing with config:', {
+    key: PUSHER_CONFIG.key,
+    cluster: PUSHER_CONFIG.cluster,
+    authEndpoint,
+    hasToken: !!accessToken,
+  });
+
   try {
+    // Enable Pusher debug logging in development
+    if (PUSHER_CONFIG.enableLogging) {
+      Pusher.logToConsole = true;
+    }
+
     echoInstance = new Echo({
       broadcaster: 'pusher',
       key: PUSHER_CONFIG.key,
       cluster: PUSHER_CONFIG.cluster,
       forceTLS: PUSHER_CONFIG.forceTLS,
-      authEndpoint: `${API_CONFIG.WHATSAPP_EXTERNAL_BASE_URL}/broadcasting/auth`,
+      authEndpoint,
       auth: {
         headers: {
           Authorization: `Bearer ${accessToken}`,
           Accept: 'application/json',
         },
       },
-      // Enable Pusher logging in development
+      // Enable both WebSocket transports
       enabledTransports: ['ws', 'wss'],
     });
 
     window.Echo = echoInstance;
 
-    console.log('Laravel Echo initialized with Pusher');
+    // Log connection state changes
+    const pusher = echoInstance.connector?.pusher;
+    if (pusher) {
+      pusher.connection.bind('state_change', (states: { previous: string; current: string }) => {
+        console.log(`Pusher: Connection state changed from ${states.previous} to ${states.current}`);
+      });
+
+      pusher.connection.bind('connected', () => {
+        console.log('Pusher: Successfully connected, socket_id:', pusher.connection.socket_id);
+      });
+
+      pusher.connection.bind('error', (error: any) => {
+        console.error('Pusher: Connection error:', error);
+      });
+    }
+
+    console.log('Pusher: Laravel Echo initialized successfully');
     return echoInstance;
   } catch (error) {
-    console.error('Failed to initialize Laravel Echo:', error);
+    console.error('Pusher: Failed to initialize Laravel Echo:', error);
     return null;
   }
 };
@@ -157,54 +198,62 @@ export const subscribeToVendorChannel = (
   const echo = initEcho();
 
   if (!echo) {
-    console.error('Echo not initialized - cannot subscribe to channel');
+    console.error('Pusher: Echo not initialized - cannot subscribe to channel');
+    callbacks.onError?.({ message: 'Echo not initialized' });
     return () => {};
   }
 
   const channelName = `vendor.${vendorUid}`;
-  console.log(`Subscribing to private channel: ${channelName}`);
+  console.log(`Pusher: Subscribing to private channel: ${channelName}`);
 
   try {
     currentChannel = echo.private(channelName)
       .listen('.contact.message', (data: ContactMessageEvent) => {
-        console.log('Real-time: New message received', {
+        console.log('Pusher: New message received', {
           contact: data.contact?.uid,
           messageType: data.message?.message_type,
           isIncoming: data.message?.is_incoming_message,
+          body: data.message?.body?.substring(0, 50),
         });
         callbacks.onNewMessage?.(data);
       })
       .listen('.contact.updated', (data: ContactUpdatedEvent) => {
-        console.log('Real-time: Contact updated', {
+        console.log('Pusher: Contact updated', {
           contact: data.contact?.uid,
           unread: data.contact?.unread_messages_count,
         });
         callbacks.onContactUpdated?.(data);
       })
       .listen('.message.status', (data: MessageStatusEvent) => {
-        console.log('Real-time: Message status changed', {
+        console.log('Pusher: Message status changed', {
           message: data.message?.uid,
           status: data.message?.status,
         });
         callbacks.onMessageStatus?.(data);
       })
       .subscribed(() => {
-        console.log(`Successfully subscribed to ${channelName}`);
+        console.log(`Pusher: Successfully subscribed to ${channelName}`);
         callbacks.onConnected?.();
       })
       .error((error: any) => {
-        console.error(`Error subscribing to ${channelName}:`, error);
+        console.error(`Pusher: Error subscribing to ${channelName}:`, error);
+        // Provide more details about the error
+        if (error?.status === 403) {
+          console.error('Pusher: 403 Forbidden - Check broadcasting auth endpoint and token');
+        } else if (error?.status === 401) {
+          console.error('Pusher: 401 Unauthorized - Token may be invalid or expired');
+        }
         callbacks.onError?.(error);
       });
 
     // Return cleanup function
     return () => {
-      console.log(`Unsubscribing from ${channelName}`);
+      console.log(`Pusher: Unsubscribing from ${channelName}`);
       echo.leave(channelName);
       currentChannel = null;
     };
   } catch (error) {
-    console.error('Failed to subscribe to vendor channel:', error);
+    console.error('Pusher: Failed to subscribe to vendor channel:', error);
     callbacks.onError?.(error);
     return () => {};
   }
@@ -213,16 +262,29 @@ export const subscribeToVendorChannel = (
 // Disconnect Echo instance
 export const disconnectEcho = (): void => {
   if (echoInstance) {
-    console.log('Disconnecting Laravel Echo');
+    console.log('Pusher: Disconnecting Laravel Echo');
     echoInstance.disconnect();
     echoInstance = null;
     window.Echo = null;
   }
 };
 
+// Force reconnect with fresh token (useful after login/token refresh)
+export const forceReconnect = (): Echo<any> | null => {
+  console.log('Pusher: Force reconnecting...');
+  disconnectEcho();
+  return initEcho();
+};
+
 // Check if Echo is connected
 export const isEchoConnected = (): boolean => {
-  return echoInstance !== null && echoInstance.connector?.pusher?.connection?.state === 'connected';
+  const state = echoInstance?.connector?.pusher?.connection?.state;
+  return state === 'connected';
+};
+
+// Get connection state for debugging
+export const getConnectionState = (): string => {
+  return echoInstance?.connector?.pusher?.connection?.state || 'not_initialized';
 };
 
 // Get current vendor UID
@@ -230,6 +292,7 @@ export const getCurrentVendorUid = getVendorUid;
 
 // Reconnect Echo (useful after token refresh)
 export const reconnectEcho = (): Echo<any> | null => {
+  console.log('Pusher: Reconnecting...');
   disconnectEcho();
   return initEcho();
 };

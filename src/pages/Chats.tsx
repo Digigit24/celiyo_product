@@ -66,11 +66,24 @@ export default function Chats() {
   const markAsReadMutation = useMarkAsRead();
 
   // Real-time updates via Pusher/Laravel Echo
-  const { isConnected: isRealtimeConnected, connectionError: realtimeError } = useRealtimeChat({
+  const {
+    isConnected: isRealtimeConnected,
+    connectionError: realtimeError,
+    connectionState: pusherState
+  } = useRealtimeChat({
     enabled: true,
     selectedContactUid: selectedContactUid || null,
     playNotificationSound: true,
   });
+
+  // Debug log for Pusher connection status
+  useEffect(() => {
+    console.log('Chats: Pusher connection status:', {
+      isConnected: isRealtimeConnected,
+      state: pusherState,
+      error: realtimeError,
+    });
+  }, [isRealtimeConnected, pusherState, realtimeError]);
 
   const normalize = (p?: string) => (p ? String(p).replace(/^\+/, '') : '');
 
@@ -334,18 +347,25 @@ export default function Chats() {
             <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
               {/* Real-time Connection Indicator */}
               <div
-                className="flex items-center gap-1.5 px-2 py-1 rounded-full text-xs"
-                title={isRealtimeConnected ? 'Real-time connected' : (realtimeError || 'Connecting...')}
+                className="flex items-center gap-1.5 px-2 py-1 rounded-full text-xs cursor-help"
+                title={isRealtimeConnected
+                  ? `Real-time connected (${pusherState})`
+                  : (realtimeError || `Connecting... (${pusherState})`)}
               >
                 {isRealtimeConnected ? (
                   <>
                     <Wifi className="h-3 w-3 text-emerald-500" />
                     <span className="text-emerald-600 hidden sm:inline">Live</span>
                   </>
+                ) : pusherState === 'connecting' ? (
+                  <>
+                    <Wifi className="h-3 w-3 text-amber-500 animate-pulse" />
+                    <span className="text-amber-600 hidden sm:inline">Connecting</span>
+                  </>
                 ) : (
                   <>
-                    <WifiOff className="h-3 w-3 text-amber-500" />
-                    <span className="text-amber-600 hidden sm:inline">Offline</span>
+                    <WifiOff className="h-3 w-3 text-red-500" />
+                    <span className="text-red-600 hidden sm:inline">Offline</span>
                   </>
                 )}
               </div>

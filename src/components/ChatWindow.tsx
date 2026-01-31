@@ -140,7 +140,14 @@ const isSameDay = (date1: Date, date2: Date): boolean => {
 export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onBack }: Props) => {
   const { messages, isLoading, error, sendMessage, sendMediaMessage } = useMessages(selectedConversation?.phone || null);
 
-  const transformedMessages = messages.map(msg => ({
+  // Sort messages by timestamp (oldest first) then transform
+  const sortedMessages = [...messages].sort((a, b) => {
+    const dateA = new Date(a.timestamp).getTime();
+    const dateB = new Date(b.timestamp).getTime();
+    return dateA - dateB; // Ascending order (oldest first)
+  });
+
+  const transformedMessages = sortedMessages.map(msg => ({
     from: msg.direction === 'outgoing' ? 'me' : 'them',
     text: msg.text,
     time: new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),

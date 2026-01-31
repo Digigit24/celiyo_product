@@ -251,8 +251,26 @@ export const subscribeToVendorChannel = (
   console.log(`Pusher: Subscribing to private channel: ${channelName}`);
 
   try {
-    currentChannel = echo.private(channelName)
-      // Listen to the main VendorChannelBroadcast event (no dot prefix)
+    currentChannel = echo.private(channelName);
+
+    // Get the underlying Pusher channel for direct event binding
+    const pusherChannel = currentChannel.subscription;
+
+    // Bind to pusher:subscription_succeeded for reliable connection detection
+    if (pusherChannel) {
+      pusherChannel.bind('pusher:subscription_succeeded', () => {
+        console.log(`Pusher: subscription_succeeded for ${channelName}`);
+        callbacks.onConnected?.();
+      });
+
+      pusherChannel.bind('pusher:subscription_error', (error: any) => {
+        console.error(`Pusher: subscription_error for ${channelName}:`, error);
+        callbacks.onError?.(error);
+      });
+    }
+
+    // Listen to the main VendorChannelBroadcast event
+    currentChannel
       .listen('VendorChannelBroadcast', (data: any) => {
         console.log('Pusher: VendorChannelBroadcast event received:', data);
 
@@ -283,8 +301,8 @@ export const subscribeToVendorChannel = (
         }
       })
       .subscribed(() => {
-        console.log(`Pusher: Successfully subscribed to ${channelName}`);
-        callbacks.onConnected?.();
+        console.log(`Pusher: Echo subscribed callback for ${channelName}`);
+        // onConnected already called by pusher:subscription_succeeded
       })
       .error((error: any) => {
         console.error(`Pusher: Error subscribing to ${channelName}:`, error);

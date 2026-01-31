@@ -64,7 +64,7 @@ export function useChatContacts(options: UseChatContactsOptions = {}) {
 
 export interface UseUnreadCountOptions {
   enabled?: boolean;
-  pollInterval?: number; // Default 30 seconds
+  pollInterval?: number | false; // Default 30 seconds, false to disable
 }
 
 export function useUnreadCount(options: UseUnreadCountOptions = {}) {

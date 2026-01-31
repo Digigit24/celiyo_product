@@ -35,37 +35,7 @@ export default function Chats() {
   const currentUserUid = user?._uid || user?.id || '';
 
   // React Query hooks
-  const {
-    contacts,
-    total: contactsTotal,
-    isLoading,
-    isError,
-    error,
-    refetch: refetchContacts,
-  } = useChatContacts({
-    search: searchQuery || undefined,
-  });
-
-  // Unread count with faster polling (5 seconds as per API guide)
-  const { total: unreadTotal, contacts: unreadByContact } = useUnreadCount({
-    pollInterval: UNREAD_POLL_INTERVAL,
-  });
-
-  // Messages for selected contact with polling
-  const {
-    messages,
-    contact: currentContact,
-    isLoading: messagesLoading,
-    refetch: refetchMessages,
-  } = useChatMessages({
-    contactUid: selectedContactUid || null,
-    enabled: !!selectedContactUid,
-  });
-
-  // Mark as read mutation
-  const markAsReadMutation = useMarkAsRead();
-
-  // Real-time updates via Pusher/Laravel Echo
+  // Real-time updates via Pusher/Laravel Echo (must be before polling hooks)
   const {
     isConnected: isRealtimeConnected,
     connectionError: realtimeError,
@@ -84,6 +54,37 @@ export default function Chats() {
       error: realtimeError,
     });
   }, [isRealtimeConnected, pusherState, realtimeError]);
+
+  const {
+    contacts,
+    total: contactsTotal,
+    isLoading,
+    isError,
+    error,
+    refetch: refetchContacts,
+  } = useChatContacts({
+    search: searchQuery || undefined,
+  });
+
+  // Unread count - disable polling when real-time is connected
+  const { total: unreadTotal, contacts: unreadByContact } = useUnreadCount({
+    // Disable polling when Pusher real-time is connected
+    pollInterval: isRealtimeConnected ? false : UNREAD_POLL_INTERVAL,
+  });
+
+  // Messages for selected contact - no polling when real-time connected
+  const {
+    messages,
+    contact: currentContact,
+    isLoading: messagesLoading,
+    refetch: refetchMessages,
+  } = useChatMessages({
+    contactUid: selectedContactUid || null,
+    enabled: !!selectedContactUid,
+  });
+
+  // Mark as read mutation
+  const markAsReadMutation = useMarkAsRead();
 
   const normalize = (p?: string) => (p ? String(p).replace(/^\+/, '') : '');
 

@@ -126,20 +126,8 @@ export default function Chats() {
     }
   }, [contacts, selectedContactUid, isMobile]);
 
-  // Poll messages for active conversation every 3 seconds
-  useEffect(() => {
-    if (!selectedContactUid) return;
-
-    const interval = setInterval(() => {
-      // Invalidate messages query to trigger refetch
-      queryClient.invalidateQueries({
-        queryKey: chatKeys.messages(selectedContactUid, {}),
-        exact: false,
-      });
-    }, MESSAGES_POLL_INTERVAL);
-
-    return () => clearInterval(interval);
-  }, [selectedContactUid, queryClient]);
+  // NOTE: Message polling removed - using Pusher/Laravel Echo for real-time updates
+  // Real-time message updates come through useRealtimeChat hook above
 
   const handleConversationSelect = useCallback(async (contactId: string) => {
     console.log('Selecting contact:', contactId);

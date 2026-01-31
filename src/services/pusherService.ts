@@ -25,13 +25,6 @@ const PUSHER_CONFIG = {
   enableLogging: import.meta.env.DEV,
 };
 
-// Get the Laravel app base URL (without /api suffix for broadcasting)
-const getLaravelBaseUrl = (): string => {
-  // Use the LARAVEL_APP_URL which doesn't have /api suffix
-  const laravelUrl = API_CONFIG.LARAVEL_APP_URL || 'https://whatsappapi.celiyo.com';
-  return laravelUrl;
-};
-
 // Get vendor UID from localStorage
 const getVendorUid = (): string | null => {
   try {
@@ -117,7 +110,7 @@ export interface RealtimeCallbacks {
 let echoInstance: Echo<any> | null = null;
 let currentChannel: any = null;
 
-// Initialize Laravel Echo with Pusher
+// Initialize Laravel Echo with Pusher using custom authorizer
 export const initEcho = (): Echo<any> | null => {
   const accessToken = getAccessToken();
 
@@ -131,14 +124,13 @@ export const initEcho = (): Echo<any> | null => {
     return echoInstance;
   }
 
-  // Broadcasting auth endpoint - Laravel uses /broadcasting/auth (not under /api)
-  const laravelBaseUrl = getLaravelBaseUrl();
-  const authEndpoint = `${laravelBaseUrl}/broadcasting/auth`;
+  // Broadcasting auth endpoint - using /api/broadcasting/auth
+  const authUrl = `${API_CONFIG.WHATSAPP_EXTERNAL_BASE_URL}/broadcasting/auth`;
 
   console.log('Pusher: Initializing with config:', {
     key: PUSHER_CONFIG.key,
     cluster: PUSHER_CONFIG.cluster,
-    authEndpoint,
+    authUrl,
     hasToken: !!accessToken,
   });
 
@@ -153,15 +145,42 @@ export const initEcho = (): Echo<any> | null => {
       key: PUSHER_CONFIG.key,
       cluster: PUSHER_CONFIG.cluster,
       forceTLS: PUSHER_CONFIG.forceTLS,
-      authEndpoint,
-      auth: {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          Accept: 'application/json',
-        },
+      // Use custom authorizer for better control over auth requests
+      authorizer: (channel: any, options: any) => {
+        return {
+          authorize: (socketId: string, callback: (error: any, data: any) => void) => {
+            console.log('Pusher: Authorizing channel:', channel.name, 'socket_id:', socketId);
+
+            fetch(authUrl, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'Authorization': `Bearer ${accessToken}`,
+              },
+              body: JSON.stringify({
+                socket_id: socketId,
+                channel_name: channel.name,
+              }),
+            })
+              .then(response => {
+                console.log('Pusher: Auth response status:', response.status);
+                if (!response.ok) {
+                  throw new Error(`Auth failed with status ${response.status}`);
+                }
+                return response.json();
+              })
+              .then(data => {
+                console.log('Pusher: Auth successful for channel:', channel.name);
+                callback(null, data);
+              })
+              .catch(error => {
+                console.error('Pusher: Auth error for channel:', channel.name, error);
+                callback(error, null);
+              });
+          },
+        };
       },
-      // Enable both WebSocket transports
-      enabledTransports: ['ws', 'wss'],
     });
 
     window.Echo = echoInstance;
@@ -203,33 +222,41 @@ export const subscribeToVendorChannel = (
     return () => {};
   }
 
-  const channelName = `vendor.${vendorUid}`;
+  // Channel name format: vendor-channel.{vendorUid} (with hyphen, not dot)
+  const channelName = `vendor-channel.${vendorUid}`;
   console.log(`Pusher: Subscribing to private channel: ${channelName}`);
 
   try {
     currentChannel = echo.private(channelName)
-      .listen('.contact.message', (data: ContactMessageEvent) => {
-        console.log('Pusher: New message received', {
-          contact: data.contact?.uid,
-          messageType: data.message?.message_type,
-          isIncoming: data.message?.is_incoming_message,
-          body: data.message?.body?.substring(0, 50),
-        });
-        callbacks.onNewMessage?.(data);
-      })
-      .listen('.contact.updated', (data: ContactUpdatedEvent) => {
-        console.log('Pusher: Contact updated', {
-          contact: data.contact?.uid,
-          unread: data.contact?.unread_messages_count,
-        });
-        callbacks.onContactUpdated?.(data);
-      })
-      .listen('.message.status', (data: MessageStatusEvent) => {
-        console.log('Pusher: Message status changed', {
-          message: data.message?.uid,
-          status: data.message?.status,
-        });
-        callbacks.onMessageStatus?.(data);
+      // Listen to the main VendorChannelBroadcast event
+      .listen('.VendorChannelBroadcast', (data: any) => {
+        console.log('Pusher: VendorChannelBroadcast event received:', data);
+
+        // Handle different event types based on data structure
+        if (data.message && data.contact) {
+          // New message event
+          console.log('Pusher: New message received', {
+            contact: data.contact?.uid,
+            messageType: data.message?.message_type,
+            isIncoming: data.message?.is_incoming_message,
+            body: data.message?.body?.substring(0, 50),
+          });
+          callbacks.onNewMessage?.(data as ContactMessageEvent);
+        } else if (data.contact && !data.message) {
+          // Contact updated event
+          console.log('Pusher: Contact updated', {
+            contact: data.contact?.uid,
+            unread: data.contact?.unread_messages_count,
+          });
+          callbacks.onContactUpdated?.(data as ContactUpdatedEvent);
+        } else if (data.message && data.message.status) {
+          // Message status update event
+          console.log('Pusher: Message status changed', {
+            message: data.message?.uid,
+            status: data.message?.status,
+          });
+          callbacks.onMessageStatus?.(data as MessageStatusEvent);
+        }
       })
       .subscribed(() => {
         console.log(`Pusher: Successfully subscribed to ${channelName}`);

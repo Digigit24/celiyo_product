@@ -50,21 +50,24 @@ const getAccessToken = (): string | null => {
     return loginAccessToken;
   }
 
-  // Fallback: try whatsapp_api_token from user data (not recommended for broadcasting)
+  return null;
+};
+
+// Get vendor API key for X-Api-Key header
+const getVendorApiKey = (): string | null => {
   try {
     const userJson = localStorage.getItem('celiyo_user');
     if (userJson) {
       const user = JSON.parse(userJson);
-      const whatsappToken = user?.tenant?.whatsapp_api_token;
-      if (whatsappToken) {
-        console.warn('Pusher: Falling back to whatsapp_api_token (may not work for broadcasting)');
-        return whatsappToken;
+      const apiKey = user?.tenant?.whatsapp_api_token;
+      if (apiKey) {
+        console.log('Pusher: Using vendor API key (length:', apiKey.length, ')');
+        return apiKey;
       }
     }
   } catch (error) {
-    console.error('Failed to get access token:', error);
+    console.error('Failed to get vendor API key:', error);
   }
-
   return null;
 };
 
@@ -127,10 +130,10 @@ let currentChannel: any = null;
 
 // Initialize Laravel Echo with Pusher using custom authorizer
 export const initEcho = (): Echo<any> | null => {
-  const accessToken = getAccessToken();
+  const vendorApiKey = getVendorApiKey();
 
-  if (!accessToken) {
-    console.warn('Pusher: No access token available for authentication');
+  if (!vendorApiKey) {
+    console.warn('Pusher: No vendor API key available for authentication');
     return null;
   }
 
@@ -146,7 +149,7 @@ export const initEcho = (): Echo<any> | null => {
     key: PUSHER_CONFIG.key,
     cluster: PUSHER_CONFIG.cluster,
     authUrl,
-    hasToken: !!accessToken,
+    hasApiKey: !!vendorApiKey,
   });
 
   try {
@@ -160,20 +163,18 @@ export const initEcho = (): Echo<any> | null => {
       key: PUSHER_CONFIG.key,
       cluster: PUSHER_CONFIG.cluster,
       forceTLS: PUSHER_CONFIG.forceTLS,
-      // Use custom authorizer for better control over auth requests
+      // Use custom authorizer with X-Api-Key header
       authorizer: (channel: any, options: any) => {
         return {
           authorize: (socketId: string, callback: (error: any, data: any) => void) => {
             console.log('Pusher: Authorizing channel:', channel.name, 'socket_id:', socketId);
 
-            // IMPORTANT: Token goes in the URL query string (not in header)
-            const authUrlWithToken = `${authUrl}?auth_token=${encodeURIComponent(accessToken)}`;
-
-            fetch(authUrlWithToken, {
+            fetch(authUrl, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json',
+                'X-Api-Key': vendorApiKey,
               },
               body: JSON.stringify({
                 socket_id: socketId,
@@ -251,8 +252,8 @@ export const subscribeToVendorChannel = (
 
   try {
     currentChannel = echo.private(channelName)
-      // Listen to the main VendorChannelBroadcast event
-      .listen('.VendorChannelBroadcast', (data: any) => {
+      // Listen to the main VendorChannelBroadcast event (no dot prefix)
+      .listen('VendorChannelBroadcast', (data: any) => {
         console.log('Pusher: VendorChannelBroadcast event received:', data);
 
         // Handle different event types based on data structure

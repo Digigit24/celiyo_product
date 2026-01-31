@@ -39,18 +39,33 @@ const getVendorUid = (): string | null => {
   return null;
 };
 
-// Get access token
+// Get access token - use the login access_token (long encrypted JWT), NOT whatsapp_api_token
 const getAccessToken = (): string | null => {
+  // The login access_token is stored in 'celiyo_access_token' via tokenManager
+  // This is the long encrypted JWT that the Laravel backend expects for broadcasting auth
+  const loginAccessToken = tokenManager.getAccessToken();
+
+  if (loginAccessToken) {
+    console.log('Pusher: Using login access_token (length:', loginAccessToken.length, ')');
+    return loginAccessToken;
+  }
+
+  // Fallback: try whatsapp_api_token from user data (not recommended for broadcasting)
   try {
     const userJson = localStorage.getItem('celiyo_user');
     if (userJson) {
       const user = JSON.parse(userJson);
-      return user?.tenant?.whatsapp_api_token || tokenManager.getAccessToken() || null;
+      const whatsappToken = user?.tenant?.whatsapp_api_token;
+      if (whatsappToken) {
+        console.warn('Pusher: Falling back to whatsapp_api_token (may not work for broadcasting)');
+        return whatsappToken;
+      }
     }
   } catch (error) {
     console.error('Failed to get access token:', error);
   }
-  return tokenManager.getAccessToken();
+
+  return null;
 };
 
 // Event types from Laravel broadcasting

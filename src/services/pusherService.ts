@@ -151,12 +151,14 @@ export const initEcho = (): Echo<any> | null => {
           authorize: (socketId: string, callback: (error: any, data: any) => void) => {
             console.log('Pusher: Authorizing channel:', channel.name, 'socket_id:', socketId);
 
-            fetch(authUrl, {
+            // IMPORTANT: Token goes in the URL query string (not in header)
+            const authUrlWithToken = `${authUrl}?auth_token=${encodeURIComponent(accessToken)}`;
+
+            fetch(authUrlWithToken, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json',
-                'Authorization': `Bearer ${accessToken}`,
               },
               body: JSON.stringify({
                 socket_id: socketId,
@@ -171,8 +173,14 @@ export const initEcho = (): Echo<any> | null => {
                 return response.json();
               })
               .then(data => {
-                console.log('Pusher: Auth successful for channel:', channel.name);
-                callback(null, data);
+                console.log('Pusher: Auth response data:', data);
+                if (data.auth) {
+                  console.log('Pusher: Auth successful for channel:', channel.name);
+                  callback(null, data);
+                } else {
+                  console.error('Pusher: Auth failed - no auth key in response:', data);
+                  callback(new Error(data.error || data.message || 'Auth failed - no auth key'), null);
+                }
               })
               .catch(error => {
                 console.error('Pusher: Auth error for channel:', channel.name, error);

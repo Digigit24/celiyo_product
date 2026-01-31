@@ -13,6 +13,7 @@ import {
   MessageStatusEvent,
 } from '@/services/pusherService';
 import { chatKeys } from '@/hooks/whatsapp/useChat';
+import type { ChatContact, ChatMessage, ChatMessagesResponse, ChatContactsResponse } from '@/services/whatsapp/chatService';
 
 export interface RealtimeMessage {
   _uid: string;
@@ -93,47 +94,184 @@ export function useRealtimeChat(options: UseRealtimeChatOptions = {}): UseRealti
     };
   }, []);
 
-  // Handle new message event
-  const handleNewMessage = useCallback((data: ContactMessageEvent) => {
-    console.log('useRealtimeChat: New message received', data);
-
+   const handleNewMessage = useCallback((data: ContactMessageEvent) => {
+    console.log('🔴 useRealtimeChat: New message received via Pusher', data);
+ 
     const contactUid = data.contact?.uid;
     const message = transformMessage(data);
-
+ 
     setLastMessage(message);
-
+ 
     // Play sound for incoming messages
     if (message.is_incoming_message) {
       playSound();
     }
-
+ 
     // Call custom handler
     onNewMessage?.(message, contactUid);
-
-    // Invalidate React Query caches to refetch data
-    queryClient.invalidateQueries({ queryKey: chatKeys.contacts() });
-    queryClient.invalidateQueries({ queryKey: chatKeys.unreadCount() });
-
-    // If this message is for the currently selected contact, invalidate messages too
-    if (selectedContactUid && contactUid === selectedContactUid) {
-      queryClient.invalidateQueries({
-        queryKey: chatKeys.messages(selectedContactUid, {}),
-        exact: false,
-      });
+ 
+    // Transform Pusher message to ChatMessage format for cache
+    const chatMessage: ChatMessage = {
+      _uid: data.message.uid,
+      text: data.message.body,
+      message_type: data.message.message_type,
+      direction: data.message.is_incoming_message ? 'incoming' : 'outgoing',
+      status: data.message.status,
+      timestamp: data.message.messaged_at,
+      formatted_time: data.message.formatted_message_time,
+      media_url: data.message.media?.url,
+      mime_type: data.message.media?.mime_type,
+      file_name: data.message.media?.file_name,
+    };
+ 
+    // DIRECTLY UPDATE messages cache - no API call!
+    if (contactUid) {
+      // Update messages for this contact (all matching query keys)
+      queryClient.setQueriesData<ChatMessagesResponse>(
+        { queryKey: chatKeys.messages(contactUid, {}) },
+        (oldData) => {
+          if (!oldData) return oldData;
+ 
+          // Check if message already exists (avoid duplicates)
+          const exists = oldData.messages?.some(m => m._uid === chatMessage._uid);
+          if (exists) {
+            console.log('🔴 Message already in cache, skipping');
+            return oldData;
+          }
+ 
+          console.log('🔴 Adding message to cache for contact:', contactUid);
+          return {
+            ...oldData,
+            messages: [...(oldData.messages || []), chatMessage],
+            total: (oldData.total || 0) + 1,
+          };
+        }
+      );
+    }
+ 
+    // DIRECTLY UPDATE contacts cache - update last_message and unread count
+    queryClient.setQueriesData<ChatContactsResponse>(
+      { queryKey: chatKeys.contacts() },
+      (oldData) => {
+        if (!oldData) return oldData;
+ 
+        const updatedContacts = oldData.contacts.map((contact: ChatContact) => {
+          if (contact._uid === contactUid) {
+            console.log('🔴 Updating contact in cache:', contactUid);
+            return {
+              ...contact,
+              last_message: data.message.body,
+              last_message_at: data.message.messaged_at,
+              // Increment unread only for incoming messages not in selected chat
+              unread_count: data.message.is_incoming_message && selectedContactUid !== contactUid
+                ? (contact.unread_count || 0) + 1
+                : contact.unread_count || 0,
+            };
+          }
+          return contact;
+        });
+ 
+        // Sort by last_message_at (most recent first)
+        updatedContacts.sort((a: ChatContact, b: ChatContact) => {
+          const timeA = new Date(a.last_message_at || 0).getTime();
+          const timeB = new Date(b.last_message_at || 0).getTime();
+          return timeB - timeA;
+        });
+ 
+        return {
+          ...oldData,
+          contacts: updatedContacts,
+        };
+      }
+    );
+ 
+    // DIRECTLY UPDATE unread count cache
+    if (data.message.is_incoming_message && selectedContactUid !== contactUid) {
+      queryClient.setQueryData<{ total: number; contacts: Record<string, number> }>(
+        chatKeys.unreadCount(),
+        (oldData) => {
+          if (!oldData) return { total: 1, contacts: { [contactUid]: 1 } };
+ 
+          const newContacts = { ...oldData.contacts };
+          newContacts[contactUid] = (newContacts[contactUid] || 0) + 1;
+ 
+          return {
+            total: oldData.total + 1,
+            contacts: newContacts,
+          };
+        }
+      );
     }
   }, [queryClient, selectedContactUid, onNewMessage, transformMessage, playSound]);
 
   // Handle contact updated event
-  const handleContactUpdated = useCallback((data: ContactUpdatedEvent) => {
-    console.log('useRealtimeChat: Contact updated', data);
-
-    // Invalidate contacts and unread count
-    queryClient.invalidateQueries({ queryKey: chatKeys.contacts() });
-    queryClient.invalidateQueries({ queryKey: chatKeys.unreadCount() });
-
-    // Invalidate chat context if viewing this contact
-    if (selectedContactUid && data.contact?.uid === selectedContactUid) {
-      queryClient.invalidateQueries({ queryKey: chatKeys.chatContext(selectedContactUid) });
+const handleContactUpdated = useCallback((data: ContactUpdatedEvent) => {
+    console.log('🔵 useRealtimeChat: Contact updated via Pusher', data);
+ 
+    const contactUid = data.contact?.uid;
+ 
+    // DIRECTLY UPDATE contacts cache
+    queryClient.setQueriesData<ChatContactsResponse>(
+      { queryKey: chatKeys.contacts() },
+      (oldData) => {
+        if (!oldData) return oldData;
+ 
+        const updatedContacts = oldData.contacts.map((contact: ChatContact) => {
+          if (contact._uid === contactUid) {
+            console.log('🔵 Updating contact details in cache:', contactUid);
+            return {
+              ...contact,
+              name: data.contact.full_name || contact.name,
+              labels: data.contact.labels || contact.labels,
+              assigned_user_uid: data.contact.assigned_user?.uid || contact.assigned_user_uid,
+              unread_count: data.contact.unread_messages_count ?? contact.unread_count,
+            };
+          }
+          return contact;
+        });
+ 
+        return {
+          ...oldData,
+          contacts: updatedContacts,
+        };
+      }
+    );
+ 
+    // DIRECTLY UPDATE unread count cache
+    queryClient.setQueryData<{ total: number; contacts: Record<string, number> }>(
+      chatKeys.unreadCount(),
+      (oldData) => {
+        if (!oldData) return oldData;
+ 
+        const newContacts = { ...oldData.contacts };
+        newContacts[contactUid] = data.contact.unread_messages_count || 0;
+ 
+        // Recalculate total
+        const newTotal = Object.values(newContacts).reduce((sum, count) => sum + count, 0);
+ 
+        return {
+          total: newTotal,
+          contacts: newContacts,
+        };
+      }
+    );
+ 
+    // If viewing this contact, update chat context
+    if (selectedContactUid && contactUid === selectedContactUid) {
+      queryClient.setQueryData(
+        chatKeys.chatContext(selectedContactUid),
+        (oldData: any) => {
+          if (!oldData) return oldData;
+          return {
+            ...oldData,
+            contact: {
+              ...oldData.contact,
+              name: data.contact.full_name || oldData.contact?.name,
+              labels: data.contact.labels || oldData.contact?.labels,
+            },
+          };
+        }
+      );
     }
   }, [queryClient, selectedContactUid]);
 

@@ -312,41 +312,60 @@ class MessagesService {
           // Transform messages from chatService format to messagesService format
           const transformedMessages = response.messages.map((m: any) => {
             // Extract text from various possible field names
-            // The chatService.normalizeMessage already extracts to message_body, so check that first
+            // Priority: message_body (from chatService) > body (API) > message > text
             let text = '';
+            // chatService.normalizeMessage extracts to message_body
             if (m.message_body) {
               text = m.message_body;
-            } else if (typeof m.message === 'string') {
-              text = m.message;
-            } else if (typeof m.text === 'string') {
-              text = m.text;
-            } else if (typeof m.body === 'string') {
+            }
+            // Direct "body" field (as per API guide)
+            else if (typeof m.body === 'string' && m.body) {
               text = m.body;
-            } else if (m.content) {
+            }
+            // "message" field as string
+            else if (typeof m.message === 'string' && m.message) {
+              text = m.message;
+            }
+            // "text" field as string
+            else if (typeof m.text === 'string' && m.text) {
+              text = m.text;
+            }
+            // Other fields
+            else if (m.content) {
               text = m.content;
             } else if (m.message_text) {
               text = m.message_text;
             }
             // Nested structure checks
-            else if (m.text?.body) {
+            else if (m.message?.body) {
+              text = m.message.body;
+            } else if (m.text?.body) {
               text = m.text.body;
             } else if (m.message?.text?.body) {
               text = m.message.text.body;
-            } else if (m.message?.body) {
-              text = m.message.body;
             } else if (m.message?.text && typeof m.message.text === 'string') {
               text = m.message.text;
             }
 
+            // Determine direction
+            let direction: 'incoming' | 'outgoing' = 'incoming';
+            if (m.direction === 'outgoing' || m.direction === 'incoming') {
+              direction = m.direction;
+            } else if (typeof m.is_incoming_message === 'boolean') {
+              direction = m.is_incoming_message ? 'incoming' : 'outgoing';
+            } else if (typeof m.is_outgoing === 'boolean') {
+              direction = m.is_outgoing ? 'outgoing' : 'incoming';
+            }
+
             return {
               id: String(m._uid || m.id || m.message_uid || `local-${Math.random().toString(36).slice(2)}`),
-              from: m.from || (m.direction === 'incoming' ? phone : ''),
-              to: m.to || (m.direction === 'outgoing' ? phone : null),
+              from: m.from || (direction === 'incoming' ? phone : ''),
+              to: m.to || (direction === 'outgoing' ? phone : null),
               text,
               type: m.message_type || m.type || 'text',
-              direction: m.direction || (m.is_outgoing ? 'outgoing' : m.is_incoming ? 'incoming' : 'incoming'),
+              direction,
               timestamp: this.normalizeTimestamp(m.created_at || m.timestamp || m.messaged_at),
-              status: m.status || m.delivery_status || (m.direction === 'outgoing' ? 'sent' : undefined),
+              status: m.status || m.delivery_status || (direction === 'outgoing' ? 'sent' : undefined),
               metadata: m.metadata || m.meta_data || {},
             };
           });

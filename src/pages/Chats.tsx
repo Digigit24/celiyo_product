@@ -6,7 +6,7 @@ import { ContactDetailPanel } from '@/components/ContactDetailPanel';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { useWebSocket } from '@/context/WebSocketProvider';
 import { useAuth } from '@/hooks/useAuth';
-import { MessageCircle, PanelRightClose, PanelRightOpen } from 'lucide-react';
+import { MessageCircle, PanelRightClose, PanelRightOpen, Wifi, WifiOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   useChatContacts,
@@ -15,11 +15,12 @@ import {
   useMarkAsRead,
   chatKeys,
 } from '@/hooks/whatsapp/useChat';
+import { useRealtimeChat } from '@/hooks/whatsapp/useRealtimeChat';
 import type { ChatContact } from '@/services/whatsapp/chatService';
 
-// Polling intervals (in milliseconds)
-const UNREAD_POLL_INTERVAL = 5000; // 5 seconds for unread count
-const MESSAGES_POLL_INTERVAL = 3000; // 3 seconds for messages when chat is open
+// Polling intervals (in milliseconds) - reduced since real-time handles most updates
+const UNREAD_POLL_INTERVAL = 30000; // 30 seconds for unread count (fallback)
+const MESSAGES_POLL_INTERVAL = 30000; // 30 seconds for messages (fallback)
 
 export default function Chats() {
   const [selectedContactUid, setSelectedContactUid] = useState<string>('');
@@ -63,6 +64,13 @@ export default function Chats() {
 
   // Mark as read mutation
   const markAsReadMutation = useMarkAsRead();
+
+  // Real-time updates via Pusher/Laravel Echo
+  const { isConnected: isRealtimeConnected, connectionError: realtimeError } = useRealtimeChat({
+    enabled: true,
+    selectedContactUid: selectedContactUid || null,
+    playNotificationSound: true,
+  });
 
   const normalize = (p?: string) => (p ? String(p).replace(/^\+/, '') : '');
 
@@ -322,8 +330,26 @@ export default function Chats() {
       <div className="flex-1 h-full min-w-0 flex flex-col">
         {selectedContactUid ? (
           <>
-            {/* Contact Panel Toggle Button */}
-            <div className="absolute top-4 right-4 z-10">
+            {/* Header Actions */}
+            <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
+              {/* Real-time Connection Indicator */}
+              <div
+                className="flex items-center gap-1.5 px-2 py-1 rounded-full text-xs"
+                title={isRealtimeConnected ? 'Real-time connected' : (realtimeError || 'Connecting...')}
+              >
+                {isRealtimeConnected ? (
+                  <>
+                    <Wifi className="h-3 w-3 text-emerald-500" />
+                    <span className="text-emerald-600 hidden sm:inline">Live</span>
+                  </>
+                ) : (
+                  <>
+                    <WifiOff className="h-3 w-3 text-amber-500" />
+                    <span className="text-amber-600 hidden sm:inline">Offline</span>
+                  </>
+                )}
+              </div>
+              {/* Contact Panel Toggle */}
               <Button
                 variant="ghost"
                 size="icon"

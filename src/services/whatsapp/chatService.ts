@@ -237,19 +237,28 @@ class ChatService {
 
   private normalizeMessage(data: any): ChatMessage {
     // Extract message text from various possible field names
-    // WhatsApp API can have nested structures like text.body, message.text.body, etc.
+    // According to the API guide, the field is "body" for message text
+    // Priority: body > message (string) > message_body > text > nested structures
     let messageText = '';
 
-    // Direct field checks
-    if (data.message_body) {
-      messageText = data.message_body;
-    } else if (typeof data.message === 'string') {
-      messageText = data.message;
-    } else if (typeof data.text === 'string') {
-      messageText = data.text;
-    } else if (typeof data.body === 'string') {
+    // Primary: "body" field (as per API guide)
+    if (typeof data.body === 'string' && data.body) {
       messageText = data.body;
-    } else if (data.content) {
+    }
+    // "message" field as string (some API responses)
+    else if (typeof data.message === 'string' && data.message) {
+      messageText = data.message;
+    }
+    // "message_body" field
+    else if (data.message_body) {
+      messageText = data.message_body;
+    }
+    // "text" field as string
+    else if (typeof data.text === 'string' && data.text) {
+      messageText = data.text;
+    }
+    // Other direct fields
+    else if (data.content) {
       messageText = data.content;
     } else if (data.message_text) {
       messageText = data.message_text;
@@ -257,10 +266,10 @@ class ChatService {
     // Nested structure checks (WhatsApp Cloud API format)
     else if (data.text?.body) {
       messageText = data.text.body;
-    } else if (data.message?.text?.body) {
-      messageText = data.message.text.body;
     } else if (data.message?.body) {
       messageText = data.message.body;
+    } else if (data.message?.text?.body) {
+      messageText = data.message.text.body;
     } else if (data.message?.text && typeof data.message.text === 'string') {
       messageText = data.message.text;
     }
@@ -275,18 +284,28 @@ class ChatService {
       messageText = `[Template: ${data.template.name}]`;
     }
 
+    // Determine direction - check is_incoming_message first (as per API guide)
+    let direction: 'incoming' | 'outgoing' = 'incoming';
+    if (data.direction === 'outgoing' || data.direction === 'incoming') {
+      direction = data.direction;
+    } else if (typeof data.is_incoming_message === 'boolean') {
+      direction = data.is_incoming_message ? 'incoming' : 'outgoing';
+    } else if (typeof data.is_outgoing === 'boolean') {
+      direction = data.is_outgoing ? 'outgoing' : 'incoming';
+    } else if (typeof data.is_incoming === 'boolean') {
+      direction = data.is_incoming ? 'incoming' : 'outgoing';
+    }
+
     // Log for debugging
     console.log('📨 Normalizing message:', {
       id: data._uid || data.id,
-      direction: data.direction,
+      direction,
       type: data.type || data.message_type,
-      hasMessageBody: !!data.message_body,
-      hasMessage: !!data.message,
-      hasText: !!data.text,
       hasBody: !!data.body,
-      hasContent: !!data.content,
-      hasNestedTextBody: !!data.text?.body,
-      hasNestedMessageText: !!data.message?.text,
+      hasMessage: !!data.message,
+      hasMessageBody: !!data.message_body,
+      hasText: !!data.text,
+      is_incoming_message: data.is_incoming_message,
       extractedText: messageText?.substring(0, 50) || '(empty)',
       rawKeys: Object.keys(data),
     });
@@ -294,11 +313,11 @@ class ChatService {
     return {
       _uid: data._uid || data.id || data.message_uid,
       contact_uid: data.contact_uid || data.contact_id,
-      direction: data.direction || (data.is_outgoing ? 'outgoing' : data.is_incoming ? 'incoming' : 'incoming'),
+      direction,
       message_type: data.message_type || data.type || 'text',
       message_body: messageText,
-      media_url: data.media_url || data.media?.url,
-      media_type: data.media_type || data.media?.type,
+      media_url: data.media_url || data.media?.url || data.media_values?.url,
+      media_type: data.media_type || data.media?.type || data.media_values?.mime_type,
       template_name: data.template_name,
       status: data.status || data.delivery_status,
       created_at: data.created_at || data.timestamp || data.messaged_at || new Date().toISOString(),

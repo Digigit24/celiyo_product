@@ -14,6 +14,11 @@ import {
   ReplyWindowStatus,
 } from '@/services/whatsapp/chatService';
 
+// ==================== POLLING CONFIGURATION ====================
+// DISABLED: Using Pusher/Laravel Echo for real-time updates instead of polling
+// Set this to true to re-enable polling as a fallback
+export const ENABLE_POLLING = false;
+
 // ==================== QUERY KEYS ====================
 
 export const chatKeys = {
@@ -60,7 +65,7 @@ export function useChatContacts(options: UseChatContactsOptions = {}) {
   };
 }
 
-// ==================== UNREAD COUNT HOOK (WITH POLLING) ====================
+// ==================== UNREAD COUNT HOOK (WITH OPTIONAL POLLING) ====================
 
 export interface UseUnreadCountOptions {
   enabled?: boolean;
@@ -70,11 +75,15 @@ export interface UseUnreadCountOptions {
 export function useUnreadCount(options: UseUnreadCountOptions = {}) {
   const { enabled = true, pollInterval = 30000 } = options;
 
+  // Determine actual polling interval based on global flag
+  // If ENABLE_POLLING is false, always disable polling regardless of pollInterval param
+  const actualPollInterval = ENABLE_POLLING ? pollInterval : false;
+
   const query = useQuery({
     queryKey: chatKeys.unreadCount(),
     queryFn: () => chatService.getUnreadCount(),
     enabled,
-    refetchInterval: pollInterval,
+    refetchInterval: actualPollInterval,
     staleTime: 10000, // 10 seconds
     retry: false, // Don't retry on failure - endpoint may not be implemented
     throwOnError: false, // Don't throw errors to prevent app crash

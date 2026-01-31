@@ -18,9 +18,8 @@ import {
 import { useRealtimeChat } from '@/hooks/whatsapp/useRealtimeChat';
 import type { ChatContact } from '@/services/whatsapp/chatService';
 
-// Polling intervals (in milliseconds) - reduced since real-time handles most updates
-const UNREAD_POLL_INTERVAL = 30000; // 30 seconds for unread count (fallback)
-const MESSAGES_POLL_INTERVAL = 30000; // 30 seconds for messages (fallback)
+// NOTE: Polling is now controlled by ENABLE_POLLING flag in useChat.ts
+// Set ENABLE_POLLING = true in useChat.ts to re-enable polling as fallback
 
 export default function Chats() {
   const [selectedContactUid, setSelectedContactUid] = useState<string>('');
@@ -66,11 +65,8 @@ export default function Chats() {
     search: searchQuery || undefined,
   });
 
-  // Unread count - disable polling when real-time is connected
-  const { total: unreadTotal, contacts: unreadByContact } = useUnreadCount({
-    // Disable polling when Pusher real-time is connected
-    pollInterval: isRealtimeConnected ? false : UNREAD_POLL_INTERVAL,
-  });
+  // Unread count - polling controlled by ENABLE_POLLING flag in useChat.ts
+  const { total: unreadTotal, contacts: unreadByContact } = useUnreadCount();
 
   // Messages for selected contact - no polling when real-time connected
   const {

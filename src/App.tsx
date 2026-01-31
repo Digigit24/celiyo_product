@@ -209,6 +209,7 @@ const App = () => {
         <TooltipProvider>
           <Toaster />
           <Sonner />
+          {/* WebSocketProvider kept for backward compatibility, but connection disabled */}
           <WebSocketProvider>
             <BrowserRouter>
               <Routes>

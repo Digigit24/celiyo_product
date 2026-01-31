@@ -56,6 +56,10 @@ interface WebSocketProviderProps {
   children: ReactNode;
 }
 
+// DISABLED: Using Pusher/Laravel Echo for real-time instead of custom WebSocket
+// Set this to true to re-enable the old WebSocket connection
+const ENABLE_LEGACY_WEBSOCKET = false;
+
 export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ children }) => {
   const [socketStatus, setSocketStatus] = useState<SocketStatus>('closed');
   const [messages, setMessages] = useState<WhatsAppMessage[]>([]);
@@ -183,6 +187,12 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ children }
   };
 
   const connectWebSocket = React.useCallback(() => {
+    // DISABLED: Using Pusher/Laravel Echo for real-time instead
+    if (!ENABLE_LEGACY_WEBSOCKET) {
+      console.log('🔌 Legacy WebSocket DISABLED - Using Pusher/Laravel Echo for real-time');
+      return;
+    }
+
     if (typeof window === 'undefined' || isUnmountingRef.current) {
       console.log('🔌 Skipping WebSocket connection');
       return;

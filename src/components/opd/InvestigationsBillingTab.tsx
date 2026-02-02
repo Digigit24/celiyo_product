@@ -221,7 +221,7 @@ export const InvestigationsBillingTab: React.FC<InvestigationsBillingTabProps> =
                             </div>
                             <div className="text-right">
                               <div className="font-semibold">
-                                ₹{parseFloat(investigation.price || '0').toFixed(2)}
+                                ₹{parseFloat(investigation.base_charge || '0').toFixed(2)}
                               </div>
                               <Button size="sm" variant="ghost" className="h-6 mt-1">
                                 Add

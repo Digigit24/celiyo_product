@@ -716,9 +716,9 @@ export const OPDBillingContent: React.FC<OPDBillingContentProps> = ({ visit }) =
       item_name: investigation.name,
       source: 'Lab',
       quantity: 1,
-      system_calculated_price: investigation.price || '0',
-      unit_price: investigation.price || '0',
-      total_price: investigation.price || '0',
+      system_calculated_price: investigation.base_charge || '0',
+      unit_price: investigation.base_charge || '0',
+      total_price: investigation.base_charge || '0',
       notes: investigation.category || '',
     };
 

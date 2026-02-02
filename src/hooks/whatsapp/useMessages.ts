@@ -1,8 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { messagesService } from '@/services/whatsapp/messagesService';
 import { uploadMedia, sendMediaMessage as sendMedia } from '@/services/whatsapp';
 import type { WhatsAppMessage } from '@/types/whatsappTypes';
-import { useWebSocket } from '@/context/WebSocketProvider';
+import { chatService } from '@/services/whatsapp/chatService';
+import { chatKeys } from '@/hooks/whatsapp/useChat';
+import { useRealtimeChat } from '@/hooks/whatsapp/useRealtimeChat';
 
 export interface UseMessagesReturn {
   messages: WhatsAppMessage[];
@@ -14,10 +17,17 @@ export interface UseMessagesReturn {
 }
 
 export function useMessages(conversationPhone: string | null): UseMessagesReturn {
-  const { messages: allMessages } = useWebSocket();
+  const queryClient = useQueryClient();
   const [messages, setMessages] = useState<WhatsAppMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [contactUid, setContactUid] = useState<string | null>(null);
+
+  // Enable real-time updates via Pusher
+  useRealtimeChat({
+    enabled: true,
+    selectedContactUid: contactUid,
+  });
 
   const normalizePhone = (p?: string | null) => (p ? String(p).replace(/^\+/, '') : '');
   const normalizeTimestamp = (ts?: string | null) => {
@@ -30,128 +40,41 @@ export function useMessages(conversationPhone: string | null): UseMessagesReturn
     return `${withT}Z`;
   };
 
+  // Subscribe to React Query cache updates for messages
   useEffect(() => {
-    if (!conversationPhone || allMessages.length === 0) {
-      return;
-    }
+    if (!contactUid) return;
 
-    const normalizedConvPhone = normalizePhone(conversationPhone);
-
-    setMessages((prevMessages) => {
-      const updatedMessages = [...prevMessages];
-
-      const isForCurrentConversation = (msg: WhatsAppMessage) => {
-        const normalizedMsgFrom = normalizePhone(msg.from);
-        const normalizedMsgTo = normalizePhone(msg.to);
-        const metaPhone = normalizePhone((msg.metadata as any)?.phone || (msg as any).phone);
-
-        return (
-          normalizedMsgFrom === normalizedConvPhone ||
-          normalizedMsgTo === normalizedConvPhone ||
-          metaPhone === normalizedConvPhone
-        );
-      };
-
-      const hydrateMessage = (msg: WhatsAppMessage): WhatsAppMessage => {
-        const normalizedMsgFrom = normalizePhone(msg.from);
-        const normalizedMsgTo = normalizePhone(msg.to);
-        const fallbackPhone =
-          msg.from ||
-          msg.to ||
-          (msg.metadata as any)?.phone ||
-          conversationPhone;
-
-        const direction =
-          msg.direction ||
-          (normalizedMsgFrom === normalizedConvPhone
-            ? 'incoming'
-            : normalizedMsgTo === normalizedConvPhone
-              ? 'outgoing'
-              : 'incoming');
-
-        const normalizedTs = normalizeTimestamp(
-          msg.timestamp || (msg.metadata as any)?.timestamp
-        );
-
-        return {
-          ...msg,
-          direction,
-          from: msg.from || (direction === 'incoming' ? fallbackPhone : msg.from || ''),
-          to: msg.to || (direction === 'outgoing' ? fallbackPhone : msg.to || null),
-          timestamp: normalizedTs,
-          metadata: {
-            ...(msg.metadata || {}),
-            timestamp: (msg.metadata as any)?.timestamp || normalizedTs,
-          },
-        };
-      };
-
-      allMessages.forEach((messageFromSocket) => {
-        if (!isForCurrentConversation(messageFromSocket)) {
-          return;
-        }
-
-        const hydratedMessage = hydrateMessage(messageFromSocket);
-
-        // Replace optimistic media message when server confirms upload
-        if (hydratedMessage.metadata?.media_id) {
-          const optimisticMessageIndex = updatedMessages.findIndex(
-            (m) => m.metadata?.media_id === hydratedMessage.metadata?.media_id && m.metadata?.is_uploading
-          );
-
-          if (optimisticMessageIndex > -1) {
-            updatedMessages[optimisticMessageIndex] = {
-              ...updatedMessages[optimisticMessageIndex],
-              ...hydratedMessage,
-              metadata: {
-                ...(updatedMessages[optimisticMessageIndex].metadata || {}),
-                ...(hydratedMessage.metadata || {}),
-                is_uploading: false,
-              },
-            };
-            return;
+    const unsubscribe = queryClient.getQueryCache().subscribe((event) => {
+      if (event.type === 'updated' && event.query.queryKey[0] === 'chat' && event.query.queryKey[1] === 'messages') {
+        const queryContactUid = event.query.queryKey[2];
+        if (queryContactUid === contactUid) {
+          const data = event.query.state.data as any;
+          if (data?.messages) {
+            console.log('📬 useMessages: Cache updated, syncing messages');
+            const transformed = data.messages.map((m: any) => ({
+              id: m._uid,
+              from: m.direction === 'incoming' ? conversationPhone : '',
+              to: m.direction === 'outgoing' ? conversationPhone : '',
+              text: m.message_body || m.text || '',
+              type: m.message_type || 'text',
+              direction: m.direction,
+              timestamp: normalizeTimestamp(m.created_at || m.timestamp),
+              status: m.status,
+              metadata: m.metadata || {},
+              template_proforma: m.template_proforma,
+              template_component_values: m.template_component_values,
+              template_components: m.template_components,
+              media_values: m.media_values,
+              interaction_message_data: m.interaction_message_data,
+            }));
+            setMessages(transformed);
           }
         }
-
-        // Update existing message (including status updates)
-        const existingMessageIndex = updatedMessages.findIndex(
-          (m) => String(m.id) === String(hydratedMessage.id)
-        );
-        if (existingMessageIndex > -1) {
-          updatedMessages[existingMessageIndex] = {
-            ...updatedMessages[existingMessageIndex],
-            ...hydratedMessage,
-            metadata: hydratedMessage.metadata || updatedMessages[existingMessageIndex].metadata,
-          };
-          return;
-        }
-
-        // Otherwise push new message
-        updatedMessages.push(hydratedMessage);
-      });
-
-      // Sort by timestamp to ensure correct order (especially for rapid messages)
-      updatedMessages.sort((a, b) => {
-        const timeA = Date.parse(normalizeTimestamp(a.timestamp || (a.metadata as any)?.timestamp)) || 0;
-        const timeB = Date.parse(normalizeTimestamp(b.timestamp || (b.metadata as any)?.timestamp)) || 0;
-
-        if (timeA !== timeB) {
-          return timeA - timeB;
-        }
-
-        const wsOrderA = (a.metadata as any)?.ws_received_at || 0;
-        const wsOrderB = (b.metadata as any)?.ws_received_at || 0;
-
-        if (wsOrderA !== wsOrderB) {
-          return wsOrderA - wsOrderB;
-        }
-
-        return String(a.id).localeCompare(String(b.id));
-      });
-
-      return updatedMessages;
+      }
     });
-  }, [allMessages, conversationPhone]);
+
+    return () => unsubscribe();
+  }, [contactUid, conversationPhone, queryClient]);
 
   const loadMessages = useCallback(async () => {
     if (!conversationPhone) {
@@ -163,35 +86,61 @@ export function useMessages(conversationPhone: string | null): UseMessagesReturn
     setError(null);
 
     try {
-      const conversationDetail = await messagesService.getConversationMessages(conversationPhone);
+      // First get contact UID from phone
+      const contacts = await chatService.getChatContacts({ search: conversationPhone, limit: 1 });
+      const contact = contacts.contacts.find(c =>
+        normalizePhone(c.phone_number) === normalizePhone(conversationPhone)
+      );
 
-      // Normalize and sort messages by timestamp (oldest first) to ensure chronological order
-      const sortedMessages = [...conversationDetail.messages]
-        .map((m) => ({
-          ...m,
-          timestamp: normalizeTimestamp(m.timestamp || (m.metadata as any)?.timestamp),
-          metadata: {
-            ...(m.metadata || {}),
-            timestamp: (m.metadata as any)?.timestamp || m.timestamp,
-          },
-        }))
-        .sort((a, b) => {
-          const timeA = Date.parse(a.timestamp) || 0;
-          const timeB = Date.parse(b.timestamp) || 0;
-          return timeA - timeB;
+      if (contact) {
+        setContactUid(contact._uid);
+
+        // Fetch messages using chat service (React Query backed)
+        const result = await chatService.getContactMessages(contact._uid, { limit: 100 });
+
+        // Update React Query cache
+        queryClient.setQueryData(chatKeys.messages(contact._uid, {}), result);
+
+        // Transform to WhatsAppMessage format
+        const transformedMessages = result.messages.map((m: any) => ({
+          id: m._uid,
+          from: m.direction === 'incoming' ? conversationPhone : '',
+          to: m.direction === 'outgoing' ? conversationPhone : '',
+          text: m.message_body || m.text || '',
+          type: m.message_type || 'text',
+          direction: m.direction,
+          timestamp: normalizeTimestamp(m.created_at || m.timestamp),
+          status: m.status,
+          metadata: m.metadata || {},
+          template_proforma: m.template_proforma,
+          template_component_values: m.template_component_values,
+          template_components: m.template_components,
+          media_values: m.media_values,
+          interaction_message_data: m.interaction_message_data,
+        }));
+
+        console.log('📥 Loaded messages:', {
+          count: transformedMessages.length,
+          contactUid: contact._uid,
         });
 
-      console.log('📥 Loaded messages:', {
-        count: sortedMessages.length,
-        withStatus: sortedMessages.filter(m => m.status).length,
-        statuses: sortedMessages.map(m => ({
-          id: String(m.id).substring(0, 10),
-          status: m.status,
-          direction: m.direction
-        }))
-      });
+        setMessages(transformedMessages);
+      } else {
+        // Fallback to legacy messages service
+        const conversationDetail = await messagesService.getConversationMessages(conversationPhone);
+        const sortedMessages = [...conversationDetail.messages]
+          .map((m) => ({
+            ...m,
+            timestamp: normalizeTimestamp(m.timestamp || (m.metadata as any)?.timestamp),
+          }))
+          .sort((a, b) => {
+            const timeA = Date.parse(a.timestamp) || 0;
+            const timeB = Date.parse(b.timestamp) || 0;
+            return timeA - timeB;
+          });
 
-      setMessages(sortedMessages);
+        setMessages(sortedMessages);
+      }
     } catch (err: any) {
       console.error('Failed to load messages:', err);
       setError(err.message || 'Failed to load messages');
@@ -199,7 +148,7 @@ export function useMessages(conversationPhone: string | null): UseMessagesReturn
     } finally {
       setIsLoading(false);
     }
-  }, [conversationPhone]);
+  }, [conversationPhone, queryClient]);
 
   const sendMessage = useCallback(async (text: string) => {
     if (!conversationPhone || !text.trim()) return;
@@ -233,6 +182,15 @@ export function useMessages(conversationPhone: string | null): UseMessagesReturn
           ? { ...m, id: response.message_id, status: 'sent' }
           : m
       ));
+
+      // Invalidate React Query cache to trigger refresh
+      if (contactUid) {
+        queryClient.invalidateQueries({
+          queryKey: chatKeys.messages(contactUid, {}),
+          exact: false,
+        });
+        queryClient.invalidateQueries({ queryKey: chatKeys.contacts() });
+      }
     } catch (err: any) {
       console.error('❌ Failed to send message:', err);
       // Mark message as failed
@@ -244,7 +202,7 @@ export function useMessages(conversationPhone: string | null): UseMessagesReturn
       setError(err.message || 'Failed to send message');
       throw err;
     }
-  }, [conversationPhone]);
+  }, [conversationPhone, contactUid, queryClient]);
 
   const sendMediaMessage = useCallback(async (file: File, media_type: "image" | "video" | "audio" | "document", caption?: string) => {
     if (!conversationPhone) return;
@@ -287,20 +245,33 @@ export function useMessages(conversationPhone: string | null): UseMessagesReturn
         caption,
       });
 
-      // The websocket will handle replacing the temporary message
-      // with the final one from the server.
+      // Mark upload as complete
+      setMessages(prev => prev.map(m =>
+        m.id === tempId
+          ? { ...m, metadata: { ...m.metadata, is_uploading: false } }
+          : m
+      ));
+
+      // Invalidate React Query cache to trigger refresh
+      if (contactUid) {
+        queryClient.invalidateQueries({
+          queryKey: chatKeys.messages(contactUid, {}),
+          exact: false,
+        });
+        queryClient.invalidateQueries({ queryKey: chatKeys.contacts() });
+      }
     } catch (err: any) {
       console.error('❌ Failed to send media message:', err);
       // On failure, update optimistic message to show error
-      setMessages(prev => prev.map(m => 
-        m.id === tempId 
-          ? { ...m, metadata: { ...m.metadata, is_uploading: false, error: 'Upload failed' } } 
+      setMessages(prev => prev.map(m =>
+        m.id === tempId
+          ? { ...m, metadata: { ...m.metadata, is_uploading: false, error: 'Upload failed' } }
           : m
       ));
       setError(err.message || 'Failed to send media message');
       throw err;
     }
-  }, [conversationPhone]);
+  }, [conversationPhone, contactUid, queryClient]);
 
   const refreshMessages = useCallback(async () => {
     await loadMessages();

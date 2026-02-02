@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Loader2, Save, Download, Printer, Building2, Stethoscope, CalendarPlus, X } from 'lucide-react';
+import { Loader2, Save, Download, Printer, Building2, Stethoscope, CalendarPlus, X, MessageSquare, Send } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -99,6 +99,15 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit, onVisit
   );
   const [followupNotes, setFollowupNotes] = useState(visit.follow_up_notes || '');
   const [isSavingFollowup, setIsSavingFollowup] = useState(false);
+
+  // WhatsApp message dialog state
+  const [isWhatsAppDialogOpen, setIsWhatsAppDialogOpen] = useState(false);
+  const [whatsAppVariables, setWhatsAppVariables] = useState<Record<string, string>>({});
+  const [templateBody, setTemplateBody] = useState('');
+  const [templateName, setTemplateName] = useState('');
+  const [templateLanguage, setTemplateLanguage] = useState('en');
+  const [isSendingWhatsApp, setIsSendingWhatsApp] = useState(false);
+  const [savedFollowupDate, setSavedFollowupDate] = useState<Date | null>(null);
 
   const previewRef = useRef<HTMLDivElement>(null);
 
@@ -314,7 +323,7 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit, onVisit
       setIsFollowupOpen(false);
       onVisitUpdate?.();
 
-      // Send WhatsApp template if follow-up date is set
+      // Show WhatsApp dialog if follow-up date is set
       if (followupDate) {
         const patientPhone = patientData?.mobile_primary || visit.patient_details?.mobile_primary;
 
@@ -323,29 +332,62 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit, onVisit
         } else {
           const preferences = authService.getUserPreferences();
           const defaultTemplateId = preferences?.whatsappDefaults?.followup;
+          const variableMapping = preferences?.whatsappDefaults?.followupVariableMapping || [];
 
           if (!defaultTemplateId) {
             toast.warning('Set default followup template in Admin Settings');
           } else {
             try {
               const template = await templatesService.getTemplate(defaultTemplateId);
+              const body = templatesService.extractBodyText(template);
 
-              // Clean phone number
-              let phone = patientPhone.replace(/[\s\-\(\)]/g, '');
-              if (!phone.startsWith('91') && phone.length === 10) {
-                phone = '91' + phone;
-              }
+              // Build variables based on mapping
+              const variables: Record<string, string> = {};
+              const patientName = patientData?.full_name || visit.patient_details?.full_name || 'Patient';
+              const followupDateStr = format(followupDate, 'dd MMM yyyy');
+              const followupTimeStr = '10:00 AM'; // Default time, can be made configurable
 
-              await templatesService.sendTemplate({
-                to: phone,
-                template_name: template.name,
-                language: template.language as any,
+              variableMapping.forEach((mapping: any) => {
+                switch (mapping.fieldSource) {
+                  case 'patient_name':
+                    variables[mapping.variableNumber] = patientName;
+                    break;
+                  case 'followup_date':
+                    variables[mapping.variableNumber] = followupDateStr;
+                    break;
+                  case 'followup_time':
+                    variables[mapping.variableNumber] = followupTimeStr;
+                    break;
+                  case 'doctor_name':
+                    variables[mapping.variableNumber] = visit.doctor_details?.full_name || 'Doctor';
+                    break;
+                  case 'hospital_name':
+                    variables[mapping.variableNumber] = tenantData?.name || 'Hospital';
+                    break;
+                  case 'patient_phone':
+                    variables[mapping.variableNumber] = patientPhone;
+                    break;
+                  default:
+                    variables[mapping.variableNumber] = '';
+                }
               });
 
-              toast.success('WhatsApp reminder sent');
+              // Auto-fill default mapping if none configured
+              if (variableMapping.length === 0) {
+                variables['1'] = patientName;
+                variables['2'] = followupDateStr;
+                variables['3'] = followupTimeStr;
+              }
+
+              setSavedFollowupDate(followupDate);
+              setTemplateBody(body);
+              setTemplateName(template.name);
+              setTemplateLanguage(template.language);
+              setWhatsAppVariables(variables);
+              setIsWhatsAppDialogOpen(true);
             } catch (waError: any) {
-              console.error('WhatsApp send failed:', waError);
-              toast.error('WhatsApp failed: ' + (waError.message || 'Unknown error'));
+              console.error('Template fetch failed:', waError);
+              toast.error('Failed to load template: ' + (waError.message || 'Unknown error'));
             }
           }
         }
@@ -355,6 +397,48 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit, onVisit
     } finally {
       setIsSavingFollowup(false);
     }
+  };
+
+  // Handle WhatsApp send
+  const handleSendWhatsApp = async () => {
+    setIsSendingWhatsApp(true);
+    try {
+      const patientPhone = patientData?.mobile_primary || visit.patient_details?.mobile_primary;
+      if (!patientPhone) {
+        toast.error('Patient phone not available');
+        return;
+      }
+
+      // Clean phone number
+      let phone = patientPhone.replace(/[\s\-\(\)]/g, '');
+      if (!phone.startsWith('91') && phone.length === 10) {
+        phone = '91' + phone;
+      }
+
+      await templatesService.sendTemplate({
+        to: phone,
+        template_name: templateName,
+        language: templateLanguage as any,
+        parameters: whatsAppVariables,
+      });
+
+      toast.success('WhatsApp reminder sent successfully');
+      setIsWhatsAppDialogOpen(false);
+    } catch (err: any) {
+      console.error('WhatsApp send failed:', err);
+      toast.error('Failed to send WhatsApp: ' + (err.message || 'Unknown error'));
+    } finally {
+      setIsSendingWhatsApp(false);
+    }
+  };
+
+  // Get preview with variables replaced
+  const getPreviewWithVariables = () => {
+    let preview = templateBody;
+    Object.entries(whatsAppVariables).forEach(([key, value]) => {
+      preview = preview.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), value || `{{${key}}}`);
+    });
+    return preview;
   };
 
   const handleClearFollowup = () => {
@@ -951,6 +1035,76 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit, onVisit
             >
               {isSavingFollowup && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Save Follow-up
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* WhatsApp Message Dialog - Field Mapping */}
+      <Dialog open={isWhatsAppDialogOpen} onOpenChange={setIsWhatsAppDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MessageSquare className="h-5 w-5 text-green-600" />
+              Send Follow-up Reminder
+            </DialogTitle>
+            <DialogDescription>
+              Review and send WhatsApp message to patient
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {/* Variable Inputs */}
+            <div className="space-y-3">
+              <Label className="text-sm font-semibold">Message Variables</Label>
+              {Object.keys(whatsAppVariables).sort().map((varKey) => (
+                <div key={varKey} className="flex items-center gap-3">
+                  <span className="text-sm font-mono bg-muted px-2 py-1 rounded min-w-[50px] text-center">
+                    {`{{${varKey}}}`}
+                  </span>
+                  <Input
+                    value={whatsAppVariables[varKey]}
+                    onChange={(e) => setWhatsAppVariables(prev => ({
+                      ...prev,
+                      [varKey]: e.target.value
+                    }))}
+                    placeholder={`Value for {{${varKey}}}`}
+                    className="flex-1"
+                  />
+                </div>
+              ))}
+            </div>
+
+            {/* Message Preview */}
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold">Message Preview</Label>
+              <div className="p-4 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-200 dark:border-green-800">
+                <p className="text-sm whitespace-pre-wrap">{getPreviewWithVariables()}</p>
+              </div>
+            </div>
+
+            {/* Patient Info */}
+            <div className="text-xs text-muted-foreground">
+              Sending to: {patientData?.full_name || visit.patient_details?.full_name} ({patientData?.mobile_primary || visit.patient_details?.mobile_primary})
+            </div>
+          </div>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setIsWhatsAppDialogOpen(false)}
+            >
+              Skip
+            </Button>
+            <Button
+              onClick={handleSendWhatsApp}
+              disabled={isSendingWhatsApp}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {isSendingWhatsApp ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4 mr-2" />
+              )}
+              Send WhatsApp
             </Button>
           </DialogFooter>
         </DialogContent>

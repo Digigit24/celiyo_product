@@ -40,12 +40,20 @@ export interface RoleListParams {
   [key: string]: string | number | boolean | undefined;
 }
 
+// Variable mapping for WhatsApp templates
+export interface TemplateVariableMapping {
+  variableNumber: string; // "1", "2", "3", etc.
+  fieldSource: string;    // "patient_name", "followup_date", "followup_time", "custom"
+  customValue?: string;   // For custom field source
+}
+
 // WhatsApp default templates interface
 export interface WhatsAppDefaults {
   followup?: number | string;           // Template ID for followup reminders
   leadNotification?: number | string;   // Template ID for lead notifications
   appointmentReminder?: number | string; // Template ID for appointment reminders
   welcomeMessage?: number | string;     // Template ID for welcome messages
+  followupVariableMapping?: TemplateVariableMapping[]; // Variable mappings for followup template
 }
 
 // User preferences interface - flexible key-value structure

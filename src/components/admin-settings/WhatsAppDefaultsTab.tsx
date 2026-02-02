@@ -14,7 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Loader2, MessageSquare, Save, RefreshCw, AlertCircle } from 'lucide-react';
 import { templatesService } from '@/services/whatsapp/templatesService';
 import { Template, TemplateStatus } from '@/types/whatsappTypes';
-import type { WhatsAppDefaults } from '@/types/user.types';
+import type { WhatsAppDefaults, TemplateVariableMapping } from '@/types/user.types';
 
 interface WhatsAppDefaultsTabProps {
   whatsappDefaults: WhatsAppDefaults;
@@ -29,6 +29,16 @@ const TEMPLATE_PURPOSES = [
   { key: 'leadNotification', label: 'Lead Notification', description: 'Default template for new lead notifications' },
   { key: 'appointmentReminder', label: 'Appointment Reminder', description: 'Default template for appointment reminders' },
   { key: 'welcomeMessage', label: 'Welcome Message', description: 'Default template for welcoming new contacts' },
+] as const;
+
+// Field sources for variable mapping
+const FIELD_SOURCES = [
+  { value: 'patient_name', label: 'Patient Name' },
+  { value: 'followup_date', label: 'Follow-up Date' },
+  { value: 'followup_time', label: 'Follow-up Time' },
+  { value: 'doctor_name', label: 'Doctor Name' },
+  { value: 'hospital_name', label: 'Hospital Name' },
+  { value: 'patient_phone', label: 'Patient Phone' },
 ] as const;
 
 export const WhatsAppDefaultsTab: React.FC<WhatsAppDefaultsTabProps> = ({
@@ -93,6 +103,49 @@ export const WhatsAppDefaultsTab: React.FC<WhatsAppDefaultsTabProps> = ({
     const template = templates.find(t => String(t.id) === String(templateId));
     return template?.name || 'Unknown template';
   };
+
+  // Extract variables from template body
+  const extractVariables = (content: string): string[] => {
+    const regex = /\{\{(\d+)\}\}/g;
+    const variables: string[] = [];
+    let match;
+    while ((match = regex.exec(content)) !== null) {
+      if (!variables.includes(match[1])) {
+        variables.push(match[1]);
+      }
+    }
+    return variables.sort((a, b) => parseInt(a) - parseInt(b));
+  };
+
+  // Handle variable mapping change
+  const handleVariableMappingChange = (variableNumber: string, fieldSource: string) => {
+    const currentMapping = whatsappDefaults.followupVariableMapping || [];
+    const existingIndex = currentMapping.findIndex(m => m.variableNumber === variableNumber);
+
+    let newMapping: TemplateVariableMapping[];
+    if (existingIndex >= 0) {
+      newMapping = [...currentMapping];
+      newMapping[existingIndex] = { variableNumber, fieldSource };
+    } else {
+      newMapping = [...currentMapping, { variableNumber, fieldSource }];
+    }
+
+    onWhatsAppDefaultsChange({
+      ...whatsappDefaults,
+      followupVariableMapping: newMapping,
+    });
+  };
+
+  // Get current mapping for a variable
+  const getVariableMapping = (variableNumber: string): string => {
+    const mapping = whatsappDefaults.followupVariableMapping?.find(m => m.variableNumber === variableNumber);
+    return mapping?.fieldSource || '';
+  };
+
+  // Get followup template variables
+  const followupTemplateId = whatsappDefaults.followup;
+  const followupTemplateBody = getTemplatePreview(followupTemplateId);
+  const followupVariables = followupTemplateBody ? extractVariables(followupTemplateBody) : [];
 
   return (
     <div className="space-y-6">
@@ -195,6 +248,42 @@ export const WhatsAppDefaultsTab: React.FC<WhatsAppDefaultsTabProps> = ({
                       <div className="p-3 bg-muted/50 rounded-md">
                         <Label className="text-xs text-muted-foreground">Preview:</Label>
                         <p className="text-sm mt-1 whitespace-pre-wrap">{preview}</p>
+                      </div>
+                    )}
+
+                    {/* Variable Mapping UI for Followup Template */}
+                    {purpose.key === 'followup' && selectedId && followupVariables.length > 0 && (
+                      <div className="p-3 bg-blue-50 dark:bg-blue-950/30 rounded-md border border-blue-200 dark:border-blue-800">
+                        <Label className="text-xs font-semibold text-blue-700 dark:text-blue-300">
+                          Variable Mapping (Auto-fill fields)
+                        </Label>
+                        <p className="text-xs text-muted-foreground mb-3">
+                          Configure which data fields map to template variables
+                        </p>
+                        <div className="space-y-2">
+                          {followupVariables.map((varNum) => (
+                            <div key={varNum} className="flex items-center gap-3">
+                              <span className="text-sm font-mono bg-white dark:bg-gray-800 px-2 py-1 rounded border min-w-[60px] text-center">
+                                {`{{${varNum}}}`}
+                              </span>
+                              <Select
+                                value={getVariableMapping(varNum)}
+                                onValueChange={(value) => handleVariableMappingChange(varNum, value)}
+                              >
+                                <SelectTrigger className="flex-1">
+                                  <SelectValue placeholder="Select field source" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {FIELD_SOURCES.map((source) => (
+                                    <SelectItem key={source.value} value={source.value}>
+                                      {source.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     )}
                   </div>

@@ -47,6 +47,41 @@ export interface ChatContact {
   updated_at?: string;
 }
 
+// Template component types for rendering
+export interface TemplateComponent {
+  type: 'HEADER' | 'BODY' | 'FOOTER' | 'BUTTONS';
+  format?: 'TEXT' | 'IMAGE' | 'VIDEO' | 'DOCUMENT';
+  text?: string;
+  buttons?: Array<{
+    type: 'QUICK_REPLY' | 'URL' | 'PHONE_NUMBER';
+    text: string;
+    url?: string;
+    phone_number?: string;
+  }>;
+}
+
+export interface TemplateProforma {
+  name: string;
+  language: string;
+  components: TemplateComponent[];
+}
+
+export interface MediaValue {
+  type: 'image' | 'video' | 'document';
+  link: string;
+  caption?: string;
+  filename?: string;
+}
+
+export interface InteractionMessageData {
+  type: 'button' | 'list';
+  body?: { text: string };
+  action?: {
+    buttons?: Array<{ type: string; reply: { id: string; title: string } }>;
+    sections?: Array<{ title: string; rows: Array<{ id: string; title: string; description?: string }> }>;
+  };
+}
+
 export interface ChatMessage {
   _uid: string;
   contact_uid: string;
@@ -60,6 +95,12 @@ export interface ChatMessage {
   created_at: string;
   updated_at?: string;
   metadata?: Record<string, any>;
+  // Template message fields (when message_body is null/empty)
+  template_proforma?: TemplateProforma;
+  template_component_values?: Record<string, string>;
+  template_components?: TemplateComponent[];
+  media_values?: MediaValue;
+  interaction_message_data?: InteractionMessageData;
 }
 
 export interface UnreadCount {

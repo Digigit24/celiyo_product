@@ -156,7 +156,46 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
     metadata: msg.metadata,
     timestamp: msg.timestamp,
     date: new Date(msg.timestamp),
+    // Template message fields
+    template_proforma: msg.template_proforma,
+    template_component_values: msg.template_component_values,
+    template_components: msg.template_components,
+    media_values: msg.media_values,
+    interaction_message_data: msg.interaction_message_data,
   }));
+
+  // Helper to render template message content
+  const renderTemplateContent = (msg: typeof transformedMessages[0]) => {
+    // If has text, use it
+    if (msg.text) return msg.text;
+
+    // Build content from template_proforma and component values
+    if (msg.template_proforma && msg.template_component_values) {
+      const components = msg.template_proforma.components || [];
+      const bodyComponent = components.find(c => c.type === 'BODY');
+      if (bodyComponent?.text) {
+        let text = bodyComponent.text;
+        // Replace {{1}}, {{2}}, etc. with actual values
+        Object.entries(msg.template_component_values).forEach(([key, value]) => {
+          text = text.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), value as string);
+        });
+        return text;
+      }
+    }
+
+    // Fallback to template_components
+    if (msg.template_components) {
+      const bodyComponent = msg.template_components.find(c => c.type === 'BODY');
+      if (bodyComponent?.text) return bodyComponent.text;
+    }
+
+    // Interactive message
+    if (msg.interaction_message_data?.body?.text) {
+      return msg.interaction_message_data.body.text;
+    }
+
+    return '[Template Message]';
+  };
 
   // Log messages for debugging
   useEffect(() => {
@@ -632,7 +671,47 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
                       )}
                     </div>
                   )}
-                  <p className="text-sm leading-relaxed break-words whitespace-pre-wrap">{msg.text}</p>
+                  {/* Template message with header media */}
+                  {msg.type === 'template' && msg.media_values && (
+                    <div className="mb-2">
+                      {msg.media_values.type === 'image' && (
+                        <MediaWithAuth
+                          type="image"
+                          src={msg.media_values.link}
+                          alt="template media"
+                          className="rounded-md max-w-[240px] w-full h-auto"
+                        />
+                      )}
+                      {msg.media_values.type === 'video' && (
+                        <MediaWithAuth
+                          type="video"
+                          src={msg.media_values.link}
+                          alt="template video"
+                          className="rounded-md max-w-[240px] w-full h-auto"
+                        />
+                      )}
+                      {msg.media_values.type === 'document' && (
+                        <DocumentWithAuth
+                          src={msg.media_values.link}
+                          filename={msg.media_values.filename || 'Document'}
+                          className="rounded-md max-w-full"
+                        />
+                      )}
+                    </div>
+                  )}
+                  <p className="text-sm leading-relaxed break-words whitespace-pre-wrap">
+                    {msg.type === 'template' ? renderTemplateContent(msg) : msg.text}
+                  </p>
+                  {/* Interactive message buttons */}
+                  {msg.type === 'interactive' && msg.interaction_message_data?.action?.buttons && (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {msg.interaction_message_data.action.buttons.map((btn, i) => (
+                        <span key={i} className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded-full">
+                          {btn.reply?.title}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                   <div className={cn(
                     "flex items-center justify-end gap-1 mt-1 text-[10px]",
                     msg.from === "me" ? "opacity-75" : "text-muted-foreground"

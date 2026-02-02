@@ -116,10 +116,21 @@ export interface MessageStatusEvent {
   };
 }
 
+// VendorChannelBroadcast event payload (new simplified format from API)
+export interface VendorChannelBroadcastEvent {
+  contactUid: string;
+  contactWaId: string;
+  isNewIncomingMessage: boolean;
+  message_status?: 'sent' | 'delivered' | 'read' | 'failed';
+  lastMessageUid: string;
+  assignedUserId?: number;
+}
+
 export interface RealtimeCallbacks {
   onNewMessage?: (data: ContactMessageEvent) => void;
   onContactUpdated?: (data: ContactUpdatedEvent) => void;
   onMessageStatus?: (data: MessageStatusEvent) => void;
+  onVendorBroadcast?: (data: VendorChannelBroadcastEvent) => void;
   onConnected?: () => void;
   onDisconnected?: () => void;
   onError?: (error: any) => void;
@@ -274,7 +285,30 @@ export const subscribeToVendorChannel = (
       .listen('VendorChannelBroadcast', (data: any) => {
         console.log('Pusher: VendorChannelBroadcast event received:', data);
 
-        // Handle different event types based on data structure
+        // Handle new simplified API format (contactUid, isNewIncomingMessage, etc.)
+        if (data.contactUid !== undefined) {
+          console.log('Pusher: VendorChannelBroadcast (simplified format)', {
+            contactUid: data.contactUid,
+            isNewIncoming: data.isNewIncomingMessage,
+            messageStatus: data.message_status,
+            lastMessageUid: data.lastMessageUid,
+          });
+          callbacks.onVendorBroadcast?.(data as VendorChannelBroadcastEvent);
+
+          // Also trigger status update if message_status is present
+          if (data.message_status && data.lastMessageUid) {
+            callbacks.onMessageStatus?.({
+              message: {
+                uid: data.lastMessageUid,
+                status: data.message_status,
+                updated_at: new Date().toISOString(),
+              }
+            });
+          }
+          return;
+        }
+
+        // Handle legacy event types based on data structure
         if (data.message && data.contact) {
           // New message event
           console.log('Pusher: New message received', {

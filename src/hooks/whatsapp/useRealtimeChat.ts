@@ -11,6 +11,7 @@ import {
   ContactMessageEvent,
   ContactUpdatedEvent,
   MessageStatusEvent,
+  VendorChannelBroadcastEvent,
 } from '@/services/pusherService';
 import { chatKeys } from '@/hooks/whatsapp/useChat';
 import type { ChatContact, ChatMessage, ChatMessagesResponse, ChatContactsResponse } from '@/services/whatsapp/chatService';
@@ -285,14 +286,75 @@ const handleContactUpdated = useCallback((data: ContactUpdatedEvent) => {
     // Call custom handler
     onMessageStatusUpdate?.(messageUid, status);
 
-    // Invalidate messages for selected contact to show updated status
-    if (selectedContactUid) {
-      queryClient.invalidateQueries({
-        queryKey: chatKeys.messages(selectedContactUid, {}),
-        exact: false,
-      });
+    // DIRECTLY UPDATE message status in cache
+    if (selectedContactUid && messageUid && status) {
+      queryClient.setQueriesData<ChatMessagesResponse>(
+        { queryKey: chatKeys.messages(selectedContactUid, {}) },
+        (oldData) => {
+          if (!oldData) return oldData;
+
+          const updatedMessages = oldData.messages?.map(msg => {
+            if (msg._uid === messageUid) {
+              return { ...msg, status };
+            }
+            return msg;
+          });
+
+          return {
+            ...oldData,
+            messages: updatedMessages,
+          };
+        }
+      );
     }
   }, [queryClient, selectedContactUid, onMessageStatusUpdate]);
+
+  // Handle VendorChannelBroadcast event (new simplified API format)
+  const handleVendorBroadcast = useCallback((data: VendorChannelBroadcastEvent) => {
+    console.log('🟢 useRealtimeChat: VendorChannelBroadcast received', data);
+
+    const { contactUid, isNewIncomingMessage, message_status, lastMessageUid } = data;
+
+    // If new incoming message, invalidate to fetch latest messages
+    if (isNewIncomingMessage && contactUid) {
+      console.log('🟢 New incoming message, invalidating messages for:', contactUid);
+      queryClient.invalidateQueries({
+        queryKey: chatKeys.messages(contactUid, {}),
+        exact: false,
+      });
+
+      // Also invalidate contacts to update last_message
+      queryClient.invalidateQueries({
+        queryKey: chatKeys.contacts(),
+        exact: false,
+      });
+
+      // Play notification sound
+      playSound();
+    }
+
+    // Update message status if provided
+    if (message_status && lastMessageUid && selectedContactUid) {
+      queryClient.setQueriesData<ChatMessagesResponse>(
+        { queryKey: chatKeys.messages(selectedContactUid, {}) },
+        (oldData) => {
+          if (!oldData) return oldData;
+
+          const updatedMessages = oldData.messages?.map(msg => {
+            if (msg._uid === lastMessageUid) {
+              return { ...msg, status: message_status };
+            }
+            return msg;
+          });
+
+          return {
+            ...oldData,
+            messages: updatedMessages,
+          };
+        }
+      );
+    }
+  }, [queryClient, selectedContactUid, playSound]);
 
   // Subscribe to real-time channel
   useEffect(() => {
@@ -315,6 +377,7 @@ const handleContactUpdated = useCallback((data: ContactUpdatedEvent) => {
       onNewMessage: handleNewMessage,
       onContactUpdated: handleContactUpdated,
       onMessageStatus: handleMessageStatus,
+      onVendorBroadcast: handleVendorBroadcast,
       onConnected: () => {
         console.log('useRealtimeChat: Connected to Pusher');
         setIsConnected(true);
@@ -341,7 +404,7 @@ const handleContactUpdated = useCallback((data: ContactUpdatedEvent) => {
         unsubscribeRef.current = null;
       }
     };
-  }, [enabled, handleNewMessage, handleContactUpdated, handleMessageStatus]);
+  }, [enabled, handleNewMessage, handleContactUpdated, handleMessageStatus, handleVendorBroadcast]);
 
   // Disconnect when component unmounts completely
   useEffect(() => {

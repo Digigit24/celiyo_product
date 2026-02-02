@@ -1053,6 +1053,31 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit, onVisit
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
+            {/* Follow-up Date Display & Edit */}
+            <div className="p-3 bg-purple-50 dark:bg-purple-950/30 rounded-lg border border-purple-200 dark:border-purple-800">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-xs font-semibold text-purple-700 dark:text-purple-300">Follow-up Date</Label>
+                  <p className="text-sm font-medium mt-1">
+                    {savedFollowupDate ? format(savedFollowupDate, 'dd MMM yyyy (EEEE)') : 'Not set'}
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setIsWhatsAppDialogOpen(false);
+                    setFollowupDate(savedFollowupDate || undefined);
+                    setIsFollowupOpen(true);
+                  }}
+                  className="text-purple-600 border-purple-300 hover:bg-purple-100"
+                >
+                  <CalendarPlus className="h-4 w-4 mr-1" />
+                  Change
+                </Button>
+              </div>
+            </div>
+
             {/* Variable Inputs */}
             <div className="space-y-3">
               <Label className="text-sm font-semibold">Message Variables</Label>

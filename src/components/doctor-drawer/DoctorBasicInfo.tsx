@@ -1,5 +1,5 @@
 // src/components/doctor-drawer/DoctorBasicInfo.tsx
-import { forwardRef, useImperativeHandle, useEffect } from 'react';
+import { forwardRef, useImperativeHandle, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { X } from 'lucide-react';
+import { X, Eye, EyeOff } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -78,6 +78,8 @@ const DoctorBasicInfo = forwardRef<DoctorBasicInfoHandle, DoctorBasicInfoProps>(
   ({ doctor, specialties, mode, onSuccess }, ref) => {
     const isReadOnly = mode === 'view';
     const isCreateMode = mode === 'create';
+    const [showPassword, setShowPassword] = useState(false);
+    const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
 
     const schema = isCreateMode ? createDoctorSchema : updateDoctorSchema;
 
@@ -242,13 +244,23 @@ const DoctorBasicInfo = forwardRef<DoctorBasicInfoHandle, DoctorBasicInfoProps>(
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="password">Password *</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    {...register('password')}
-                    placeholder="••••••••"
-                    className={errors.password ? 'border-destructive' : ''}
-                  />
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? 'text' : 'password'}
+                      {...register('password')}
+                      placeholder="••••••••"
+                      className={`pr-10 ${errors.password ? 'border-destructive' : ''}`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
+                      tabIndex={-1}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
                   {errors.password && (
                     <p className="text-sm text-destructive">{errors.password.message as string}</p>
                   )}
@@ -256,13 +268,23 @@ const DoctorBasicInfo = forwardRef<DoctorBasicInfoHandle, DoctorBasicInfoProps>(
 
                 <div className="space-y-2">
                   <Label htmlFor="password_confirm">Confirm Password *</Label>
-                  <Input
-                    id="password_confirm"
-                    type="password"
-                    {...register('password_confirm')}
-                    placeholder="••••••••"
-                    className={errors.password_confirm ? 'border-destructive' : ''}
-                  />
+                  <div className="relative">
+                    <Input
+                      id="password_confirm"
+                      type={showPasswordConfirm ? 'text' : 'password'}
+                      {...register('password_confirm')}
+                      placeholder="••••••••"
+                      className={`pr-10 ${errors.password_confirm ? 'border-destructive' : ''}`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPasswordConfirm(!showPasswordConfirm)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
+                      tabIndex={-1}
+                    >
+                      {showPasswordConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
                   {errors.password_confirm && (
                     <p className="text-sm text-destructive">{errors.password_confirm.message as string}</p>
                   )}

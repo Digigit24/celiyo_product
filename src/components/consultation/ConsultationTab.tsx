@@ -832,13 +832,15 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit, onVisit
 
             {/* Follow-up Button */}
             <Button
-              variant={visit.follow_up_date ? 'default' : 'outline'}
+              variant={(followupDate || visit.follow_up_date) ? 'default' : 'outline'}
               size="sm"
               onClick={() => setIsFollowupOpen(true)}
-              className={`gap-2 ${visit.follow_up_date ? 'bg-purple-600 hover:bg-purple-700 text-white' : ''}`}
+              className={`gap-2 ${(followupDate || visit.follow_up_date) ? 'bg-purple-600 hover:bg-purple-700 text-white' : ''}`}
             >
               <CalendarPlus className="h-4 w-4" />
-              {visit.follow_up_date ? `Follow-up: ${new Date(visit.follow_up_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}` : 'Set Follow-up'}
+              {(followupDate || visit.follow_up_date)
+                ? `Follow-up: ${format(followupDate || new Date(visit.follow_up_date!), 'dd MMM')}`
+                : 'Set Follow-up'}
             </Button>
           </div>
         </div>

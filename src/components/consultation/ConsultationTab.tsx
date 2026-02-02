@@ -29,8 +29,8 @@ import { OpdVisit } from '@/types/opdVisit.types';
 import { toast } from 'sonner';
 import { useOPDTemplate } from '@/hooks/useOPDTemplate';
 import { useIPD } from '@/hooks/useIPD';
-import { useOpdVisit } from '@/hooks/useOpdVisit';
 import { usePatient } from '@/hooks/usePatient';
+import { useClinicalNote } from '@/hooks/useClinicalNote';
 import { templatesService } from '@/services/whatsapp/templatesService';
 import { authService } from '@/services/authService';
 import { useTenant } from '@/hooks/useTenant';
@@ -109,7 +109,9 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit, onVisit
 
   const previewRef = useRef<HTMLDivElement>(null);
 
-  const { patchOpdVisit } = useOpdVisit();
+  // Clinical note hook for follow-up date
+  const { useClinicalNoteByVisit, updateNote, createNote } = useClinicalNote();
+  const { data: clinicalNote, mutate: mutateClinicalNote } = useClinicalNoteByVisit(visit.id);
 
   // Fetch patient details (for phone number)
   const { usePatientById } = usePatient();
@@ -122,12 +124,13 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit, onVisit
   });
   const activeAdmission = admissionsData?.results?.[0] || null;
 
-  // Initialize follow-up date from visit
+  // Initialize follow-up date from clinical note
   useEffect(() => {
-    if (visit.follow_up_date) {
-      setFollowupDate(new Date(visit.follow_up_date));
+    if (clinicalNote?.next_followup_date) {
+      setFollowupDate(new Date(clinicalNote.next_followup_date));
+      setSavedFollowupDate(new Date(clinicalNote.next_followup_date));
     }
-  }, [visit.follow_up_date]);
+  }, [clinicalNote?.next_followup_date]);
 
   // Determine object_id based on encounter type
   const currentObjectId = encounterType === 'visit' ? visit.id : activeAdmission?.id;
@@ -321,15 +324,26 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit, onVisit
     try {
       const followupDateStr = followupDate ? format(followupDate, 'yyyy-MM-dd') : null;
 
-      // Save follow-up to visit
-      await patchOpdVisit(visit.id, {
-        follow_up_required: !!followupDate,
-        follow_up_date: followupDateStr,
-        follow_up_notes: followupNotes || null,
-      });
+      // Save follow-up to clinical note
+      if (clinicalNote?.id) {
+        // Update existing clinical note
+        await updateNote(clinicalNote.id, {
+          next_followup_date: followupDateStr,
+        });
+      } else {
+        // Create new clinical note with follow-up date
+        await createNote({
+          visit: visit.id,
+          next_followup_date: followupDateStr,
+        });
+      }
+
+      // Update local state immediately for UI feedback
+      setSavedFollowupDate(followupDate || null);
 
       toast.success(followupDate ? 'Follow-up scheduled' : 'Follow-up cleared');
       setIsFollowupOpen(false);
+      mutateClinicalNote(); // Refresh clinical note data
       onVisitUpdate?.();
 
       // Show WhatsApp dialog if follow-up date is set
@@ -841,14 +855,14 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit, onVisit
 
             {/* Follow-up Button */}
             <Button
-              variant={(followupDate || visit.follow_up_date) ? 'default' : 'outline'}
+              variant={(savedFollowupDate || clinicalNote?.next_followup_date) ? 'default' : 'outline'}
               size="sm"
               onClick={() => setIsFollowupOpen(true)}
-              className={`gap-2 ${(followupDate || visit.follow_up_date) ? 'bg-purple-600 hover:bg-purple-700 text-white' : ''}`}
+              className={`gap-2 ${(savedFollowupDate || clinicalNote?.next_followup_date) ? 'bg-purple-600 hover:bg-purple-700 text-white' : ''}`}
             >
               <CalendarPlus className="h-4 w-4" />
-              {(followupDate || visit.follow_up_date)
-                ? `Follow-up: ${format(followupDate || new Date(visit.follow_up_date!), 'dd MMM')}`
+              {(savedFollowupDate || clinicalNote?.next_followup_date)
+                ? `Follow-up: ${format(savedFollowupDate || new Date(clinicalNote!.next_followup_date!), 'dd MMM')}`
                 : 'Set Follow-up'}
             </Button>
           </div>
@@ -1027,7 +1041,7 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit, onVisit
             </div>
           </div>
           <DialogFooter className="flex-col sm:flex-row gap-2">
-            {(followupDate || visit.follow_up_date) && (
+            {(followupDate || clinicalNote?.next_followup_date) && (
               <Button
                 variant="outline"
                 onClick={() => {

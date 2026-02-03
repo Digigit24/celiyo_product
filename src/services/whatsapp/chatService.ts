@@ -265,7 +265,7 @@ class ChatService {
       avatar_url: data.avatar_url || data.profile_picture,
       last_message: this.extractLastMessage(data.last_message) || data.last_message_text || '',
       last_message_at: this.extractLastMessageTime(data),
-      unread_count: data.unread_count || 0,
+      unread_count: data.unread_count ?? data.unread_messages_count ?? 0,
       is_online: data.is_online || false,
       is_blocked: data.is_blocked ?? false,
       bot_enabled: data.bot_enabled ?? true,

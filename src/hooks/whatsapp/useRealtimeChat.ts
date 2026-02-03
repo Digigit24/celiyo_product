@@ -358,7 +358,25 @@ const handleContactUpdated = useCallback((data: ContactUpdatedEvent) => {
     }
   }, [queryClient, selectedContactUid, playSound]);
 
-  // Subscribe to real-time channel
+  // Store handlers in refs to avoid re-subscription on every change
+  const handlersRef = useRef({
+    onNewMessage: handleNewMessage,
+    onContactUpdated: handleContactUpdated,
+    onMessageStatus: handleMessageStatus,
+    onVendorBroadcast: handleVendorBroadcast,
+  });
+
+  // Update refs when handlers change (without triggering re-subscription)
+  useEffect(() => {
+    handlersRef.current = {
+      onNewMessage: handleNewMessage,
+      onContactUpdated: handleContactUpdated,
+      onMessageStatus: handleMessageStatus,
+      onVendorBroadcast: handleVendorBroadcast,
+    };
+  }, [handleNewMessage, handleContactUpdated, handleMessageStatus, handleVendorBroadcast]);
+
+  // Subscribe to real-time channel - only once on mount
   useEffect(() => {
     if (!enabled) {
       return;
@@ -374,12 +392,12 @@ const handleContactUpdated = useCallback((data: ContactUpdatedEvent) => {
 
     console.log('useRealtimeChat: Subscribing to vendor channel', vendorUid);
 
-    // Subscribe to the vendor channel
+    // Subscribe to the vendor channel with wrapper functions that use refs
     const unsubscribe = subscribeToVendorChannel(vendorUid, {
-      onNewMessage: handleNewMessage,
-      onContactUpdated: handleContactUpdated,
-      onMessageStatus: handleMessageStatus,
-      onVendorBroadcast: handleVendorBroadcast,
+      onNewMessage: (data) => handlersRef.current.onNewMessage(data),
+      onContactUpdated: (data) => handlersRef.current.onContactUpdated(data),
+      onMessageStatus: (data) => handlersRef.current.onMessageStatus(data),
+      onVendorBroadcast: (data) => handlersRef.current.onVendorBroadcast(data),
       onConnected: () => {
         console.log('useRealtimeChat: Connected to Pusher');
         setIsConnected(true);
@@ -398,7 +416,7 @@ const handleContactUpdated = useCallback((data: ContactUpdatedEvent) => {
 
     unsubscribeRef.current = unsubscribe;
 
-    // Cleanup on unmount
+    // Cleanup on unmount only
     return () => {
       console.log('useRealtimeChat: Cleaning up subscription');
       if (unsubscribeRef.current) {
@@ -406,7 +424,7 @@ const handleContactUpdated = useCallback((data: ContactUpdatedEvent) => {
         unsubscribeRef.current = null;
       }
     };
-  }, [enabled, handleNewMessage, handleContactUpdated, handleMessageStatus, handleVendorBroadcast]);
+  }, [enabled]); // Only re-subscribe when enabled changes
 
   // Disconnect when component unmounts completely
   useEffect(() => {

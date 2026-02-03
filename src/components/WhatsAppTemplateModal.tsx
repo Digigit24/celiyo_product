@@ -115,10 +115,10 @@ export const WhatsAppTemplateModal: React.FC<WhatsAppTemplateModalProps> = ({
       return;
     }
 
-    // Clean phone number
-    let cleanPhone = phoneNumber.replace(/[^\d+]/g, '');
-    if (cleanPhone.startsWith('+')) {
-      cleanPhone = cleanPhone.substring(1);
+    // Clean phone number - ensure format is 91XXXXXXXXXX
+    let cleanPhone = phoneNumber.replace(/[^\d]/g, '');
+    if (!cleanPhone.startsWith('91') && cleanPhone.length === 10) {
+      cleanPhone = '91' + cleanPhone;
     }
 
     setIsSending(true);

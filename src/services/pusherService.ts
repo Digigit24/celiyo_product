@@ -281,8 +281,10 @@ export const subscribeToVendorChannel = (
     }
 
     // Listen to the main VendorChannelBroadcast event
+    // NOTE: Dot prefix (.VendorChannelBroadcast) is required for raw event name matching
+    // Without dot, Laravel Echo expects namespaced event (App\Events\VendorChannelBroadcast)
     currentChannel
-      .listen('VendorChannelBroadcast', (data: any) => {
+      .listen('.VendorChannelBroadcast', (data: any) => {
         console.log('Pusher: VendorChannelBroadcast event received:', data);
 
         // Handle new simplified API format (contactUid, isNewIncomingMessage, etc.)

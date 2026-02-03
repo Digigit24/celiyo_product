@@ -112,19 +112,7 @@ export default function Chats() {
     return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
   };
 
-  // Auto-select first contact on desktop when contacts load
-  useEffect(() => {
-    if (contacts.length > 0 && !selectedContactUid && !isMobile) {
-      const firstContact = contacts[0];
-      const contactId = firstContact._uid || firstContact.phone_number;
-      console.log('Auto-selecting first contact:', {
-        _uid: firstContact._uid,
-        phone: firstContact.phone_number,
-        selected: contactId
-      });
-      setSelectedContactUid(contactId);
-    }
-  }, [contacts, selectedContactUid, isMobile]);
+  // NOTE: Auto-select removed - start with empty state, user selects chat manually
 
   // NOTE: Message polling removed - using Pusher/Laravel Echo for real-time updates
   // Real-time message updates come through useRealtimeChat hook above

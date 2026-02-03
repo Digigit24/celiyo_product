@@ -79,7 +79,18 @@ import { WorkflowLogs } from "./pages/WorkflowLogs"; // Import Workflow Logs pag
 import { WebSocketProvider } from "./context/WebSocketProvider";
 import { OAuthCallback } from "./pages/OAuthCallback";
 
-const queryClient = new QueryClient();
+// Configure QueryClient with optimized settings for WebSocket-based updates
+// Disable automatic refetching since we use Pusher for real-time updates
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,  // Don't refetch when user switches tabs
+      refetchOnReconnect: false,    // Don't refetch on network reconnect (Pusher handles this)
+      retry: 1,                     // Only retry once on failure
+      staleTime: 30000,             // Consider data fresh for 30 seconds
+    },
+  },
+});
 
 const AppLayout = () => {
   const isMobile = useIsMobile();

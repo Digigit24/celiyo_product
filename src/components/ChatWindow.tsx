@@ -20,6 +20,7 @@ import {
   User,
   Camera,
   X,
+  Reply,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -739,9 +740,12 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
                 <div
                   className={cn(
                     "relative max-w-[85%] sm:max-w-[70%] md:max-w-[65%] rounded-lg px-3 py-2 shadow-sm",
-                    msg.from === "me"
-                      ? "bg-[#dcf8c6] text-[#0b141a] rounded-br-none border border-emerald-100"
-                      : "bg-white text-[#0b141a] rounded-bl-none border border-gray-200"
+                    // Template messages get light cyan background
+                    isTemplateMessage(msg)
+                      ? "bg-[#e8f4f8] text-[#0b141a] rounded-br-none border border-cyan-100"
+                      : msg.from === "me"
+                        ? "bg-[#dcf8c6] text-[#0b141a] rounded-br-none border border-emerald-100"
+                        : "bg-white text-[#0b141a] rounded-bl-none border border-gray-200"
                   )}
                 >
                   {msg.type === 'image' && (
@@ -834,17 +838,9 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
                       )}
                     </div>
                   )}
-                  {/* Template message indicator and header */}
-                  {isTemplateMessage(msg) && (
-                    <>
-                      <div className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
-                        <span className="bg-green-100 text-green-700 px-1.5 py-0.5 rounded text-[10px] font-medium">Template</span>
-                      </div>
-                      {/* Template header */}
-                      {getTemplateHeader(msg) && (
-                        <p className="font-semibold text-sm mb-1">{getTemplateHeader(msg)}</p>
-                      )}
-                    </>
+                  {/* Template message header - bold title without badge */}
+                  {isTemplateMessage(msg) && getTemplateHeader(msg) && (
+                    <p className="font-bold text-[15px] text-[#0b141a] mb-2">{getTemplateHeader(msg)}</p>
                   )}
                   {/* Message body */}
                   <p className="text-sm leading-relaxed break-words whitespace-pre-wrap">
@@ -856,14 +852,15 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
                   )}
                   {/* Interactive message buttons - WhatsApp style */}
                   {msg.interaction_message_data?.action?.buttons && (
-                    <div className="mt-3 pt-2 border-t border-gray-200/50 flex flex-col gap-1">
+                    <div className="mt-3 flex flex-col">
                       {msg.interaction_message_data.action.buttons.map((btn, i) => (
                         <button
                           key={i}
                           type="button"
-                          className="w-full py-2 px-3 text-sm font-medium text-[#00a884] hover:bg-gray-50 rounded-md transition-colors text-center"
+                          className="w-full py-2.5 px-3 text-sm font-medium text-[#00a5f4] hover:bg-cyan-50/50 transition-colors flex items-center justify-center gap-1.5 border-t border-gray-200/60"
                           onClick={() => console.log('Button clicked:', btn.reply?.title)}
                         >
+                          <Reply className="h-4 w-4" />
                           {btn.reply?.title}
                         </button>
                       ))}
@@ -871,25 +868,26 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
                   )}
                   {/* Template buttons (from template_proforma or template_components) */}
                   {isTemplateMessage(msg) && !msg.interaction_message_data?.action?.buttons && getTemplateButtons(msg) && (
-                    <div className="mt-3 pt-2 border-t border-gray-200/50 flex flex-col gap-1">
+                    <div className="mt-3 flex flex-col">
                       {getTemplateButtons(msg)!.map((btn: any, i: number) => (
                         <button
                           key={i}
                           type="button"
-                          className="w-full py-2 px-3 text-sm font-medium text-[#00a884] hover:bg-gray-50 rounded-md transition-colors text-center"
+                          className="w-full py-2.5 px-3 text-sm font-medium text-[#00a5f4] hover:bg-cyan-50/50 transition-colors flex items-center justify-center gap-1.5 border-t border-gray-200/60"
                           onClick={() => console.log('Template button clicked:', btn.text)}
                         >
+                          <Reply className="h-4 w-4" />
                           {btn.text}
                         </button>
                       ))}
                     </div>
                   )}
                   <div className={cn(
-                    "flex items-center justify-end gap-1 mt-1 text-[10px]",
-                    msg.from === "me" ? "opacity-75" : "text-muted-foreground"
+                    "flex items-center justify-end gap-1 mt-2 text-[11px]",
+                    isTemplateMessage(msg) ? "text-cyan-600/70" : msg.from === "me" ? "text-gray-500" : "text-muted-foreground"
                   )}>
                     <span>{msg.time}</span>
-                    {msg.from === "me" && (
+                    {msg.from === "me" && !isTemplateMessage(msg) && (
                       <span className="flex items-center">
                         {getStatusIcon(msg.status)}
                       </span>

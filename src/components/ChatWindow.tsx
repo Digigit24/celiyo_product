@@ -132,6 +132,36 @@ const getDateLabel = (date: Date): string => {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 };
 
+// Helper to get ordinal suffix (1st, 2nd, 3rd, etc.)
+const getOrdinalSuffix = (day: number): string => {
+  if (day > 3 && day < 21) return 'th';
+  switch (day % 10) {
+    case 1: return 'st';
+    case 2: return 'nd';
+    case 3: return 'rd';
+    default: return 'th';
+  }
+};
+
+// Format full timestamp like "Saturday 31st January 2026 7:27:29 am"
+const formatFullTimestamp = (date: Date): string => {
+  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+  const dayName = days[date.getDay()];
+  const day = date.getDate();
+  const month = months[date.getMonth()];
+  const year = date.getFullYear();
+
+  let hours = date.getHours();
+  const minutes = date.getMinutes().toString().padStart(2, '0');
+  const seconds = date.getSeconds().toString().padStart(2, '0');
+  const ampm = hours >= 12 ? 'pm' : 'am';
+  hours = hours % 12 || 12;
+
+  return `${dayName} ${day}${getOrdinalSuffix(day)} ${month} ${year} ${hours}:${minutes}:${seconds} ${ampm}`;
+};
+
 // Helper function to check if two dates are on the same day
 const isSameDay = (date1: Date, date2: Date): boolean => {
   return date1.toDateString() === date2.toDateString();
@@ -150,7 +180,7 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
   const transformedMessages = sortedMessages.map(msg => ({
     from: msg.direction === 'outgoing' ? 'me' : 'them',
     text: msg.text,
-    time: new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    time: formatFullTimestamp(new Date(msg.timestamp)),
     status: msg.status,
     type: msg.type,
     metadata: msg.metadata,
@@ -552,10 +582,10 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
         </div>
       </div>
 
-      {/* Messages Area - Scrollable */}
+      {/* Messages Area - Scrollable with messages at bottom */}
       <div
         ref={messagesContainerRef}
-        className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-4 py-4 space-y-3"
+        className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-4 py-4"
         style={{
           backgroundImage: `url('https://hms.thedigitechsolutions.com/imgs/wa-message-bg-faded.png')`,
           backgroundSize: 'cover',
@@ -589,7 +619,20 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
             </div>
           </div>
         ) : (
-          <>
+          <div className="flex flex-col min-h-full justify-end space-y-3">
+            {/* Load earlier messages button */}
+            <div className="flex justify-center py-2">
+              <button
+                type="button"
+                className="bg-white/90 hover:bg-white text-gray-600 hover:text-gray-800 text-xs font-medium px-4 py-2 rounded-full shadow-sm border border-gray-200 transition-all hover:shadow-md"
+                onClick={() => {
+                  console.log('Load earlier messages clicked');
+                  // TODO: Implement pagination/load more
+                }}
+              >
+                ↑ Load earlier messages
+              </button>
+            </div>
             {transformedMessages.map((msg, idx) => {
               // Check if we need to show a date separator
               const showDateSeparator =
@@ -723,15 +766,43 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
                   <p className="text-sm leading-relaxed break-words whitespace-pre-wrap">
                     {isTemplateMessage(msg) ? renderTemplateContent(msg) : msg.text}
                   </p>
-                  {/* Interactive message buttons */}
-                  {(msg.type === 'interactive' || msg.interaction_message_data?.action?.buttons) && msg.interaction_message_data?.action?.buttons && (
-                    <div className="mt-2 flex flex-wrap gap-2">
+                  {/* Template/Interactive message buttons - WhatsApp style */}
+                  {(isTemplateMessage(msg) || msg.type === 'interactive' || msg.interaction_message_data?.action?.buttons) && msg.interaction_message_data?.action?.buttons && (
+                    <div className="mt-3 pt-2 border-t border-gray-200/50 flex flex-col gap-1">
                       {msg.interaction_message_data.action.buttons.map((btn, i) => (
-                        <span key={i} className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded-full">
+                        <button
+                          key={i}
+                          type="button"
+                          className="w-full py-2 px-3 text-sm font-medium text-[#00a884] hover:bg-gray-50 rounded-md transition-colors text-center"
+                          onClick={() => console.log('Button clicked:', btn.reply?.title)}
+                        >
                           {btn.reply?.title}
-                        </span>
+                        </button>
                       ))}
                     </div>
+                  )}
+                  {/* Template proforma buttons */}
+                  {isTemplateMessage(msg) && msg.template_proforma?.components && (
+                    (() => {
+                      const buttonsComponent = msg.template_proforma.components.find(c => c.type === 'BUTTONS');
+                      if (buttonsComponent?.buttons && buttonsComponent.buttons.length > 0) {
+                        return (
+                          <div className="mt-3 pt-2 border-t border-gray-200/50 flex flex-col gap-1">
+                            {buttonsComponent.buttons.map((btn: any, i: number) => (
+                              <button
+                                key={i}
+                                type="button"
+                                className="w-full py-2 px-3 text-sm font-medium text-[#00a884] hover:bg-gray-50 rounded-md transition-colors text-center"
+                                onClick={() => console.log('Template button clicked:', btn.text)}
+                              >
+                                {btn.text}
+                              </button>
+                            ))}
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()
                   )}
                   <div className={cn(
                     "flex items-center justify-end gap-1 mt-1 text-[10px]",
@@ -750,7 +821,7 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
               );
             })}
             <div ref={messagesEndRef} />
-          </>
+          </div>
         )}
       </div>
 

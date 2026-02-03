@@ -42,6 +42,7 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { useMessages } from "@/hooks/whatsapp/useMessages";
+import { useClearChatHistory } from "@/hooks/whatsapp/useChat";
 import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
 import MediaWithAuth from './MediaWithAuth';
@@ -170,6 +171,8 @@ const isSameDay = (date1: Date, date2: Date): boolean => {
 
 export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onBack }: Props) => {
   const { messages, isLoading, error, sendMessage, sendMediaMessage } = useMessages(selectedConversation?.phone || null);
+  const clearChatMutation = useClearChatHistory();
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   // Sort messages by timestamp (oldest first) then transform
   const sortedMessages = [...messages].sort((a, b) => {
@@ -649,7 +652,10 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
               <DropdownMenuItem className="cursor-pointer">
                 Mute notifications
               </DropdownMenuItem>
-              <DropdownMenuItem className="cursor-pointer">
+              <DropdownMenuItem
+                className="cursor-pointer"
+                onClick={() => setShowClearConfirm(true)}
+              >
                 Clear messages
               </DropdownMenuItem>
               <DropdownMenuItem className="text-destructive focus:text-destructive cursor-pointer">
@@ -1276,6 +1282,36 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
             >
               <Send className="h-4 w-4 mr-2" />
               Send
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Clear Chat Confirmation Dialog */}
+      <Dialog open={showClearConfirm} onOpenChange={setShowClearConfirm}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Clear Chat History</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to clear all messages in this chat? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setShowClearConfirm(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                clearChatMutation.mutate(conversationId);
+                setShowClearConfirm(false);
+              }}
+              disabled={clearChatMutation.isPending}
+            >
+              {clearChatMutation.isPending ? 'Clearing...' : 'Clear Chat'}
             </Button>
           </DialogFooter>
         </DialogContent>

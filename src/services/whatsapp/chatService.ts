@@ -97,10 +97,15 @@ export interface ChatMessage {
   metadata?: Record<string, any>;
   // Template message fields (when message_body is null/empty)
   template_proforma?: TemplateProforma;
-  template_component_values?: Record<string, string>;
+  template_component_values?: Array<{
+    type: string;
+    parameters: Record<string, { type: string; text?: string }>;
+  }>;
   template_components?: TemplateComponent[];
+  template_message?: string;
   media_values?: MediaValue;
   interaction_message_data?: InteractionMessageData;
+  whatsapp_message_error?: string;
 }
 
 export interface UnreadCount {
@@ -364,6 +369,14 @@ class ChatService {
       created_at: data.created_at || data.timestamp || data.messaged_at || new Date().toISOString(),
       updated_at: data.updated_at,
       metadata: data.metadata || data.meta_data,
+      // Template message fields - pass through as-is from API
+      template_proforma: data.template_proforma,
+      template_component_values: data.template_component_values,
+      template_components: data.template_components,
+      template_message: data.template_message,
+      media_values: data.media_values,
+      interaction_message_data: data.interaction_message_data,
+      whatsapp_message_error: data.whatsapp_message_error,
     };
   }
 

@@ -739,13 +739,13 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
                   >
                 <div
                   className={cn(
-                    "relative max-w-[85%] sm:max-w-[70%] md:max-w-[65%] rounded-lg px-3 py-2 shadow-sm",
-                    // Template messages get light cyan background
+                    "relative max-w-[85%] sm:max-w-[70%] md:max-w-[65%] rounded-lg shadow-sm",
+                    // Template messages get white background with no padding (padding added inside)
                     isTemplateMessage(msg)
-                      ? "bg-[#e8f4f8] text-[#0b141a] rounded-br-none border border-cyan-100"
+                      ? "bg-white text-[#0b141a] rounded-br-none border border-gray-200 overflow-hidden"
                       : msg.from === "me"
-                        ? "bg-[#dcf8c6] text-[#0b141a] rounded-br-none border border-emerald-100"
-                        : "bg-white text-[#0b141a] rounded-bl-none border border-gray-200"
+                        ? "bg-[#dcf8c6] text-[#0b141a] rounded-br-none border border-emerald-100 px-3 py-2"
+                        : "bg-white text-[#0b141a] rounded-bl-none border border-gray-200 px-3 py-2"
                   )}
                 >
                   {msg.type === 'image' && (
@@ -838,61 +838,81 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
                       )}
                     </div>
                   )}
-                  {/* Template message header - bold title without badge */}
-                  {isTemplateMessage(msg) && getTemplateHeader(msg) && (
-                    <p className="font-bold text-[15px] text-[#0b141a] mb-2">{getTemplateHeader(msg)}</p>
+                  {/* Template message content */}
+                  {isTemplateMessage(msg) ? (
+                    <>
+                      {/* Template content with padding */}
+                      <div className="px-3 pt-3 pb-2">
+                        {/* Template header - bold title */}
+                        {getTemplateHeader(msg) && (
+                          <p className="font-bold text-[15px] text-[#0b141a] mb-3">{getTemplateHeader(msg)}</p>
+                        )}
+                        {/* Template body */}
+                        <p className="text-[14px] leading-[1.5] text-[#0b141a] break-words whitespace-pre-wrap">
+                          {renderTemplateContent(msg)}
+                        </p>
+                        {/* Template footer */}
+                        {getTemplateFooter(msg) && (
+                          <p className="text-xs text-gray-500 mt-3">{getTemplateFooter(msg)}</p>
+                        )}
+                      </div>
+                      {/* Template buttons - outside padding area */}
+                      {getTemplateButtons(msg) && (
+                        <div className="flex flex-col">
+                          {getTemplateButtons(msg)!.map((btn: any, i: number) => (
+                            <button
+                              key={i}
+                              type="button"
+                              className="w-full py-3 px-3 text-[14px] font-normal text-[#00a5f4] hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 border-t border-gray-200"
+                              onClick={() => console.log('Template button clicked:', btn.text)}
+                            >
+                              <Reply className="h-4 w-4 rotate-180 scale-x-[-1]" />
+                              {btn.text}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      {/* Timestamp for template */}
+                      <div className="flex items-center justify-end px-3 pb-2 text-[11px] text-[#667781]">
+                        <span>{msg.time}</span>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      {/* Regular message body */}
+                      <p className="text-sm leading-relaxed break-words whitespace-pre-wrap">
+                        {msg.text}
+                      </p>
+                      {/* Interactive message buttons */}
+                      {msg.interaction_message_data?.action?.buttons && (
+                        <div className="mt-3 flex flex-col">
+                          {msg.interaction_message_data.action.buttons.map((btn, i) => (
+                            <button
+                              key={i}
+                              type="button"
+                              className="w-full py-2.5 px-3 text-sm font-medium text-[#00a5f4] hover:bg-gray-50 transition-colors flex items-center justify-center gap-1.5 border-t border-gray-200"
+                              onClick={() => console.log('Button clicked:', btn.reply?.title)}
+                            >
+                              <Reply className="h-4 w-4 rotate-180 scale-x-[-1]" />
+                              {btn.reply?.title}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      {/* Timestamp for regular messages */}
+                      <div className={cn(
+                        "flex items-center justify-end gap-1 mt-1 text-[11px]",
+                        msg.from === "me" ? "text-[#667781]" : "text-[#667781]"
+                      )}>
+                        <span>{msg.time}</span>
+                        {msg.from === "me" && (
+                          <span className="flex items-center">
+                            {getStatusIcon(msg.status)}
+                          </span>
+                        )}
+                      </div>
+                    </>
                   )}
-                  {/* Message body */}
-                  <p className="text-sm leading-relaxed break-words whitespace-pre-wrap">
-                    {isTemplateMessage(msg) ? renderTemplateContent(msg) : msg.text}
-                  </p>
-                  {/* Template footer */}
-                  {isTemplateMessage(msg) && getTemplateFooter(msg) && (
-                    <p className="text-xs text-muted-foreground mt-2">{getTemplateFooter(msg)}</p>
-                  )}
-                  {/* Interactive message buttons - WhatsApp style */}
-                  {msg.interaction_message_data?.action?.buttons && (
-                    <div className="mt-3 flex flex-col">
-                      {msg.interaction_message_data.action.buttons.map((btn, i) => (
-                        <button
-                          key={i}
-                          type="button"
-                          className="w-full py-2.5 px-3 text-sm font-medium text-[#00a5f4] hover:bg-cyan-50/50 transition-colors flex items-center justify-center gap-1.5 border-t border-gray-200/60"
-                          onClick={() => console.log('Button clicked:', btn.reply?.title)}
-                        >
-                          <Reply className="h-4 w-4" />
-                          {btn.reply?.title}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                  {/* Template buttons (from template_proforma or template_components) */}
-                  {isTemplateMessage(msg) && !msg.interaction_message_data?.action?.buttons && getTemplateButtons(msg) && (
-                    <div className="mt-3 flex flex-col">
-                      {getTemplateButtons(msg)!.map((btn: any, i: number) => (
-                        <button
-                          key={i}
-                          type="button"
-                          className="w-full py-2.5 px-3 text-sm font-medium text-[#00a5f4] hover:bg-cyan-50/50 transition-colors flex items-center justify-center gap-1.5 border-t border-gray-200/60"
-                          onClick={() => console.log('Template button clicked:', btn.text)}
-                        >
-                          <Reply className="h-4 w-4" />
-                          {btn.text}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                  <div className={cn(
-                    "flex items-center justify-end gap-1 mt-2 text-[11px]",
-                    isTemplateMessage(msg) ? "text-cyan-600/70" : msg.from === "me" ? "text-gray-500" : "text-muted-foreground"
-                  )}>
-                    <span>{msg.time}</span>
-                    {msg.from === "me" && !isTemplateMessage(msg) && (
-                      <span className="flex items-center">
-                        {getStatusIcon(msg.status)}
-                      </span>
-                    )}
-                  </div>
                 </div>
               </div>
                 </React.Fragment>

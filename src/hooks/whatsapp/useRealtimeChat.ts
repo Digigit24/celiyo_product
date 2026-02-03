@@ -315,16 +315,18 @@ const handleContactUpdated = useCallback((data: ContactUpdatedEvent) => {
 
     const { contactUid, isNewIncomingMessage, message_status, lastMessageUid } = data;
 
-    // If new incoming message, invalidate to fetch latest messages
+    // If new incoming message, refetch to get latest messages from API
     if (isNewIncomingMessage && contactUid) {
-      console.log('🟢 New incoming message, invalidating messages for:', contactUid);
-      queryClient.invalidateQueries({
+      console.log('🟢 New incoming message, refetching data for:', contactUid);
+
+      // Force refetch messages for this contact
+      queryClient.refetchQueries({
         queryKey: chatKeys.messages(contactUid, {}),
         exact: false,
       });
 
-      // Also invalidate contacts to update last_message
-      queryClient.invalidateQueries({
+      // Force refetch contacts to update last_message and unread_count
+      queryClient.refetchQueries({
         queryKey: chatKeys.contacts(),
         exact: false,
       });

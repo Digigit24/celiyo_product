@@ -23,10 +23,14 @@ export const ENABLE_POLLING = false;
 
 export const chatKeys = {
   all: ['chat'] as const,
-  contacts: (params?: { page?: number; limit?: number; search?: string }) =>
-    [...chatKeys.all, 'contacts', params] as const,
+  // Base key for contacts - use this for invalidation
+  contacts: () => [...chatKeys.all, 'contacts'] as const,
+  // Full key with params - use this for actual queries
+  contactsWithParams: (params?: { page?: number; limit?: number; search?: string }) =>
+    [...chatKeys.contacts(), params] as const,
   unreadCount: () => [...chatKeys.all, 'unread-count'] as const,
   teamMembers: () => [...chatKeys.all, 'team-members'] as const,
+  // Base key for messages - use this for invalidation
   messages: (contactUid: string, params?: { page?: number; limit?: number }) =>
     [...chatKeys.all, 'messages', contactUid, params] as const,
   messageLog: (params?: { page?: number; limit?: number; contact_uid?: string; direction?: string }) =>
@@ -48,7 +52,8 @@ export function useChatContacts(options: UseChatContactsOptions = {}) {
   const { page = 1, limit = 50, search, enabled = true } = options;
 
   const query = useQuery({
-    queryKey: chatKeys.contacts({ page, limit, search }),
+    // Use contactsWithParams for the full query key with params
+    queryKey: chatKeys.contactsWithParams({ page, limit, search }),
     queryFn: () => chatService.getChatContacts({ page, limit, search }),
     enabled,
     staleTime: 30000, // 30 seconds

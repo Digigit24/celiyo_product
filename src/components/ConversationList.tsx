@@ -215,7 +215,7 @@ export const ConversationList = ({
                     {conversation.name.charAt(0).toUpperCase()}
                   </div>
                   {/* Unread indicator badge */}
-                  {conversation.unread && conversation.unreadCount && conversation.unreadCount > 0 && (
+                  {typeof conversation.unreadCount === 'number' && conversation.unreadCount > 0 && (
                     <div className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 border-2 border-card rounded-full flex items-center justify-center">
                       <span className="sr-only">Unread messages</span>
                     </div>
@@ -230,7 +230,7 @@ export const ConversationList = ({
                       {channelIcon(conversation.channel)}
                       <h3 className={cn(
                         "text-sm truncate",
-                        conversation.unread ? "font-semibold" : "font-normal"
+                        (conversation.unreadCount ?? 0) > 0 ? "font-semibold" : "font-normal"
                       )}>
                         {conversation.name}
                       </h3>
@@ -238,7 +238,7 @@ export const ConversationList = ({
                     <div className="flex items-center gap-2 flex-none ml-2">
                       <span className={cn(
                         "text-xs whitespace-nowrap",
-                        conversation.unread ? "text-primary font-medium" : "text-muted-foreground"
+                        (conversation.unreadCount ?? 0) > 0 ? "text-primary font-medium" : "text-muted-foreground"
                       )}>
                         {conversation.time}
                       </span>
@@ -292,11 +292,11 @@ export const ConversationList = ({
                   <div className="flex items-center justify-between gap-2">
                     <p className={cn(
                       "text-xs truncate",
-                      conversation.unread ? "text-foreground font-medium" : "text-muted-foreground"
+                      (conversation.unreadCount ?? 0) > 0 ? "text-foreground font-medium" : "text-muted-foreground"
                     )}>
                       {conversation.lastMessage || 'No messages yet'}
                     </p>
-                    {conversation.unreadCount && conversation.unreadCount > 0 && (
+                    {typeof conversation.unreadCount === 'number' && conversation.unreadCount > 0 && (
                       <span className="flex-none inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-primary text-primary-foreground text-[10px] font-semibold">
                         {conversation.unreadCount > 99 ? '99+' : conversation.unreadCount}
                       </span>

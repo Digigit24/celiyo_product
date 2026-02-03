@@ -185,7 +185,7 @@ export const initEcho = (): Echo<any> | null => {
               headers: {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json',
-                'X-Api-Key': vendorApiKey,
+                'Authorization': `Bearer ${vendorApiKey}`,
               },
               body: JSON.stringify({
                 socket_id: socketId,

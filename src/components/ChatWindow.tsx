@@ -164,21 +164,28 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
     interaction_message_data: msg.interaction_message_data,
   }));
 
+  // Check if message is a template message
+  const isTemplateMessage = (msg: typeof transformedMessages[0]) => {
+    return msg.type === 'template' ||
+           msg.template_proforma ||
+           msg.template_components ||
+           (msg.metadata as any)?.template_name;
+  };
+
   // Helper to render template message content
   const renderTemplateContent = (msg: typeof transformedMessages[0]) => {
-    // If has text, use it
-    if (msg.text) return msg.text;
-
     // Build content from template_proforma and component values
-    if (msg.template_proforma && msg.template_component_values) {
+    if (msg.template_proforma) {
       const components = msg.template_proforma.components || [];
       const bodyComponent = components.find(c => c.type === 'BODY');
       if (bodyComponent?.text) {
         let text = bodyComponent.text;
         // Replace {{1}}, {{2}}, etc. with actual values
-        Object.entries(msg.template_component_values).forEach(([key, value]) => {
-          text = text.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), value as string);
-        });
+        if (msg.template_component_values) {
+          Object.entries(msg.template_component_values).forEach(([key, value]) => {
+            text = text.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), value as string);
+          });
+        }
         return text;
       }
     }
@@ -192,6 +199,14 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
     // Interactive message
     if (msg.interaction_message_data?.body?.text) {
       return msg.interaction_message_data.body.text;
+    }
+
+    // If has text, use it as fallback
+    if (msg.text) return msg.text;
+
+    // Show template name if available
+    if ((msg.metadata as any)?.template_name) {
+      return `[Template: ${(msg.metadata as any).template_name}]`;
     }
 
     return '[Template Message]';
@@ -672,7 +687,7 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
                     </div>
                   )}
                   {/* Template message with header media */}
-                  {msg.type === 'template' && msg.media_values && (
+                  {isTemplateMessage(msg) && msg.media_values && (
                     <div className="mb-2">
                       {msg.media_values.type === 'image' && (
                         <MediaWithAuth
@@ -699,11 +714,17 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
                       )}
                     </div>
                   )}
+                  {/* Template message indicator */}
+                  {isTemplateMessage(msg) && (
+                    <div className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
+                      <span className="bg-green-100 text-green-700 px-1.5 py-0.5 rounded text-[10px] font-medium">Template</span>
+                    </div>
+                  )}
                   <p className="text-sm leading-relaxed break-words whitespace-pre-wrap">
-                    {msg.type === 'template' ? renderTemplateContent(msg) : msg.text}
+                    {isTemplateMessage(msg) ? renderTemplateContent(msg) : msg.text}
                   </p>
                   {/* Interactive message buttons */}
-                  {msg.type === 'interactive' && msg.interaction_message_data?.action?.buttons && (
+                  {(msg.type === 'interactive' || msg.interaction_message_data?.action?.buttons) && msg.interaction_message_data?.action?.buttons && (
                     <div className="mt-2 flex flex-wrap gap-2">
                       {msg.interaction_message_data.action.buttons.map((btn, i) => (
                         <span key={i} className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded-full">

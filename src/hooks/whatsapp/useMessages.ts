@@ -51,22 +51,29 @@ export function useMessages(conversationPhone: string | null): UseMessagesReturn
           const data = event.query.state.data as any;
           if (data?.messages) {
             console.log('📬 useMessages: Cache updated, syncing messages');
-            const transformed = data.messages.map((m: any) => ({
-              id: m._uid,
-              from: m.direction === 'incoming' ? conversationPhone : '',
-              to: m.direction === 'outgoing' ? conversationPhone : '',
-              text: m.message_body || m.text || '',
-              type: m.message_type || 'text',
-              direction: m.direction,
-              timestamp: normalizeTimestamp(m.created_at || m.timestamp),
-              status: m.status,
-              metadata: m.metadata || {},
-              template_proforma: m.template_proforma,
-              template_component_values: m.template_component_values,
-              template_components: m.template_components,
-              media_values: m.media_values,
-              interaction_message_data: m.interaction_message_data,
-            }));
+            const transformed = data.messages.map((m: any) => {
+              // API uses is_incoming_message boolean, convert to direction
+              const isIncoming = m.is_incoming_message ?? (m.direction === 'incoming');
+              const direction = isIncoming ? 'incoming' : 'outgoing';
+              return {
+                id: m._uid,
+                from: isIncoming ? conversationPhone : '',
+                to: isIncoming ? '' : conversationPhone,
+                text: m.message || m.message_body || m.text || '',
+                type: m.message_type || 'text',
+                direction,
+                timestamp: normalizeTimestamp(m.messaged_at || m.created_at || m.timestamp),
+                status: m.status,
+                metadata: m.metadata || {},
+                template_proforma: m.template_proforma,
+                template_component_values: m.template_component_values,
+                template_components: m.template_components,
+                media_values: m.media_values,
+                interaction_message_data: m.interaction_message_data,
+                template_message: m.template_message,
+                whatsapp_message_error: m.whatsapp_message_error,
+              };
+            });
             setMessages(transformed);
           }
         }
@@ -102,22 +109,29 @@ export function useMessages(conversationPhone: string | null): UseMessagesReturn
         queryClient.setQueryData(chatKeys.messages(contact._uid, {}), result);
 
         // Transform to WhatsAppMessage format
-        const transformedMessages = result.messages.map((m: any) => ({
-          id: m._uid,
-          from: m.direction === 'incoming' ? conversationPhone : '',
-          to: m.direction === 'outgoing' ? conversationPhone : '',
-          text: m.message_body || m.text || '',
-          type: m.message_type || 'text',
-          direction: m.direction,
-          timestamp: normalizeTimestamp(m.created_at || m.timestamp),
-          status: m.status,
-          metadata: m.metadata || {},
-          template_proforma: m.template_proforma,
-          template_component_values: m.template_component_values,
-          template_components: m.template_components,
-          media_values: m.media_values,
-          interaction_message_data: m.interaction_message_data,
-        }));
+        const transformedMessages = result.messages.map((m: any) => {
+          // API uses is_incoming_message boolean, convert to direction
+          const isIncoming = m.is_incoming_message ?? (m.direction === 'incoming');
+          const direction = isIncoming ? 'incoming' : 'outgoing';
+          return {
+            id: m._uid,
+            from: isIncoming ? conversationPhone : '',
+            to: isIncoming ? '' : conversationPhone,
+            text: m.message || m.message_body || m.text || '',
+            type: m.message_type || 'text',
+            direction,
+            timestamp: normalizeTimestamp(m.messaged_at || m.created_at || m.timestamp),
+            status: m.status,
+            metadata: m.metadata || {},
+            template_proforma: m.template_proforma,
+            template_component_values: m.template_component_values,
+            template_components: m.template_components,
+            media_values: m.media_values,
+            interaction_message_data: m.interaction_message_data,
+            template_message: m.template_message,
+            whatsapp_message_error: m.whatsapp_message_error,
+          };
+        });
 
         console.log('📥 Loaded messages:', {
           count: transformedMessages.length,

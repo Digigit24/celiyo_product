@@ -7,7 +7,7 @@ export interface WhatsAppMessage {
   from: string;
   to: string | null;
   text: string;
-  type: 'text' | 'image' | 'video' | 'audio' | 'document';
+  type: 'text' | 'image' | 'video' | 'audio' | 'document' | 'template' | 'interactive';
   direction: 'incoming' | 'outgoing';
   timestamp: string;
   status?: 'sent' | 'delivered' | 'read' | 'failed';
@@ -18,6 +18,54 @@ export interface WhatsAppMessage {
     error?: string;
     [key: string]: any;
   };
+  // Template message fields
+  template_proforma?: {
+    name: string;
+    components: Array<{
+      type: string;
+      format?: string;
+      text?: string;
+      buttons?: Array<{
+        type: string;
+        text: string;
+        url?: string;
+        phone_number?: string;
+      }>;
+      example?: any;
+    }>;
+    language?: string;
+    status?: string;
+    category?: string;
+  };
+  template_component_values?: Array<{
+    type: string;
+    parameters: Record<string, { type: string; text?: string }>;
+  }>;
+  template_components?: Array<{
+    type: string;
+    format?: string;
+    text?: string;
+    buttons?: Array<{
+      type: string;
+      text: string;
+    }>;
+  }>;
+  template_message?: string;
+  media_values?: {
+    type: string;
+    link?: string;
+    filename?: string;
+  };
+  interaction_message_data?: {
+    body?: { text: string };
+    action?: {
+      buttons?: Array<{
+        type: string;
+        reply?: { id: string; title: string };
+      }>;
+    };
+  };
+  whatsapp_message_error?: string;
 }
 
 export interface Conversation {

@@ -202,28 +202,59 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
            (msg.metadata as any)?.template_name;
   };
 
+  // Helper to extract parameter values from template_component_values array
+  const getTemplateParameterValues = (componentValues: any[]): Record<string, string> => {
+    const paramValues: Record<string, string> = {};
+    if (!Array.isArray(componentValues)) return paramValues;
+
+    // Find the body component which contains the parameters
+    const bodyComponent = componentValues.find(c => c.type === 'body');
+    if (bodyComponent?.parameters) {
+      // Parameters is an object with keys like "{{1}}", "{{2}}", etc.
+      Object.entries(bodyComponent.parameters).forEach(([key, value]: [string, any]) => {
+        // Extract the number from "{{1}}" format
+        const match = key.match(/\{\{(\d+)\}\}/);
+        if (match) {
+          paramValues[match[1]] = value?.text || value || '';
+        }
+      });
+    }
+    return paramValues;
+  };
+
   // Helper to render template message content
   const renderTemplateContent = (msg: typeof transformedMessages[0]) => {
     // Build content from template_proforma and component values
     if (msg.template_proforma) {
       const components = msg.template_proforma.components || [];
-      const bodyComponent = components.find(c => c.type === 'BODY');
+      const bodyComponent = components.find((c: any) => c.type === 'BODY');
       if (bodyComponent?.text) {
         let text = bodyComponent.text;
-        // Replace {{1}}, {{2}}, etc. with actual values
-        if (msg.template_component_values) {
-          Object.entries(msg.template_component_values).forEach(([key, value]) => {
-            text = text.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), value as string);
+        // Replace {{1}}, {{2}}, etc. with actual values from template_component_values
+        if (msg.template_component_values && Array.isArray(msg.template_component_values)) {
+          const paramValues = getTemplateParameterValues(msg.template_component_values);
+          Object.entries(paramValues).forEach(([key, value]) => {
+            text = text.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), value);
           });
         }
         return text;
       }
     }
 
-    // Fallback to template_components
+    // Fallback to template_components with variable substitution
     if (msg.template_components) {
-      const bodyComponent = msg.template_components.find(c => c.type === 'BODY');
-      if (bodyComponent?.text) return bodyComponent.text;
+      const bodyComponent = msg.template_components.find((c: any) => c.type === 'BODY');
+      if (bodyComponent?.text) {
+        let text = bodyComponent.text;
+        // Try to substitute from template_component_values
+        if (msg.template_component_values && Array.isArray(msg.template_component_values)) {
+          const paramValues = getTemplateParameterValues(msg.template_component_values);
+          Object.entries(paramValues).forEach(([key, value]) => {
+            text = text.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), value);
+          });
+        }
+        return text;
+      }
     }
 
     // Interactive message
@@ -240,6 +271,32 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
     }
 
     return '[Template Message]';
+  };
+
+  // Helper to get template header text
+  const getTemplateHeader = (msg: typeof transformedMessages[0]): string | null => {
+    if (msg.template_proforma?.components) {
+      const headerComponent = msg.template_proforma.components.find((c: any) => c.type === 'HEADER' && c.format === 'TEXT');
+      if (headerComponent?.text) return headerComponent.text;
+    }
+    if (msg.template_components) {
+      const headerComponent = msg.template_components.find((c: any) => c.type === 'HEADER' && c.format === 'TEXT');
+      if (headerComponent?.text) return headerComponent.text;
+    }
+    return null;
+  };
+
+  // Helper to get template footer text
+  const getTemplateFooter = (msg: typeof transformedMessages[0]): string | null => {
+    if (msg.template_proforma?.components) {
+      const footerComponent = msg.template_proforma.components.find((c: any) => c.type === 'FOOTER');
+      if (footerComponent?.text) return footerComponent.text;
+    }
+    if (msg.template_components) {
+      const footerComponent = msg.template_components.find((c: any) => c.type === 'FOOTER');
+      if (footerComponent?.text) return footerComponent.text;
+    }
+    return null;
   };
 
   // Log messages for debugging
@@ -757,15 +814,26 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
                       )}
                     </div>
                   )}
-                  {/* Template message indicator */}
+                  {/* Template message indicator and header */}
                   {isTemplateMessage(msg) && (
-                    <div className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
-                      <span className="bg-green-100 text-green-700 px-1.5 py-0.5 rounded text-[10px] font-medium">Template</span>
-                    </div>
+                    <>
+                      <div className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
+                        <span className="bg-green-100 text-green-700 px-1.5 py-0.5 rounded text-[10px] font-medium">Template</span>
+                      </div>
+                      {/* Template header */}
+                      {getTemplateHeader(msg) && (
+                        <p className="font-semibold text-sm mb-1">{getTemplateHeader(msg)}</p>
+                      )}
+                    </>
                   )}
+                  {/* Message body */}
                   <p className="text-sm leading-relaxed break-words whitespace-pre-wrap">
                     {isTemplateMessage(msg) ? renderTemplateContent(msg) : msg.text}
                   </p>
+                  {/* Template footer */}
+                  {isTemplateMessage(msg) && getTemplateFooter(msg) && (
+                    <p className="text-xs text-muted-foreground mt-2">{getTemplateFooter(msg)}</p>
+                  )}
                   {/* Template/Interactive message buttons - WhatsApp style */}
                   {(isTemplateMessage(msg) || msg.type === 'interactive' || msg.interaction_message_data?.action?.buttons) && msg.interaction_message_data?.action?.buttons && (
                     <div className="mt-3 pt-2 border-t border-gray-200/50 flex flex-col gap-1">

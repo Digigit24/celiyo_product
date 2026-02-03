@@ -199,6 +199,7 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
     return msg.type === 'template' ||
            msg.template_proforma ||
            msg.template_components ||
+           msg.template_message ||
            (msg.metadata as any)?.template_name;
   };
 
@@ -295,6 +296,25 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
     if (msg.template_components) {
       const footerComponent = msg.template_components.find((c: any) => c.type === 'FOOTER');
       if (footerComponent?.text) return footerComponent.text;
+    }
+    return null;
+  };
+
+  // Helper to get template buttons from either template_proforma or template_components
+  const getTemplateButtons = (msg: typeof transformedMessages[0]): Array<{ type: string; text: string }> | null => {
+    // Check template_proforma.components first
+    if (msg.template_proforma?.components) {
+      const buttonsComponent = msg.template_proforma.components.find((c: any) => c.type === 'BUTTONS');
+      if (buttonsComponent?.buttons && buttonsComponent.buttons.length > 0) {
+        return buttonsComponent.buttons;
+      }
+    }
+    // Fallback to template_components
+    if (msg.template_components) {
+      const buttonsComponent = msg.template_components.find((c: any) => c.type === 'BUTTONS');
+      if (buttonsComponent?.buttons && buttonsComponent.buttons.length > 0) {
+        return buttonsComponent.buttons;
+      }
     }
     return null;
   };
@@ -834,8 +854,8 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
                   {isTemplateMessage(msg) && getTemplateFooter(msg) && (
                     <p className="text-xs text-muted-foreground mt-2">{getTemplateFooter(msg)}</p>
                   )}
-                  {/* Template/Interactive message buttons - WhatsApp style */}
-                  {(isTemplateMessage(msg) || msg.type === 'interactive' || msg.interaction_message_data?.action?.buttons) && msg.interaction_message_data?.action?.buttons && (
+                  {/* Interactive message buttons - WhatsApp style */}
+                  {msg.interaction_message_data?.action?.buttons && (
                     <div className="mt-3 pt-2 border-t border-gray-200/50 flex flex-col gap-1">
                       {msg.interaction_message_data.action.buttons.map((btn, i) => (
                         <button
@@ -849,28 +869,20 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
                       ))}
                     </div>
                   )}
-                  {/* Template proforma buttons */}
-                  {isTemplateMessage(msg) && msg.template_proforma?.components && (
-                    (() => {
-                      const buttonsComponent = msg.template_proforma.components.find(c => c.type === 'BUTTONS');
-                      if (buttonsComponent?.buttons && buttonsComponent.buttons.length > 0) {
-                        return (
-                          <div className="mt-3 pt-2 border-t border-gray-200/50 flex flex-col gap-1">
-                            {buttonsComponent.buttons.map((btn: any, i: number) => (
-                              <button
-                                key={i}
-                                type="button"
-                                className="w-full py-2 px-3 text-sm font-medium text-[#00a884] hover:bg-gray-50 rounded-md transition-colors text-center"
-                                onClick={() => console.log('Template button clicked:', btn.text)}
-                              >
-                                {btn.text}
-                              </button>
-                            ))}
-                          </div>
-                        );
-                      }
-                      return null;
-                    })()
+                  {/* Template buttons (from template_proforma or template_components) */}
+                  {isTemplateMessage(msg) && !msg.interaction_message_data?.action?.buttons && getTemplateButtons(msg) && (
+                    <div className="mt-3 pt-2 border-t border-gray-200/50 flex flex-col gap-1">
+                      {getTemplateButtons(msg)!.map((btn: any, i: number) => (
+                        <button
+                          key={i}
+                          type="button"
+                          className="w-full py-2 px-3 text-sm font-medium text-[#00a884] hover:bg-gray-50 rounded-md transition-colors text-center"
+                          onClick={() => console.log('Template button clicked:', btn.text)}
+                        >
+                          {btn.text}
+                        </button>
+                      ))}
+                    </div>
                   )}
                   <div className={cn(
                     "flex items-center justify-end gap-1 mt-1 text-[10px]",

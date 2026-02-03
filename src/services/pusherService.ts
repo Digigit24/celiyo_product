@@ -138,6 +138,35 @@ export interface RealtimeCallbacks {
 
 let echoInstance: Echo<any> | null = null;
 let currentChannel: any = null;
+let isChannelSubscribed = false;
+let subscribedVendorUid: string | null = null;
+
+// Callback registry for multiple listeners (singleton pattern)
+type CallbackId = string;
+const callbackRegistry = new Map<CallbackId, RealtimeCallbacks>();
+let callbackIdCounter = 0;
+
+// Generate unique callback ID
+const generateCallbackId = (): CallbackId => {
+  return `cb_${++callbackIdCounter}_${Date.now()}`;
+};
+
+// Notify all registered callbacks
+const notifyCallbacks = <K extends keyof RealtimeCallbacks>(
+  eventType: K,
+  data: Parameters<NonNullable<RealtimeCallbacks[K]>>[0]
+) => {
+  callbackRegistry.forEach((callbacks, id) => {
+    const callback = callbacks[eventType];
+    if (callback) {
+      try {
+        (callback as (data: any) => void)(data);
+      } catch (error) {
+        console.error(`Pusher: Error in callback ${id} for ${eventType}:`, error);
+      }
+    }
+  });
+};
 
 // Initialize Laravel Echo with Pusher using custom authorizer
 export const initEcho = (): Echo<any> | null => {
@@ -245,15 +274,38 @@ export const initEcho = (): Echo<any> | null => {
 };
 
 // Subscribe to vendor channel for real-time updates
+// Uses singleton pattern - multiple callers share one Pusher subscription
 export const subscribeToVendorChannel = (
   vendorUid: string,
   callbacks: RealtimeCallbacks
 ): (() => void) => {
+  // Register callbacks first
+  const callbackId = generateCallbackId();
+  callbackRegistry.set(callbackId, callbacks);
+  console.log(`Pusher: Registered callbacks with ID ${callbackId}, total listeners: ${callbackRegistry.size}`);
+
+  // If already subscribed to this vendor's channel, just return cleanup
+  if (isChannelSubscribed && subscribedVendorUid === vendorUid && currentChannel) {
+    console.log(`Pusher: Already subscribed to vendor ${vendorUid}, reusing existing subscription`);
+
+    // If already connected, call onConnected immediately
+    if (isEchoConnected()) {
+      callbacks.onConnected?.();
+    }
+
+    // Return cleanup function that removes callbacks but keeps subscription
+    return () => {
+      console.log(`Pusher: Removing callbacks ${callbackId}, remaining listeners: ${callbackRegistry.size - 1}`);
+      callbackRegistry.delete(callbackId);
+    };
+  }
+
   const echo = initEcho();
 
   if (!echo) {
     console.error('Pusher: Echo not initialized - cannot subscribe to channel');
     callbacks.onError?.({ message: 'Echo not initialized' });
+    callbackRegistry.delete(callbackId);
     return () => {};
   }
 
@@ -263,6 +315,7 @@ export const subscribeToVendorChannel = (
 
   try {
     currentChannel = echo.private(channelName);
+    subscribedVendorUid = vendorUid;
 
     // Get the underlying Pusher channel for direct event binding
     const pusherChannel = currentChannel.subscription;
@@ -271,12 +324,14 @@ export const subscribeToVendorChannel = (
     if (pusherChannel) {
       pusherChannel.bind('pusher:subscription_succeeded', () => {
         console.log(`Pusher: subscription_succeeded for ${channelName}`);
-        callbacks.onConnected?.();
+        isChannelSubscribed = true;
+        notifyCallbacks('onConnected', undefined as any);
       });
 
       pusherChannel.bind('pusher:subscription_error', (error: any) => {
         console.error(`Pusher: subscription_error for ${channelName}:`, error);
-        callbacks.onError?.(error);
+        isChannelSubscribed = false;
+        notifyCallbacks('onError', error);
       });
     }
 
@@ -295,11 +350,11 @@ export const subscribeToVendorChannel = (
             messageStatus: data.message_status,
             lastMessageUid: data.lastMessageUid,
           });
-          callbacks.onVendorBroadcast?.(data as VendorChannelBroadcastEvent);
+          notifyCallbacks('onVendorBroadcast', data as VendorChannelBroadcastEvent);
 
           // Also trigger status update if message_status is present
           if (data.message_status && data.lastMessageUid) {
-            callbacks.onMessageStatus?.({
+            notifyCallbacks('onMessageStatus', {
               message: {
                 uid: data.lastMessageUid,
                 status: data.message_status,
@@ -319,47 +374,58 @@ export const subscribeToVendorChannel = (
             isIncoming: data.message?.is_incoming_message,
             body: data.message?.body?.substring(0, 50),
           });
-          callbacks.onNewMessage?.(data as ContactMessageEvent);
+          notifyCallbacks('onNewMessage', data as ContactMessageEvent);
         } else if (data.contact && !data.message) {
           // Contact updated event
           console.log('Pusher: Contact updated', {
             contact: data.contact?.uid,
             unread: data.contact?.unread_messages_count,
           });
-          callbacks.onContactUpdated?.(data as ContactUpdatedEvent);
+          notifyCallbacks('onContactUpdated', data as ContactUpdatedEvent);
         } else if (data.message && data.message.status) {
           // Message status update event
           console.log('Pusher: Message status changed', {
             message: data.message?.uid,
             status: data.message?.status,
           });
-          callbacks.onMessageStatus?.(data as MessageStatusEvent);
+          notifyCallbacks('onMessageStatus', data as MessageStatusEvent);
         }
       })
       .subscribed(() => {
         console.log(`Pusher: Echo subscribed callback for ${channelName}`);
+        isChannelSubscribed = true;
         // onConnected already called by pusher:subscription_succeeded
       })
       .error((error: any) => {
         console.error(`Pusher: Error subscribing to ${channelName}:`, error);
+        isChannelSubscribed = false;
         // Provide more details about the error
         if (error?.status === 403) {
           console.error('Pusher: 403 Forbidden - Check broadcasting auth endpoint and token');
         } else if (error?.status === 401) {
           console.error('Pusher: 401 Unauthorized - Token may be invalid or expired');
         }
-        callbacks.onError?.(error);
+        notifyCallbacks('onError', error);
       });
 
-    // Return cleanup function
+    // Return cleanup function that removes callbacks but keeps subscription active
     return () => {
-      console.log(`Pusher: Unsubscribing from ${channelName}`);
-      echo.leave(channelName);
-      currentChannel = null;
+      console.log(`Pusher: Removing callbacks ${callbackId}, remaining listeners: ${callbackRegistry.size - 1}`);
+      callbackRegistry.delete(callbackId);
+
+      // Only unsubscribe if no more listeners
+      if (callbackRegistry.size === 0) {
+        console.log(`Pusher: No more listeners, unsubscribing from ${channelName}`);
+        echo.leave(channelName);
+        currentChannel = null;
+        isChannelSubscribed = false;
+        subscribedVendorUid = null;
+      }
     };
   } catch (error) {
     console.error('Pusher: Failed to subscribe to vendor channel:', error);
-    callbacks.onError?.(error);
+    callbackRegistry.delete(callbackId);
+    notifyCallbacks('onError', error);
     return () => {};
   }
 };
@@ -372,6 +438,11 @@ export const disconnectEcho = (): void => {
     echoInstance = null;
     window.Echo = null;
   }
+  // Clear subscription state
+  currentChannel = null;
+  isChannelSubscribed = false;
+  subscribedVendorUid = null;
+  callbackRegistry.clear();
 };
 
 // Force reconnect with fresh token (useful after login/token refresh)
@@ -400,4 +471,14 @@ export const reconnectEcho = (): Echo<any> | null => {
   console.log('Pusher: Reconnecting...');
   disconnectEcho();
   return initEcho();
+};
+
+// Get number of active callback listeners (for debugging)
+export const getActiveListenerCount = (): number => {
+  return callbackRegistry.size;
+};
+
+// Check if channel is subscribed
+export const isChannelActive = (): boolean => {
+  return isChannelSubscribed;
 };

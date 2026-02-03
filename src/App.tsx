@@ -77,7 +77,6 @@ import WorkflowEditor from "./pages/WorkflowEditor"; // Import Workflow Editor p
 import { WorkflowLogs } from "./pages/WorkflowLogs"; // Import Workflow Logs page
 
 import { WebSocketProvider } from "./context/WebSocketProvider";
-import { RealtimeChatProvider } from "./context/RealtimeChatProvider";
 import { OAuthCallback } from "./pages/OAuthCallback";
 
 // Configure QueryClient with optimized settings for WebSocket-based updates
@@ -238,9 +237,7 @@ const App = () => {
                   path="/*"
                   element={
                     <ProtectedRoute>
-                      <RealtimeChatProvider>
-                        <AppLayout />
-                      </RealtimeChatProvider>
+                      <AppLayout />
                     </ProtectedRoute>
                   }
                 />

@@ -36,26 +36,18 @@ export const RealtimeChatProvider: React.FC<RealtimeChatProviderProps> = ({ chil
   const queryClient = useQueryClient();
   const unsubscribeRef = useRef<(() => void) | null>(null);
 
-  // Handle VendorChannelBroadcast event - invalidate queries to refresh data
-  // NOTE: We only invalidate here, not directly update cache, to avoid conflicts
-  // with useRealtimeChat which handles detailed updates on the Chats page
+  // Handle VendorChannelBroadcast event - refetch queries to refresh data immediately
   const handleVendorBroadcast = useCallback((data: VendorChannelBroadcastEvent) => {
     console.log('🔔 RealtimeChatProvider: VendorChannelBroadcast received', data);
 
     const { contactUid, isNewIncomingMessage } = data;
 
     if (isNewIncomingMessage && contactUid) {
-      console.log('🔔 New incoming message - invalidating queries for fresh data');
+      console.log('🔔 New incoming message - refetching contacts for fresh unread counts');
 
-      // Invalidate contacts to refresh unread counts
-      queryClient.invalidateQueries({
+      // Force refetch contacts to get fresh unread counts from API
+      queryClient.refetchQueries({
         queryKey: chatKeys.contacts(),
-        exact: false,
-      });
-
-      // Invalidate unread count
-      queryClient.invalidateQueries({
-        queryKey: chatKeys.unreadCount(),
         exact: false,
       });
     }

@@ -224,7 +224,8 @@ export default function Chats() {
   // Transform contacts to match ConversationList format with new fields
   const transformedConversations = contacts.map((contact: ChatContact) => {
     const contactId = contact._uid || contact.phone_number;
-    const unreadCount = unreadByContact[contactId] || contact.unread_count || 0;
+    // Use contact.unread_count directly from API (confirmed working)
+    const unreadCount = contact.unread_count || 0;
     const formattedTime = formatLastTimestamp(contact.last_message_at);
 
     return {

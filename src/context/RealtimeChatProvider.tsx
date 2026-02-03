@@ -11,7 +11,6 @@ import {
   VendorChannelBroadcastEvent,
 } from '@/services/pusherService';
 import { chatKeys } from '@/hooks/whatsapp/useChat';
-import type { ChatContactsResponse } from '@/services/whatsapp/chatService';
 
 interface RealtimeChatContextType {
   isConnected: boolean;
@@ -37,57 +36,26 @@ export const RealtimeChatProvider: React.FC<RealtimeChatProviderProps> = ({ chil
   const queryClient = useQueryClient();
   const unsubscribeRef = useRef<(() => void) | null>(null);
 
-  // Handle VendorChannelBroadcast event - update unread counts globally
+  // Handle VendorChannelBroadcast event - invalidate queries to refresh data
+  // NOTE: We only invalidate here, not directly update cache, to avoid conflicts
+  // with useRealtimeChat which handles detailed updates on the Chats page
   const handleVendorBroadcast = useCallback((data: VendorChannelBroadcastEvent) => {
     console.log('🔔 RealtimeChatProvider: VendorChannelBroadcast received', data);
 
     const { contactUid, isNewIncomingMessage } = data;
 
     if (isNewIncomingMessage && contactUid) {
-      console.log('🔔 New incoming message - updating unread counts globally');
+      console.log('🔔 New incoming message - invalidating queries for fresh data');
 
-      // Update contacts cache - increment unread count for this contact
-      queryClient.setQueriesData<ChatContactsResponse>(
-        { queryKey: chatKeys.contacts() },
-        (oldData) => {
-          if (!oldData) return oldData;
-
-          const updatedContacts = oldData.contacts.map((contact) => {
-            if (contact._uid === contactUid) {
-              return {
-                ...contact,
-                unread_count: (contact.unread_count || 0) + 1,
-              };
-            }
-            return contact;
-          });
-
-          return {
-            ...oldData,
-            contacts: updatedContacts,
-          };
-        }
-      );
-
-      // Update global unread count cache
-      queryClient.setQueryData<{ total: number; contacts: Record<string, number> }>(
-        chatKeys.unreadCount(),
-        (oldData) => {
-          if (!oldData) return { total: 1, contacts: { [contactUid]: 1 } };
-
-          const newContacts = { ...oldData.contacts };
-          newContacts[contactUid] = (newContacts[contactUid] || 0) + 1;
-
-          return {
-            total: oldData.total + 1,
-            contacts: newContacts,
-          };
-        }
-      );
-
-      // Invalidate to ensure fresh data is fetched when user visits Chats page
+      // Invalidate contacts to refresh unread counts
       queryClient.invalidateQueries({
         queryKey: chatKeys.contacts(),
+        exact: false,
+      });
+
+      // Invalidate unread count
+      queryClient.invalidateQueries({
+        queryKey: chatKeys.unreadCount(),
         exact: false,
       });
     }

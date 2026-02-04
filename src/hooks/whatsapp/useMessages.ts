@@ -84,7 +84,7 @@ export function useMessages(conversationPhone: string | null): UseMessagesReturn
 
               // Keep messages that are either:
               // 1. Optimistic (temp_ prefix) and not in API
-              // 2. Recently sent outgoing messages not yet in API (by ID or content match)
+              // 2. Recent messages (incoming or outgoing) not yet in API (by ID or content match)
               const pendingMessages = prev.filter(m => {
                 const isTemp = String(m.id).startsWith('temp_');
                 const inApiById = apiIds.has(m.id);
@@ -94,11 +94,12 @@ export function useMessages(conversationPhone: string | null): UseMessagesReturn
                 // Keep if it's a temp message not in API
                 if (isTemp && !inApiById) return true;
 
-                // Keep if it's a recent outgoing message (last 30 seconds) not in API
-                if (m.direction === 'outgoing' && !inApiById && !inApiByContent) {
+                // Keep if it's a recent message (last 60 seconds) not in API
+                // This preserves both outgoing and incoming messages from real-time updates
+                if (!inApiById && !inApiByContent) {
                   const msgTime = new Date(m.timestamp).getTime();
                   const now = Date.now();
-                  const isRecent = (now - msgTime) < 30000; // 30 seconds
+                  const isRecent = (now - msgTime) < 60000; // 60 seconds
                   return isRecent;
                 }
 

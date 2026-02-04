@@ -404,12 +404,13 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
   // Fetch templates (only when needed)
   const { templates, isLoading: isLoadingTemplates, fetchTemplates } = useTemplates({ autoFetch: false });
 
-  // Filter templates based on search query
+  // Filter templates based on search query (status is uppercase from API)
   const filteredTemplates = useMemo(() => {
-    if (!templateSearchQuery) return templates.filter(t => t.status === 'approved');
+    const isApproved = (t: Template) => t.status?.toUpperCase() === 'APPROVED';
+    if (!templateSearchQuery) return templates.filter(isApproved);
     const query = templateSearchQuery.toLowerCase();
     return templates.filter(t =>
-      t.status === 'approved' && t.name.toLowerCase().includes(query)
+      isApproved(t) && t.name.toLowerCase().includes(query)
     );
   }, [templates, templateSearchQuery]);
 
@@ -450,7 +451,7 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
     if (value === '/' || value.endsWith(' /')) {
       setShowTemplateDropdown(true);
       setTemplateSearchQuery("");
-      fetchTemplates({ status: 'approved', limit: 50 });
+      fetchTemplates({ limit: 50 });
     } else if (showTemplateDropdown) {
       // If dropdown is open, update search query
       const slashIndex = value.lastIndexOf('/');

@@ -109,12 +109,20 @@ export function useMessages(conversationPhone: string | null): UseMessagesReturn
                     if (mMediaType !== 'text' && tMediaType !== 'text') {
                       return mMediaType === tMediaType;
                     }
-                    // For text/template messages, match by content
-                    if (mMediaType === 'text' && tMediaType === 'text') {
-                      return t.text?.trim() === m.text?.trim();
+                    // For template messages - match by type and direction within time window
+                    // API may return different text (with header/footer) than what we previewed
+                    if (m.type === 'template') {
+                      // Real message is also a template or has template fields
+                      const isRealTemplate = t.type === 'template' ||
+                                             t.template_proforma ||
+                                             t.template_components;
+                      if (isRealTemplate) return true;
+                      // Or real message text contains our body text (header added by API)
+                      if (t.text && m.text && t.text.includes(m.text.trim())) return true;
+                      return false;
                     }
-                    // For template messages
-                    if (m.type === 'template' && (t.type === 'template' || t.type === 'text')) {
+                    // For text messages, match by content
+                    if (mMediaType === 'text' && tMediaType === 'text') {
                       return t.text?.trim() === m.text?.trim();
                     }
                     return false;

@@ -74,29 +74,58 @@ export function useMessages(conversationPhone: string | null): UseMessagesReturn
                 whatsapp_message_error: m.whatsapp_message_error,
               };
             });
-            // Merge: keep optimistic messages not yet confirmed by API
-            // Also preserve original timestamp for recently sent messages
+            // Merge: keep optimistic/pending messages not yet in API response
             setMessages(prev => {
               const apiIds = new Set(transformed.map((m: WhatsAppMessage) => m.id));
-              const optimisticMessages = prev.filter(m =>
-                String(m.id).startsWith('temp_') && !apiIds.has(m.id)
-              );
-              // Build map of recent outgoing message timestamps to preserve
-              const recentOutgoingTimestamps = new Map<string, string>();
+              // Also create a set of message text+direction for matching
+              const apiMessageKeys = new Set(transformed.map((m: WhatsAppMessage) =>
+                `${m.text}_${m.direction}`
+              ));
+
+              // Keep messages that are either:
+              // 1. Optimistic (temp_ prefix) and not in API
+              // 2. Recently sent outgoing messages not yet in API (by ID or content match)
+              const pendingMessages = prev.filter(m => {
+                const isTemp = String(m.id).startsWith('temp_');
+                const inApiById = apiIds.has(m.id);
+                const messageKey = `${m.text}_${m.direction}`;
+                const inApiByContent = apiMessageKeys.has(messageKey);
+
+                // Keep if it's a temp message not in API
+                if (isTemp && !inApiById) return true;
+
+                // Keep if it's a recent outgoing message (last 30 seconds) not in API
+                if (m.direction === 'outgoing' && !inApiById && !inApiByContent) {
+                  const msgTime = new Date(m.timestamp).getTime();
+                  const now = Date.now();
+                  const isRecent = (now - msgTime) < 30000; // 30 seconds
+                  return isRecent;
+                }
+
+                return false;
+              });
+
+              // Build map of timestamps to preserve for outgoing messages
+              const existingTimestamps = new Map<string, string>();
               prev.forEach(m => {
-                if (m.direction === 'outgoing' && !String(m.id).startsWith('temp_')) {
-                  recentOutgoingTimestamps.set(m.id, m.timestamp);
+                if (m.direction === 'outgoing') {
+                  existingTimestamps.set(m.id, m.timestamp);
+                  // Also map by content for matching
+                  existingTimestamps.set(`${m.text}_outgoing`, m.timestamp);
                 }
               });
+
               // Preserve timestamps for messages we already had
               const mergedTransformed = transformed.map(m => {
-                const existingTimestamp = recentOutgoingTimestamps.get(m.id);
+                const existingTimestamp = existingTimestamps.get(m.id) ||
+                  (m.direction === 'outgoing' ? existingTimestamps.get(`${m.text}_outgoing`) : null);
                 if (existingTimestamp && m.direction === 'outgoing') {
                   return { ...m, timestamp: existingTimestamp };
                 }
                 return m;
               });
-              return [...mergedTransformed, ...optimisticMessages].sort((a, b) =>
+
+              return [...mergedTransformed, ...pendingMessages].sort((a, b) =>
                 new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
               );
             });

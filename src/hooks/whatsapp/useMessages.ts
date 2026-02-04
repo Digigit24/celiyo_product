@@ -260,9 +260,11 @@ export function useMessages(conversationPhone: string | null): UseMessagesReturn
   }, [conversationPhone, contactUid, queryClient]);
 
   const sendMediaMessage = useCallback(async (file: File, media_type: "image" | "video" | "audio" | "document", caption?: string) => {
-    if (!contactUid) {
-      setError('Contact not found');
-      return;
+    const contactIdOrPhone = contactUid || conversationPhone;
+    if (!contactIdOrPhone) {
+      const err = new Error('Contact not found');
+      setError(err.message);
+      throw err;
     }
 
     const tempId = `temp_${Date.now()}`;
@@ -298,9 +300,9 @@ export function useMessages(conversationPhone: string | null): UseMessagesReturn
           : m
       ));
 
-      // Send via chatService with contactUid
+      // Send via chatService with contactUid or phone
       await chatService.sendMediaMessage(
-        contactUid,
+        contactIdOrPhone,
         media_type,
         media_url,
         caption,

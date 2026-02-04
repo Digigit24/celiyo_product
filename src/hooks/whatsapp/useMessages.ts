@@ -74,26 +74,38 @@ export function useMessages(conversationPhone: string | null): UseMessagesReturn
                 whatsapp_message_error: m.whatsapp_message_error,
               };
             });
-            // Merge: keep optimistic messages (temp_*) not yet confirmed
+            // Merge: ADD new messages from cache, don't replace
             setMessages(prev => {
+              const existingIds = new Set(prev.map(m => m.id));
+              const existingContentKeys = new Set(prev.map(m => `${m.text?.trim()}_${m.direction}`));
+
+              // Find NEW messages from cache that don't exist locally
+              const newMessages = transformed.filter((m: WhatsAppMessage) => {
+                if (existingIds.has(m.id)) return false;
+                // Also check by content to avoid duplicates
+                const contentKey = `${m.text?.trim()}_${m.direction}`;
+                if (existingContentKeys.has(contentKey)) return false;
+                return true;
+              });
+
+              // Filter out optimistic messages that are now confirmed in cache
               const apiIds = new Set(transformed.map((m: WhatsAppMessage) => m.id));
-              // Also match by content+direction to detect confirmed optimistic messages
               const apiContentKeys = new Set(transformed.map((m: WhatsAppMessage) =>
                 `${m.text?.trim()}_${m.direction}`
               ));
 
-              // Keep optimistic messages not yet confirmed by API (by ID or content)
-              const optimisticMessages = prev.filter(m => {
-                if (!String(m.id).startsWith('temp_')) return false;
+              const filteredPrev = prev.filter(m => {
+                // Keep non-optimistic messages
+                if (!String(m.id).startsWith('temp_')) return true;
+                // Filter out confirmed optimistic messages
                 if (apiIds.has(m.id)) return false;
-                // Also filter out if same content exists in API (message was confirmed)
                 const contentKey = `${m.text?.trim()}_${m.direction}`;
                 if (apiContentKeys.has(contentKey)) return false;
                 return true;
               });
 
-              // Combine and sort by timestamp
-              return [...transformed, ...optimisticMessages].sort((a, b) =>
+              // Combine existing + new and sort
+              return [...filteredPrev, ...newMessages].sort((a, b) =>
                 new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
               );
             });

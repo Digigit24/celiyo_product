@@ -81,10 +81,16 @@ export function useMessages(conversationPhone: string | null): UseMessagesReturn
               const existingIds = new Set(prev.map(m => m.id));
 
               // Create content key including media type for better deduplication
+              // Use timestamp slice to hour (0-13) to handle minute boundary issues
               const getContentKey = (m: WhatsAppMessage) => {
                 const mediaType = m.type !== 'text' ? m.type : (m.media_values?.type || 'text');
                 const content = m.text?.trim() || m.media_values?.caption || '';
-                return `${content}_${m.direction}_${mediaType}_${m.timestamp?.slice(0, 16)}`;
+                // For text messages with content, don't use timestamp (too prone to drift)
+                if (mediaType === 'text' && content) {
+                  return `${content}_${m.direction}_${mediaType}`;
+                }
+                // For media/empty messages, use hour-level timestamp
+                return `${content}_${m.direction}_${mediaType}_${m.timestamp?.slice(0, 13)}`;
               };
 
               const existingContentKeys = new Set(prev.map(getContentKey));
@@ -126,16 +132,19 @@ export function useMessages(conversationPhone: string | null): UseMessagesReturn
                 return m;
               });
 
-              // Remove duplicate IDs after temp→real replacement
+              // Combine all messages
+              const combined = [...updatedPrev, ...newMessages];
+
+              // Remove duplicates by ID (final dedup)
               const seenIds = new Set<string>();
-              const deduped = updatedPrev.filter(m => {
+              const deduped = combined.filter(m => {
                 if (seenIds.has(m.id)) return false;
                 seenIds.add(m.id);
                 return true;
               });
 
-              // Combine and sort
-              return [...deduped, ...newMessages].sort((a, b) =>
+              // Sort by timestamp
+              return deduped.sort((a, b) =>
                 new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
               );
             });

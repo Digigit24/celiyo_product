@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { messagesService } from '@/services/whatsapp/messagesService';
-import { uploadMedia, sendMediaMessage as sendMedia } from '@/services/whatsapp';
+import { uploadMedia } from '@/services/whatsapp';
 import type { WhatsAppMessage } from '@/types/whatsappTypes';
 import { chatService } from '@/services/whatsapp/chatService';
 import { chatKeys } from '@/hooks/whatsapp/useChat';
@@ -260,15 +260,18 @@ export function useMessages(conversationPhone: string | null): UseMessagesReturn
   }, [conversationPhone, contactUid, queryClient]);
 
   const sendMediaMessage = useCallback(async (file: File, media_type: "image" | "video" | "audio" | "document", caption?: string) => {
-    if (!conversationPhone) return;
+    if (!contactUid) {
+      setError('Contact not found');
+      return;
+    }
 
     const tempId = `temp_${Date.now()}`;
     const file_preview_url = URL.createObjectURL(file);
 
     const optimisticMessage: WhatsAppMessage = {
       id: tempId,
-      from: '', // This will be set to 'me' in the UI
-      to: conversationPhone,
+      from: '',
+      to: conversationPhone || '',
       text: caption || '',
       type: media_type,
       direction: 'outgoing',
@@ -277,46 +280,47 @@ export function useMessages(conversationPhone: string | null): UseMessagesReturn
       metadata: {
         file_preview_url,
         is_uploading: true,
+        file_name: file.name,
       },
     };
 
     setMessages(prev => [...prev, optimisticMessage]);
 
     try {
+      // Upload file to get public URL
       const uploadResponse = await uploadMedia(file);
-      const media_id = uploadResponse.media_id;
+      const media_url = uploadResponse.media_id || uploadResponse.url;
 
-      // Update the optimistic message with the media_id
-      setMessages(prev => prev.map(m => 
-        m.id === tempId 
-          ? { ...m, metadata: { ...m.metadata, media_id: media_id } } 
+      // Update optimistic message with media URL
+      setMessages(prev => prev.map(m =>
+        m.id === tempId
+          ? { ...m, metadata: { ...m.metadata, media_url } }
           : m
       ));
 
-      await sendMedia({
-        to: conversationPhone,
-        media_id,
+      // Send via chatService with contactUid
+      await chatService.sendMediaMessage(
+        contactUid,
         media_type,
+        media_url,
         caption,
-      });
+        file.name
+      );
 
-      // Mark upload as complete - real-time (Pusher) will sync the actual message
+      // Mark as delivered - real-time (Pusher) will sync the actual message
       setMessages(prev => prev.map(m =>
         m.id === tempId
           ? { ...m, status: 'delivered', metadata: { ...m.metadata, is_uploading: false } }
           : m
       ));
 
-      // Only update contacts list for sidebar (last message preview)
-      if (contactUid) {
-        queryClient.invalidateQueries({ queryKey: chatKeys.contacts() });
-      }
+      // Update contacts list for sidebar
+      queryClient.invalidateQueries({ queryKey: chatKeys.contacts() });
     } catch (err: any) {
       console.error('❌ Failed to send media message:', err);
-      // On failure, update optimistic message to show error
       setMessages(prev => prev.map(m =>
         m.id === tempId
-          ? { ...m, metadata: { ...m.metadata, is_uploading: false, error: 'Upload failed' } }
+          ? { ...m, status: 'failed', metadata: { ...m.metadata, is_uploading: false, error: err.message } }
           : m
       ));
       setError(err.message || 'Failed to send media message');

@@ -74,59 +74,26 @@ export function useMessages(conversationPhone: string | null): UseMessagesReturn
                 whatsapp_message_error: m.whatsapp_message_error,
               };
             });
-            // Merge: keep optimistic/pending messages not yet in API response
+            // Merge: keep optimistic messages (temp_*) not yet confirmed
             setMessages(prev => {
               const apiIds = new Set(transformed.map((m: WhatsAppMessage) => m.id));
-              // Also create a set of message text+direction for matching
-              const apiMessageKeys = new Set(transformed.map((m: WhatsAppMessage) =>
-                `${m.text}_${m.direction}`
+              // Also match by content+direction to detect confirmed optimistic messages
+              const apiContentKeys = new Set(transformed.map((m: WhatsAppMessage) =>
+                `${m.text?.trim()}_${m.direction}`
               ));
 
-              // Keep messages that are either:
-              // 1. Optimistic (temp_ prefix) and not in API
-              // 2. Recent messages (incoming or outgoing) not yet in API (by ID or content match)
-              const pendingMessages = prev.filter(m => {
-                const isTemp = String(m.id).startsWith('temp_');
-                const inApiById = apiIds.has(m.id);
-                const messageKey = `${m.text}_${m.direction}`;
-                const inApiByContent = apiMessageKeys.has(messageKey);
-
-                // Keep if it's a temp message not in API
-                if (isTemp && !inApiById) return true;
-
-                // Keep if it's a recent message (last 60 seconds) not in API
-                // This preserves both outgoing and incoming messages from real-time updates
-                if (!inApiById && !inApiByContent) {
-                  const msgTime = new Date(m.timestamp).getTime();
-                  const now = Date.now();
-                  const isRecent = (now - msgTime) < 60000; // 60 seconds
-                  return isRecent;
-                }
-
-                return false;
+              // Keep optimistic messages not yet confirmed by API (by ID or content)
+              const optimisticMessages = prev.filter(m => {
+                if (!String(m.id).startsWith('temp_')) return false;
+                if (apiIds.has(m.id)) return false;
+                // Also filter out if same content exists in API (message was confirmed)
+                const contentKey = `${m.text?.trim()}_${m.direction}`;
+                if (apiContentKeys.has(contentKey)) return false;
+                return true;
               });
 
-              // Build map of timestamps to preserve for outgoing messages
-              const existingTimestamps = new Map<string, string>();
-              prev.forEach(m => {
-                if (m.direction === 'outgoing') {
-                  existingTimestamps.set(m.id, m.timestamp);
-                  // Also map by content for matching
-                  existingTimestamps.set(`${m.text}_outgoing`, m.timestamp);
-                }
-              });
-
-              // Preserve timestamps for messages we already had
-              const mergedTransformed = transformed.map(m => {
-                const existingTimestamp = existingTimestamps.get(m.id) ||
-                  (m.direction === 'outgoing' ? existingTimestamps.get(`${m.text}_outgoing`) : null);
-                if (existingTimestamp && m.direction === 'outgoing') {
-                  return { ...m, timestamp: existingTimestamp };
-                }
-                return m;
-              });
-
-              return [...mergedTransformed, ...pendingMessages].sort((a, b) =>
+              // Combine and sort by timestamp
+              return [...transformed, ...optimisticMessages].sort((a, b) =>
                 new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
               );
             });
@@ -240,24 +207,20 @@ export function useMessages(conversationPhone: string | null): UseMessagesReturn
     setMessages(prev => [...prev, optimisticMessage]);
 
     try {
-      const response = await messagesService.sendTextMessage({
+      await messagesService.sendTextMessage({
         to: conversationPhone,
         text: messageText
       });
 
-      // Update the optimistic message with the real message ID
+      // Mark as delivered - real-time (Pusher) will sync the actual message
       setMessages(prev => prev.map(m =>
         m.id === tempId
-          ? { ...m, id: response.message_id, status: 'sent' }
+          ? { ...m, status: 'delivered' }
           : m
       ));
 
-      // Invalidate React Query cache to trigger refresh
+      // Only update contacts list for sidebar (last message preview)
       if (contactUid) {
-        queryClient.invalidateQueries({
-          queryKey: chatKeys.messages(contactUid, {}),
-          exact: false,
-        });
         queryClient.invalidateQueries({ queryKey: chatKeys.contacts() });
       }
     } catch (err: any) {
@@ -314,19 +277,15 @@ export function useMessages(conversationPhone: string | null): UseMessagesReturn
         caption,
       });
 
-      // Mark upload as complete
+      // Mark upload as complete - real-time (Pusher) will sync the actual message
       setMessages(prev => prev.map(m =>
         m.id === tempId
-          ? { ...m, metadata: { ...m.metadata, is_uploading: false } }
+          ? { ...m, status: 'delivered', metadata: { ...m.metadata, is_uploading: false } }
           : m
       ));
 
-      // Invalidate React Query cache to trigger refresh
+      // Only update contacts list for sidebar (last message preview)
       if (contactUid) {
-        queryClient.invalidateQueries({
-          queryKey: chatKeys.messages(contactUid, {}),
-          exact: false,
-        });
         queryClient.invalidateQueries({ queryKey: chatKeys.contacts() });
       }
     } catch (err: any) {

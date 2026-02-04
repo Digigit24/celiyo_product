@@ -80,62 +80,61 @@ export function useMessages(conversationPhone: string | null): UseMessagesReturn
             setMessages(prev => {
               const existingIds = new Set(prev.map(m => m.id));
 
-              // Create content key including media type for better deduplication
-              // Use timestamp slice to hour (0-13) to handle minute boundary issues
-              const getContentKey = (m: WhatsAppMessage) => {
-                const mediaType = m.type !== 'text' ? m.type : (m.media_values?.type || 'text');
-                const content = m.text?.trim() || m.media_values?.caption || '';
-                // For text messages with content, don't use timestamp (too prone to drift)
-                if (mediaType === 'text' && content) {
-                  return `${content}_${m.direction}_${mediaType}`;
-                }
-                // For media/empty messages, use hour-level timestamp
-                return `${content}_${m.direction}_${mediaType}_${m.timestamp?.slice(0, 13)}`;
-              };
-
-              const existingContentKeys = new Set(prev.map(getContentKey));
-
-              // Find NEW messages from cache that don't exist locally
+              // Find NEW messages from cache that don't exist locally (by ID only)
               const newMessages = transformed.filter((m: WhatsAppMessage) => {
-                // Skip if ID already exists
-                if (existingIds.has(m.id)) return false;
-                // Skip if same content+direction+type+time exists (handles temp→real transition)
-                if (existingContentKeys.has(getContentKey(m))) return false;
-                return true;
+                return !existingIds.has(m.id);
               });
 
-              // Keep all prev messages, just update temp→real if matched
+              // Keep all prev messages, update temp→real if matched
+              const replacedTempIds = new Set<string>();
               const updatedPrev = prev.map(m => {
                 // If this is a temp message, check if real version exists in transformed
                 if (String(m.id).startsWith('temp_')) {
+                  const mTime = new Date(m.timestamp).getTime();
+                  const mMediaType = m.type !== 'text' ? m.type : (m.media_values?.type || 'text');
+
+                  // Find matching real message
                   const realMessage = transformed.find((t: WhatsAppMessage) => {
-                    // Match by direction first
+                    // Must be same direction
                     if (t.direction !== m.direction) return false;
-                    // Check timestamps are within 2 minutes of each other
-                    const mTime = new Date(m.timestamp).getTime();
+                    // Must be within 2 minutes
                     const tTime = new Date(t.timestamp).getTime();
                     if (Math.abs(mTime - tTime) > 120000) return false;
-                    // For media messages, match by type
-                    const mMediaType = m.type !== 'text' ? m.type : (m.media_values?.type || 'text');
+                    // Must not already be used to replace another temp
+                    if (replacedTempIds.has(t.id)) return false;
+
                     const tMediaType = t.type !== 'text' ? t.type : (t.media_values?.type || 'text');
+
+                    // For media messages, match by type
                     if (mMediaType !== 'text' && tMediaType !== 'text') {
                       return mMediaType === tMediaType;
                     }
-                    // For text messages, match by content
-                    return t.text?.trim() === m.text?.trim();
+                    // For text/template messages, match by content
+                    if (mMediaType === 'text' && tMediaType === 'text') {
+                      return t.text?.trim() === m.text?.trim();
+                    }
+                    // For template messages
+                    if (m.type === 'template' && (t.type === 'template' || t.type === 'text')) {
+                      return t.text?.trim() === m.text?.trim();
+                    }
+                    return false;
                   });
+
                   if (realMessage) {
-                    // Replace temp with real message (keeps real ID and metadata)
+                    replacedTempIds.add(realMessage.id);
                     return realMessage;
                   }
                 }
                 return m;
               });
 
-              // Combine all messages
-              const combined = [...updatedPrev, ...newMessages];
+              // Combine: updated prev + truly new messages (not used for replacement)
+              const combined = [
+                ...updatedPrev,
+                ...newMessages.filter(m => !replacedTempIds.has(m.id))
+              ];
 
-              // Remove duplicates by ID (final dedup)
+              // Remove duplicates by ID (final safety dedup)
               const seenIds = new Set<string>();
               const deduped = combined.filter(m => {
                 if (seenIds.has(m.id)) return false;

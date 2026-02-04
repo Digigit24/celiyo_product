@@ -74,7 +74,16 @@ export function useMessages(conversationPhone: string | null): UseMessagesReturn
                 whatsapp_message_error: m.whatsapp_message_error,
               };
             });
-            setMessages(transformed);
+            // Merge: keep optimistic messages not yet confirmed by API
+            setMessages(prev => {
+              const apiIds = new Set(transformed.map((m: WhatsAppMessage) => m.id));
+              const optimisticMessages = prev.filter(m =>
+                String(m.id).startsWith('temp_') && !apiIds.has(m.id)
+              );
+              return [...transformed, ...optimisticMessages].sort((a, b) =>
+                new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+              );
+            });
           }
         }
       }

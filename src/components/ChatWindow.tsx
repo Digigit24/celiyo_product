@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect, useState, useMemo } from "react";
 import {
   Send,
   ArrowLeft,
@@ -21,6 +21,7 @@ import {
   Camera,
   X,
   Reply,
+  Hash,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,12 +44,14 @@ import {
 import { cn } from "@/lib/utils";
 import { useMessages } from "@/hooks/whatsapp/useMessages";
 import { useClearChatHistory } from "@/hooks/whatsapp/useChat";
+import { useTemplates } from "@/hooks/whatsapp/useTemplates";
 import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
 import MediaWithAuth from './MediaWithAuth';
 import DocumentWithAuth from './DocumentWithAuth';
 import { getMediaUrl } from "@/services/whatsapp";
 import { API_CONFIG } from "@/lib/apiConfig";
+import type { Template } from "@/types/whatsappTypes";
 
 type Props = {
   conversationId: string;
@@ -371,6 +374,144 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
   const [selectedFileType, setSelectedFileType] = useState<AttachmentType | null>(null);
   const [isFilePreviewOpen, setIsFilePreviewOpen] = useState(false);
   const [fileCaption, setFileCaption] = useState("");
+
+  // Template slash command state
+  const [showTemplateDropdown, setShowTemplateDropdown] = useState(false);
+  const [templateSearchQuery, setTemplateSearchQuery] = useState("");
+  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
+  const [isTemplateDialogOpen, setIsTemplateDialogOpen] = useState(false);
+  const [templateVariables, setTemplateVariables] = useState<Record<string, string>>({});
+  const inputRef = useRef<HTMLInputElement>(null);
+  const templateDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close template dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        showTemplateDropdown &&
+        templateDropdownRef.current &&
+        !templateDropdownRef.current.contains(event.target as Node) &&
+        inputRef.current &&
+        !inputRef.current.contains(event.target as Node)
+      ) {
+        setShowTemplateDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showTemplateDropdown]);
+
+  // Fetch templates (only when needed)
+  const { templates, isLoading: isLoadingTemplates, fetchTemplates } = useTemplates({ autoFetch: false });
+
+  // Filter templates based on search query
+  const filteredTemplates = useMemo(() => {
+    if (!templateSearchQuery) return templates.filter(t => t.status === 'approved');
+    const query = templateSearchQuery.toLowerCase();
+    return templates.filter(t =>
+      t.status === 'approved' && t.name.toLowerCase().includes(query)
+    );
+  }, [templates, templateSearchQuery]);
+
+  // Extract variables from template body ({{1}}, {{2}}, etc.)
+  const extractTemplateVariables = (template: Template): string[] => {
+    const variables: string[] = [];
+    const bodyComponent = template.components?.find(c => c.type === 'BODY');
+    if (bodyComponent?.text) {
+      const matches = bodyComponent.text.match(/\{\{(\d+)\}\}/g);
+      if (matches) {
+        matches.forEach(match => {
+          if (!variables.includes(match)) {
+            variables.push(match);
+          }
+        });
+      }
+    }
+    return variables;
+  };
+
+  // Get template preview with variables filled in
+  const getTemplatePreview = (template: Template, variables: Record<string, string>): string => {
+    const bodyComponent = template.components?.find(c => c.type === 'BODY');
+    if (!bodyComponent?.text) return '';
+    let text = bodyComponent.text;
+    Object.entries(variables).forEach(([key, value]) => {
+      text = text.replace(key, value || key);
+    });
+    return text;
+  };
+
+  // Handle input change for slash command detection
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setInput(value);
+
+    // Detect "/" at start or after space
+    if (value === '/' || value.endsWith(' /')) {
+      setShowTemplateDropdown(true);
+      setTemplateSearchQuery("");
+      fetchTemplates({ status: 'approved', limit: 50 });
+    } else if (showTemplateDropdown) {
+      // If dropdown is open, update search query
+      const slashIndex = value.lastIndexOf('/');
+      if (slashIndex !== -1) {
+        setTemplateSearchQuery(value.substring(slashIndex + 1));
+      } else {
+        setShowTemplateDropdown(false);
+      }
+    }
+  };
+
+  // Handle template selection
+  const handleTemplateSelect = (template: Template) => {
+    setSelectedTemplate(template);
+    setShowTemplateDropdown(false);
+    setInput("");
+
+    // Extract variables and initialize state
+    const vars = extractTemplateVariables(template);
+    const initialVars: Record<string, string> = {};
+    vars.forEach(v => {
+      initialVars[v] = "";
+    });
+    setTemplateVariables(initialVars);
+    setIsTemplateDialogOpen(true);
+  };
+
+  // Handle sending template message
+  const handleSendTemplate = async () => {
+    if (!selectedTemplate || !selectedConversation?.phone) return;
+
+    try {
+      const bodyComponent = selectedTemplate.components?.find(c => c.type === 'BODY');
+      const parameters: Record<string, string> = {};
+
+      // Convert {{1}} format to parameter object
+      Object.entries(templateVariables).forEach(([key, value]) => {
+        const match = key.match(/\{\{(\d+)\}\}/);
+        if (match) {
+          parameters[match[1]] = value;
+        }
+      });
+
+      // Send using templatesService via useTemplates hook
+      const { sendTemplate } = await import('@/hooks/whatsapp/useTemplates').then(m => m);
+      const templatesService = await import('@/services/whatsapp/templatesService').then(m => m.templatesService);
+
+      await templatesService.sendTemplate({
+        to: selectedConversation.phone,
+        template_name: selectedTemplate.name,
+        language: selectedTemplate.language as any,
+        parameters,
+      });
+
+      setIsTemplateDialogOpen(false);
+      setSelectedTemplate(null);
+      setTemplateVariables({});
+    } catch (error) {
+      console.error('Failed to send template:', error);
+    }
+  };
 
   const handleEmojiSelect = (emoji: any) => {
     setInput((prevInput) => prevInput + emoji.native);
@@ -1024,12 +1165,59 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
           </Popover>
 
           {/* Input Container */}
-          <div className="flex-1 flex items-center bg-background rounded-full border border-border min-h-[44px]">
+          <div className="flex-1 relative flex items-center bg-background rounded-full border border-border min-h-[44px]">
+            {/* Template Dropdown */}
+            {showTemplateDropdown && (
+              <div
+                ref={templateDropdownRef}
+                className="absolute bottom-full left-0 right-0 mb-2 bg-card border border-border rounded-lg shadow-lg max-h-64 overflow-y-auto z-50"
+              >
+                {isLoadingTemplates ? (
+                  <div className="p-4 text-center text-muted-foreground">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary mx-auto mb-2"></div>
+                    Loading templates...
+                  </div>
+                ) : filteredTemplates.length === 0 ? (
+                  <div className="p-4 text-center text-muted-foreground">
+                    No templates found
+                  </div>
+                ) : (
+                  <div className="py-1">
+                    <div className="px-3 py-2 text-xs font-medium text-muted-foreground border-b border-border">
+                      Select a template
+                    </div>
+                    {filteredTemplates.map((template) => (
+                      <button
+                        key={template.id}
+                        type="button"
+                        className="w-full px-3 py-2 text-left hover:bg-accent transition-colors flex items-start gap-2"
+                        onClick={() => handleTemplateSelect(template)}
+                      >
+                        <Hash className="h-4 w-4 mt-0.5 text-primary shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-sm truncate">{template.name}</div>
+                          <div className="text-xs text-muted-foreground truncate">
+                            {template.components?.find(c => c.type === 'BODY')?.text?.substring(0, 50)}...
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
             <Input
-              placeholder="Type a message..."
+              ref={inputRef}
+              placeholder="Type a message or / for templates..."
               className="flex-1 bg-transparent border-0 text-foreground placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0 px-4 py-2.5 text-sm h-auto"
               value={input}
-              onChange={e => setInput(e.target.value)}
+              onChange={handleInputChange}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape' && showTemplateDropdown) {
+                  setShowTemplateDropdown(false);
+                  setInput("");
+                }
+              }}
             />
 
             {/* Emoji Picker */}
@@ -1326,6 +1514,83 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
               disabled={clearChatMutation.isPending}
             >
               {clearChatMutation.isPending ? 'Clearing...' : 'Clear Chat'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Template Variables Dialog */}
+      <Dialog open={isTemplateDialogOpen} onOpenChange={setIsTemplateDialogOpen}>
+        <DialogContent className="sm:max-w-[500px] max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Hash className="h-5 w-5 text-primary" />
+              Send Template: {selectedTemplate?.name}
+            </DialogTitle>
+            <DialogDescription>
+              Fill in the variables below and preview your message before sending.
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedTemplate && (
+            <div className="space-y-4 py-4">
+              {/* Template Preview */}
+              <div className="bg-[#dcf8c6] rounded-lg p-3 border border-emerald-100">
+                <p className="text-sm text-[#0b141a] whitespace-pre-wrap">
+                  {getTemplatePreview(selectedTemplate, templateVariables)}
+                </p>
+              </div>
+
+              {/* Variable Inputs */}
+              {Object.keys(templateVariables).length > 0 && (
+                <div className="space-y-3">
+                  <label className="text-sm font-medium text-foreground">Variables</label>
+                  {Object.keys(templateVariables).map((variable, index) => (
+                    <div key={variable} className="flex items-center gap-2">
+                      <span className="text-xs font-mono bg-muted px-2 py-1 rounded shrink-0">
+                        {variable}
+                      </span>
+                      <Input
+                        placeholder={`Enter value for ${variable}`}
+                        value={templateVariables[variable]}
+                        onChange={(e) => setTemplateVariables(prev => ({
+                          ...prev,
+                          [variable]: e.target.value
+                        }))}
+                        className="flex-1"
+                        autoFocus={index === 0}
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* No variables message */}
+              {Object.keys(templateVariables).length === 0 && (
+                <p className="text-sm text-muted-foreground">
+                  This template has no variables to fill in.
+                </p>
+              )}
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsTemplateDialogOpen(false);
+                setSelectedTemplate(null);
+                setTemplateVariables({});
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSendTemplate}
+              className="bg-primary hover:bg-primary/90"
+            >
+              <Send className="h-4 w-4 mr-2" />
+              Send Template
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -538,34 +538,33 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
   };
 
   // Scroll to bottom on initial load (instant) and when new messages arrive
-  const prevMessageCountRef = useRef(0);
+  const prevLastMessageIdRef = useRef<string | null>(null);
   const isInitialLoadRef = useRef(true);
 
   useEffect(() => {
-    const currentCount = transformedMessages.length;
-    const prevCount = prevMessageCountRef.current;
+    const lastMessage = transformedMessages[transformedMessages.length - 1];
+    const lastMessageId = lastMessage?.timestamp ?? null;
 
-    if (currentCount > 0) {
+    if (transformedMessages.length > 0) {
       if (isInitialLoadRef.current) {
         // Initial load: scroll instantly without animation
         console.log('📜 Initial load: Scrolling to bottom instantly');
         messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
         isInitialLoadRef.current = false;
-      } else if (currentCount > prevCount) {
-        // New message arrived: scroll instantly
+      } else if (lastMessageId !== prevLastMessageIdRef.current) {
+        // New or different last message: scroll instantly
         console.log('📜 New message: Scrolling to bottom instantly');
         messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
       }
-      // Don't scroll on status updates (same count)
     }
 
-    prevMessageCountRef.current = currentCount;
-  }, [transformedMessages.length]);
+    prevLastMessageIdRef.current = lastMessageId;
+  }, [transformedMessages]);
 
   // Reset initial load flag when conversation changes
   useEffect(() => {
     isInitialLoadRef.current = true;
-    prevMessageCountRef.current = 0;
+    prevLastMessageIdRef.current = null;
   }, [conversationId]);
 
   useEffect(() => {

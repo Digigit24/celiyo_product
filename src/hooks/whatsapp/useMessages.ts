@@ -75,12 +75,28 @@ export function useMessages(conversationPhone: string | null): UseMessagesReturn
               };
             });
             // Merge: keep optimistic messages not yet confirmed by API
+            // Also preserve original timestamp for recently sent messages
             setMessages(prev => {
               const apiIds = new Set(transformed.map((m: WhatsAppMessage) => m.id));
               const optimisticMessages = prev.filter(m =>
                 String(m.id).startsWith('temp_') && !apiIds.has(m.id)
               );
-              return [...transformed, ...optimisticMessages].sort((a, b) =>
+              // Build map of recent outgoing message timestamps to preserve
+              const recentOutgoingTimestamps = new Map<string, string>();
+              prev.forEach(m => {
+                if (m.direction === 'outgoing' && !String(m.id).startsWith('temp_')) {
+                  recentOutgoingTimestamps.set(m.id, m.timestamp);
+                }
+              });
+              // Preserve timestamps for messages we already had
+              const mergedTransformed = transformed.map(m => {
+                const existingTimestamp = recentOutgoingTimestamps.get(m.id);
+                if (existingTimestamp && m.direction === 'outgoing') {
+                  return { ...m, timestamp: existingTimestamp };
+                }
+                return m;
+              });
+              return [...mergedTransformed, ...optimisticMessages].sort((a, b) =>
                 new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
               );
             });

@@ -77,17 +77,22 @@ export function useMessages(conversationPhone: string | null): UseMessagesReturn
             // Merge: purely additive - never lose messages
             setMessages(prev => {
               const existingIds = new Set(prev.map(m => m.id));
-              const existingContentKeys = new Set(prev.map(m =>
-                `${m.text?.trim()}_${m.direction}_${m.timestamp?.slice(0, 16)}`
-              ));
+
+              // Create content key including media type for better deduplication
+              const getContentKey = (m: WhatsAppMessage) => {
+                const mediaType = m.type !== 'text' ? m.type : (m.media_values?.type || 'text');
+                const content = m.text?.trim() || m.media_values?.caption || '';
+                return `${content}_${m.direction}_${mediaType}_${m.timestamp?.slice(0, 16)}`;
+              };
+
+              const existingContentKeys = new Set(prev.map(getContentKey));
 
               // Find NEW messages from cache that don't exist locally
               const newMessages = transformed.filter((m: WhatsAppMessage) => {
                 // Skip if ID already exists
                 if (existingIds.has(m.id)) return false;
-                // Skip if same content+direction+time exists (handles temp→real transition)
-                const contentKey = `${m.text?.trim()}_${m.direction}_${m.timestamp?.slice(0, 16)}`;
-                if (existingContentKeys.has(contentKey)) return false;
+                // Skip if same content+direction+type+time exists (handles temp→real transition)
+                if (existingContentKeys.has(getContentKey(m))) return false;
                 return true;
               });
 
@@ -95,10 +100,18 @@ export function useMessages(conversationPhone: string | null): UseMessagesReturn
               const updatedPrev = prev.map(m => {
                 // If this is a temp message, check if real version exists in transformed
                 if (String(m.id).startsWith('temp_')) {
-                  const realMessage = transformed.find((t: WhatsAppMessage) =>
-                    t.text?.trim() === m.text?.trim() &&
-                    t.direction === m.direction
-                  );
+                  const realMessage = transformed.find((t: WhatsAppMessage) => {
+                    // Match by direction first
+                    if (t.direction !== m.direction) return false;
+                    // For media messages, match by type
+                    const mMediaType = m.type !== 'text' ? m.type : (m.media_values?.type || 'text');
+                    const tMediaType = t.type !== 'text' ? t.type : (t.media_values?.type || 'text');
+                    if (mMediaType !== 'text' || tMediaType !== 'text') {
+                      return mMediaType === tMediaType;
+                    }
+                    // For text messages, match by content
+                    return t.text?.trim() === m.text?.trim();
+                  });
                   if (realMessage) {
                     // Replace temp with real message (keeps real ID and metadata)
                     return realMessage;

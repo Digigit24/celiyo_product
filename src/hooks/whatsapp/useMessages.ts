@@ -74,38 +74,49 @@ export function useMessages(conversationPhone: string | null): UseMessagesReturn
                 whatsapp_message_error: m.whatsapp_message_error,
               };
             });
-            // Merge: ADD new messages from cache, don't replace
+            // Merge: purely additive - never lose messages
             setMessages(prev => {
               const existingIds = new Set(prev.map(m => m.id));
-              const existingContentKeys = new Set(prev.map(m => `${m.text?.trim()}_${m.direction}`));
+              const existingContentKeys = new Set(prev.map(m =>
+                `${m.text?.trim()}_${m.direction}_${m.timestamp?.slice(0, 16)}`
+              ));
 
               // Find NEW messages from cache that don't exist locally
               const newMessages = transformed.filter((m: WhatsAppMessage) => {
+                // Skip if ID already exists
                 if (existingIds.has(m.id)) return false;
-                // Also check by content to avoid duplicates
-                const contentKey = `${m.text?.trim()}_${m.direction}`;
+                // Skip if same content+direction+time exists (handles temp→real transition)
+                const contentKey = `${m.text?.trim()}_${m.direction}_${m.timestamp?.slice(0, 16)}`;
                 if (existingContentKeys.has(contentKey)) return false;
                 return true;
               });
 
-              // Filter out optimistic messages that are now confirmed in cache
-              const apiIds = new Set(transformed.map((m: WhatsAppMessage) => m.id));
-              const apiContentKeys = new Set(transformed.map((m: WhatsAppMessage) =>
-                `${m.text?.trim()}_${m.direction}`
-              ));
+              // Keep all prev messages, just update temp→real if matched
+              const updatedPrev = prev.map(m => {
+                // If this is a temp message, check if real version exists in transformed
+                if (String(m.id).startsWith('temp_')) {
+                  const realMessage = transformed.find((t: WhatsAppMessage) =>
+                    t.text?.trim() === m.text?.trim() &&
+                    t.direction === m.direction
+                  );
+                  if (realMessage) {
+                    // Replace temp with real message (keeps real ID and metadata)
+                    return realMessage;
+                  }
+                }
+                return m;
+              });
 
-              const filteredPrev = prev.filter(m => {
-                // Keep non-optimistic messages
-                if (!String(m.id).startsWith('temp_')) return true;
-                // Filter out confirmed optimistic messages
-                if (apiIds.has(m.id)) return false;
-                const contentKey = `${m.text?.trim()}_${m.direction}`;
-                if (apiContentKeys.has(contentKey)) return false;
+              // Remove duplicate IDs after temp→real replacement
+              const seenIds = new Set<string>();
+              const deduped = updatedPrev.filter(m => {
+                if (seenIds.has(m.id)) return false;
+                seenIds.add(m.id);
                 return true;
               });
 
-              // Combine existing + new and sort
-              return [...filteredPrev, ...newMessages].sort((a, b) =>
+              // Combine and sort
+              return [...deduped, ...newMessages].sort((a, b) =>
                 new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
               );
             });

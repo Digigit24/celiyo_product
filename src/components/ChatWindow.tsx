@@ -753,11 +753,12 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
                         : "bg-white text-[#0b141a] rounded-bl-none border border-gray-200 px-3 py-2"
                   )}
                 >
-                  {msg.type === 'image' && (
-                    <div className="relative">
+                  {/* Render media from media_values (API response) or metadata (local upload) */}
+                  {(msg.type === 'image' || msg.media_values?.type === 'image') && !isTemplateMessage(msg) && (
+                    <div className="relative mb-1">
                       <MediaWithAuth
                         type="image"
-                        src={getMediaUrl(msg.metadata?.media_id)}
+                        src={msg.media_values?.link || getMediaUrl(msg.metadata?.media_id)}
                         previewSrc={msg.metadata?.file_preview_url}
                         alt="sent image"
                         className="rounded-md max-w-[240px] w-full h-auto"
@@ -769,11 +770,11 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
                       )}
                     </div>
                   )}
-                  {msg.type === 'video' && (
-                    <div className="relative">
+                  {(msg.type === 'video' || msg.media_values?.type === 'video') && !isTemplateMessage(msg) && (
+                    <div className="relative mb-1">
                       <MediaWithAuth
                         type="video"
-                        src={getMediaUrl(msg.metadata?.media_id)}
+                        src={msg.media_values?.link || getMediaUrl(msg.metadata?.media_id)}
                         previewSrc={msg.metadata?.file_preview_url}
                         alt="sent video"
                         className="rounded-md max-w-[240px] w-full h-auto"
@@ -785,11 +786,11 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
                       )}
                     </div>
                   )}
-                  {msg.type === 'audio' && (
-                    <div className="relative">
+                  {(msg.type === 'audio' || msg.media_values?.type === 'audio') && !isTemplateMessage(msg) && (
+                    <div className="relative mb-1">
                       <MediaWithAuth
                         type="audio"
-                        src={getMediaUrl(msg.metadata?.media_id)}
+                        src={msg.media_values?.link || getMediaUrl(msg.metadata?.media_id)}
                         previewSrc={msg.metadata?.file_preview_url}
                         alt="sent audio"
                         className="rounded-md max-w-[240px] w-full h-auto"
@@ -801,11 +802,11 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
                       )}
                     </div>
                   )}
-                  {msg.type === 'document' && (
-                    <div className="relative">
+                  {(msg.type === 'document' || msg.media_values?.type === 'document') && !isTemplateMessage(msg) && (
+                    <div className="relative mb-1">
                       <DocumentWithAuth
-                        src={getMediaUrl(msg.metadata?.media_id)}
-                        filename={msg.text}
+                        src={msg.media_values?.link || getMediaUrl(msg.metadata?.media_id)}
+                        filename={msg.media_values?.file_name || msg.media_values?.original_filename || msg.text || 'Document'}
                         className="rounded-md max-w-full"
                       />
                       {msg.metadata?.is_uploading && (
@@ -834,10 +835,18 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
                           className="rounded-md max-w-[240px] w-full h-auto"
                         />
                       )}
+                      {msg.media_values.type === 'audio' && (
+                        <MediaWithAuth
+                          type="audio"
+                          src={msg.media_values.link}
+                          alt="template audio"
+                          className="rounded-md max-w-[240px] w-full h-auto"
+                        />
+                      )}
                       {msg.media_values.type === 'document' && (
                         <DocumentWithAuth
                           src={msg.media_values.link}
-                          filename={msg.media_values.filename || 'Document'}
+                          filename={msg.media_values.file_name || msg.media_values.original_filename || 'Document'}
                           className="rounded-md max-w-full"
                         />
                       )}
@@ -884,10 +893,12 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
                     </>
                   ) : (
                     <>
-                      {/* Regular message body */}
-                      <p className="text-sm leading-relaxed break-words whitespace-pre-wrap">
-                        {msg.text}
-                      </p>
+                      {/* Regular message body - only show if has text */}
+                      {msg.text && (
+                        <p className="text-sm leading-relaxed break-words whitespace-pre-wrap">
+                          {msg.text}
+                        </p>
+                      )}
                       {/* Interactive message buttons */}
                       {msg.interaction_message_data?.action?.buttons && (
                         <div className="mt-3 flex flex-col">

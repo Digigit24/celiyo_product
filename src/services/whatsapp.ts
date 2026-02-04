@@ -1,5 +1,7 @@
 import { whatsappClient } from "@/lib/whatsappClient";
 import { API_CONFIG, buildUrl } from "@/lib/apiConfig";
+import { getWhatsappVendorUid } from "@/services/externalWhatsappService";
+import { externalWhatsappClient } from "@/lib/externalWhatsappClient";
 
 export type MediaMessagePayload = {
   to: string;
@@ -9,15 +11,28 @@ export type MediaMessagePayload = {
 };
 
 export const uploadMedia = async (file: File) => {
+  const vendorUid = getWhatsappVendorUid();
+  if (!vendorUid) {
+    throw new Error('WhatsApp vendor not configured');
+  }
+
   const formData = new FormData();
   formData.append('file', file);
 
-  const response = await whatsappClient.post(API_CONFIG.WHATSAPP.UPLOAD_MEDIA, formData, {
+  // Use external API endpoint with vendorUid
+  const endpoint = `/${vendorUid}/media/upload`;
+  const response = await externalWhatsappClient.post(endpoint, formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
     },
   });
-  return response.data;
+
+  // Return response with media_url for sending
+  return {
+    media_id: response.data?.data?.media_url || response.data?.media_url,
+    url: response.data?.data?.media_url || response.data?.media_url,
+    file_name: response.data?.data?.file_name || file.name,
+  };
 };
 
 export const sendMediaMessage = async (payload: MediaMessagePayload) => {

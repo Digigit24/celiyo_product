@@ -198,13 +198,17 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
     interaction_message_data: msg.interaction_message_data,
   }));
 
-  // Check if message is a template message
+  // Check if message is a template message (requires actual template data, not just HTML)
   const isTemplateMessage = (msg: typeof transformedMessages[0]) => {
     return msg.type === 'template' ||
            msg.template_proforma ||
            msg.template_components ||
-           msg.template_message ||
            (msg.metadata as any)?.template_name;
+  };
+
+  // Check if message has media from media_values
+  const hasMediaValues = (msg: typeof transformedMessages[0]) => {
+    return msg.media_values && ['image', 'video', 'audio', 'document'].includes(msg.media_values.type);
   };
 
   // Helper to extract parameter values from template_component_values array
@@ -893,10 +897,10 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
                     </>
                   ) : (
                     <>
-                      {/* Regular message body - only show if has text */}
-                      {msg.text && (
+                      {/* Regular message body - show text or media caption */}
+                      {(msg.text || msg.media_values?.caption) && (
                         <p className="text-sm leading-relaxed break-words whitespace-pre-wrap">
-                          {msg.text}
+                          {msg.text || msg.media_values?.caption}
                         </p>
                       )}
                       {/* Interactive message buttons */}

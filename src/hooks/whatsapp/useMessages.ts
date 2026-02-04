@@ -2,10 +2,11 @@ import { useState, useEffect, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { messagesService } from '@/services/whatsapp/messagesService';
 import { uploadMedia } from '@/services/whatsapp';
-import type { WhatsAppMessage } from '@/types/whatsappTypes';
+import type { WhatsAppMessage, Template } from '@/types/whatsappTypes';
 import { chatService } from '@/services/whatsapp/chatService';
 import { chatKeys } from '@/hooks/whatsapp/useChat';
 import { useRealtimeChat } from '@/hooks/whatsapp/useRealtimeChat';
+import { templatesService } from '@/services/whatsapp/templatesService';
 
 export interface UseMessagesReturn {
   messages: WhatsAppMessage[];
@@ -13,6 +14,7 @@ export interface UseMessagesReturn {
   error: string | null;
   sendMessage: (text: string) => Promise<void>;
   sendMediaMessage: (file: File, media_type: "image" | "video" | "audio" | "document", caption?: string) => Promise<void>;
+  sendTemplateMessage: (template: Template, variables: Record<string, string>) => Promise<void>;
   refreshMessages: () => Promise<void>;
 }
 
@@ -347,6 +349,79 @@ export function useMessages(conversationPhone: string | null): UseMessagesReturn
     }
   }, [conversationPhone, contactUid, queryClient]);
 
+  const sendTemplateMessage = useCallback(async (template: Template, variables: Record<string, string>) => {
+    if (!conversationPhone) return;
+
+    // Get template body text with variables replaced
+    const bodyComponent = template.components?.find(c => c.type === 'BODY');
+    let messageText = bodyComponent?.text || `[Template: ${template.name}]`;
+
+    // Replace variables in the text for preview
+    Object.entries(variables).forEach(([key, value]) => {
+      const match = key.match(/\{\{(\d+)\}\}/);
+      if (match) {
+        messageText = messageText.replace(key, value);
+      }
+    });
+
+    // Create optimistic message
+    const tempId = `temp_${Date.now()}`;
+    const optimisticMessage: WhatsAppMessage = {
+      id: tempId,
+      from: '',
+      to: conversationPhone,
+      text: messageText,
+      type: 'template',
+      direction: 'outgoing',
+      timestamp: new Date().toISOString(),
+      status: 'sent',
+      metadata: {
+        template_name: template.name,
+      },
+    };
+
+    setMessages(prev => [...prev, optimisticMessage]);
+
+    try {
+      // Convert variables to parameters format
+      const parameters: Record<string, string> = {};
+      Object.entries(variables).forEach(([key, value]) => {
+        const match = key.match(/\{\{(\d+)\}\}/);
+        if (match) {
+          parameters[match[1]] = value;
+        }
+      });
+
+      await templatesService.sendTemplate({
+        to: conversationPhone,
+        template_name: template.name,
+        language: template.language as any,
+        parameters,
+      });
+
+      // Mark as delivered
+      setMessages(prev => prev.map(m =>
+        m.id === tempId
+          ? { ...m, status: 'delivered' }
+          : m
+      ));
+
+      // Update contacts list for sidebar
+      if (contactUid) {
+        queryClient.invalidateQueries({ queryKey: chatKeys.contacts() });
+      }
+    } catch (err: any) {
+      console.error('❌ Failed to send template message:', err);
+      setMessages(prev => prev.map(m =>
+        m.id === tempId
+          ? { ...m, status: 'failed', metadata: { ...m.metadata, error: err.message } }
+          : m
+      ));
+      setError(err.message || 'Failed to send template message');
+      throw err;
+    }
+  }, [conversationPhone, contactUid, queryClient]);
+
   const refreshMessages = useCallback(async () => {
     await loadMessages();
   }, [loadMessages]);
@@ -361,6 +436,7 @@ export function useMessages(conversationPhone: string | null): UseMessagesReturn
     error,
     sendMessage,
     sendMediaMessage,
+    sendTemplateMessage,
     refreshMessages,
   };
 }

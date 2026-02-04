@@ -173,7 +173,7 @@ const isSameDay = (date1: Date, date2: Date): boolean => {
 };
 
 export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onBack }: Props) => {
-  const { messages, isLoading, error, sendMessage, sendMediaMessage } = useMessages(selectedConversation?.phone || null);
+  const { messages, isLoading, error, sendMessage, sendMediaMessage, sendTemplateMessage } = useMessages(selectedConversation?.phone || null);
   const clearChatMutation = useClearChatHistory();
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
@@ -484,27 +484,7 @@ export const ChatWindow = ({ conversationId, selectedConversation, isMobile, onB
     if (!selectedTemplate || !selectedConversation?.phone) return;
 
     try {
-      const bodyComponent = selectedTemplate.components?.find(c => c.type === 'BODY');
-      const parameters: Record<string, string> = {};
-
-      // Convert {{1}} format to parameter object
-      Object.entries(templateVariables).forEach(([key, value]) => {
-        const match = key.match(/\{\{(\d+)\}\}/);
-        if (match) {
-          parameters[match[1]] = value;
-        }
-      });
-
-      // Send using templatesService via useTemplates hook
-      const { sendTemplate } = await import('@/hooks/whatsapp/useTemplates').then(m => m);
-      const templatesService = await import('@/services/whatsapp/templatesService').then(m => m.templatesService);
-
-      await templatesService.sendTemplate({
-        to: selectedConversation.phone,
-        template_name: selectedTemplate.name,
-        language: selectedTemplate.language as any,
-        parameters,
-      });
+      await sendTemplateMessage(selectedTemplate, templateVariables);
 
       setIsTemplateDialogOpen(false);
       setSelectedTemplate(null);

@@ -103,10 +103,14 @@ export function useMessages(conversationPhone: string | null): UseMessagesReturn
                   const realMessage = transformed.find((t: WhatsAppMessage) => {
                     // Match by direction first
                     if (t.direction !== m.direction) return false;
+                    // Check timestamps are within 2 minutes of each other
+                    const mTime = new Date(m.timestamp).getTime();
+                    const tTime = new Date(t.timestamp).getTime();
+                    if (Math.abs(mTime - tTime) > 120000) return false;
                     // For media messages, match by type
                     const mMediaType = m.type !== 'text' ? m.type : (m.media_values?.type || 'text');
                     const tMediaType = t.type !== 'text' ? t.type : (t.media_values?.type || 'text');
-                    if (mMediaType !== 'text' || tMediaType !== 'text') {
+                    if (mMediaType !== 'text' && tMediaType !== 'text') {
                       return mMediaType === tMediaType;
                     }
                     // For text messages, match by content

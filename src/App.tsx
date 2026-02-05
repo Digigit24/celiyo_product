@@ -39,6 +39,7 @@ import Flows from "./pages/Flows";
 import FlowEditor from "./pages/FlowEditor";
 import QRCodes from "./pages/QRCodes";
 import WhatsAppOnboarding from "./pages/WhatsAppOnboarding";
+import Scheduling from "./pages/Scheduling";
 
 import { ThemeSync } from "@/components/ThemeSync";
 import OPDVisits from "./pages/OPDVisits";  // ✅ Updated to new production page
@@ -181,6 +182,7 @@ const AppLayout = () => {
               <Route path="/whatsapp/flows" element={<ModuleProtectedRoute requiredModule="whatsapp"><Flows /></ModuleProtectedRoute>} />
               <Route path="/whatsapp/flows/:flow_id" element={<ModuleProtectedRoute requiredModule="whatsapp"><FlowEditor /></ModuleProtectedRoute>} />
               <Route path="/whatsapp/qrcode" element={<ModuleProtectedRoute requiredModule="whatsapp"><QRCodes /></ModuleProtectedRoute>} />
+              <Route path="/whatsapp/scheduling" element={<ModuleProtectedRoute requiredModule="whatsapp"><Scheduling /></ModuleProtectedRoute>} />
 
               {/* Admin Routes */}
               <Route path="/admin/users" element={<ModuleProtectedRoute requiredModule="admin"><Users /></ModuleProtectedRoute>} />

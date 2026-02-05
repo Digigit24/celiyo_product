@@ -445,6 +445,8 @@ export const API_CONFIG = {
     LEAD_KANBAN: '/crm/leads/kanban/',
     LEAD_EXPORT: '/crm/leads/export/',
     LEAD_IMPORT: '/crm/leads/import_leads/',
+    LEAD_BULK_DELETE: '/crm/leads/bulk-delete/',
+    LEAD_BULK_STATUS_UPDATE: '/crm/leads/bulk-status-update/',
 
     // Lead Status endpoints
     LEAD_STATUSES: '/crm/statuses/',

@@ -36,7 +36,11 @@ import {
   LeadExportQueryParams,
   LeadExportResponse,
   LeadImportResponse,
-  LeadImportPayload
+  LeadImportPayload,
+  BulkDeletePayload,
+  BulkDeleteResponse,
+  BulkStatusUpdatePayload,
+  BulkStatusUpdateResponse
 } from '@/types/crmTypes';
 
 class CRMService {
@@ -233,6 +237,40 @@ class CRMService {
       const message = error.response?.data?.error ||
                      error.response?.data?.message ||
                      'Failed to import leads';
+      throw new Error(message);
+    }
+  }
+
+  // Bulk delete leads
+  async bulkDeleteLeads(leadIds: number[]): Promise<BulkDeleteResponse> {
+    try {
+      const payload: BulkDeletePayload = { lead_ids: leadIds };
+      const response = await crmClient.post<BulkDeleteResponse>(
+        API_CONFIG.CRM.LEAD_BULK_DELETE,
+        payload
+      );
+      return response.data;
+    } catch (error: any) {
+      const message = error.response?.data?.error ||
+                     error.response?.data?.message ||
+                     'Failed to bulk delete leads';
+      throw new Error(message);
+    }
+  }
+
+  // Bulk update lead status
+  async bulkUpdateLeadStatus(leadIds: number[], statusId: number): Promise<BulkStatusUpdateResponse> {
+    try {
+      const payload: BulkStatusUpdatePayload = { lead_ids: leadIds, status_id: statusId };
+      const response = await crmClient.post<BulkStatusUpdateResponse>(
+        API_CONFIG.CRM.LEAD_BULK_STATUS_UPDATE,
+        payload
+      );
+      return response.data;
+    } catch (error: any) {
+      const message = error.response?.data?.error ||
+                     error.response?.data?.message ||
+                     'Failed to bulk update lead status';
       throw new Error(message);
     }
   }

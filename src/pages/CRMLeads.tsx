@@ -20,9 +20,9 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, RefreshCw, Building2, Phone, Mail, IndianRupee, LayoutGrid, List, Download, Upload, FileSpreadsheet, ChevronDown, MessageCircle, Trash2, FileText, CalendarClock } from 'lucide-react';
+import { Plus, RefreshCw, Building2, Phone, Mail, IndianRupee, LayoutGrid, List, Download, Upload, FileSpreadsheet, ChevronDown, MessageCircle, Trash2, FileText, CalendarClock, MoreVertical, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 import type { Lead, LeadsQueryParams, PriorityEnum, LeadStatus } from '@/types/crmTypes';
@@ -1111,35 +1111,30 @@ export const CRMLeads: React.FC = () => {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setHideDuplicates(!hideDuplicates)}
-            className={hideDuplicates ? 'bg-blue-50 border-blue-200' : ''}
-          >
-            {hideDuplicates ? 'Show All' : 'Hide Duplicates'}
-          </Button>
+          {/* Bulk Actions - shown when leads are selected */}
           {selectedLeadIds.size > 0 && (
-            <>
-              <span className="text-sm text-muted-foreground px-2">
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-muted rounded-lg">
+              <span className="text-sm font-medium">
                 {selectedLeadIds.size} selected
               </span>
+              <div className="w-px h-4 bg-border" />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
                     disabled={isBulkUpdatingStatus}
+                    className="h-7"
                   >
                     {isBulkUpdatingStatus ? (
-                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      <RefreshCw className="h-3.5 w-3.5 mr-1.5 animate-spin" />
                     ) : (
-                      <ChevronDown className="h-4 w-4 mr-2" />
+                      <ChevronDown className="h-3.5 w-3.5 mr-1.5" />
                     )}
-                    Change Status
+                    Status
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="min-w-[180px]">
+                <DropdownMenuContent align="start" className="min-w-[180px]">
                   {statusesData?.results.map((status) => (
                     <DropdownMenuItem
                       key={status.id}
@@ -1161,57 +1156,79 @@ export const CRMLeads: React.FC = () => {
                 </DropdownMenuContent>
               </DropdownMenu>
               <Button
-                variant="destructive"
+                variant="ghost"
                 size="sm"
                 onClick={handleBulkDelete}
                 disabled={isDeleting}
+                className="h-7 text-destructive hover:text-destructive hover:bg-destructive/10"
               >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete ({selectedLeadIds.size})
+                {isDeleting ? (
+                  <RefreshCw className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                ) : (
+                  <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                )}
+                Delete
               </Button>
-            </>
+            </div>
           )}
+
+          {/* Quick Actions */}
           <Button
             variant="outline"
-            size="sm"
+            size="icon"
             onClick={() => mutate()}
             disabled={isLoading}
+            className="h-9 w-9"
+            title="Refresh"
           >
-            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-            Refresh
+            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleImportClick}
-          >
-            <Upload className="h-4 w-4 mr-2" />
-            Import
-          </Button>
+
+          {/* More Actions Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={!leadsData || leadsData.count === 0}
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Export
-                <ChevronDown className="h-4 w-4 ml-1" />
+              <Button variant="outline" size="icon" className="h-9 w-9" title="More actions">
+                <MoreVertical className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => handleExportLeads('csv')}>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem onClick={() => setHideDuplicates(!hideDuplicates)}>
+                {hideDuplicates ? (
+                  <>
+                    <Eye className="h-4 w-4 mr-2" />
+                    Show All Leads
+                  </>
+                ) : (
+                  <>
+                    <EyeOff className="h-4 w-4 mr-2" />
+                    Hide Duplicates
+                  </>
+                )}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleImportClick}>
+                <Upload className="h-4 w-4 mr-2" />
+                Import Leads
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => handleExportLeads('csv')}
+                disabled={!leadsData || leadsData.count === 0}
+              >
                 <FileSpreadsheet className="h-4 w-4 mr-2" />
                 Export as CSV
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExportLeads('json')}>
+              <DropdownMenuItem
+                onClick={() => handleExportLeads('json')}
+                disabled={!leadsData || leadsData.count === 0}
+              >
                 <Download className="h-4 w-4 mr-2" />
                 Export as JSON
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button onClick={handleCreateLeadClick} size="default" className="w-full sm:w-auto">
+
+          {/* Primary Action */}
+          <Button onClick={handleCreateLeadClick} size="default">
             <Plus className="h-4 w-4 mr-2" />
             New Lead
           </Button>

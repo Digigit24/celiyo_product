@@ -201,8 +201,10 @@ export function useScheduling(): UseSchedulingReturn {
       });
 
       if (response.reaction === 1) {
-        setScheduledEvents(response.data);
-        return { success: true, data: response.data };
+        // Ensure data is always an array
+        const events = Array.isArray(response.data) ? response.data : [];
+        setScheduledEvents(events);
+        return { success: true, data: events };
       } else {
         const errorMsg = response.message || 'Failed to fetch scheduled events';
         setError(errorMsg);
@@ -373,8 +375,10 @@ export function useScheduling(): UseSchedulingReturn {
       });
 
       if (response.reaction === 1) {
-        setScheduledMessages(response.data);
-        return { success: true, data: response.data };
+        // Ensure data is always an array
+        const messages = Array.isArray(response.data) ? response.data : [];
+        setScheduledMessages(messages);
+        return { success: true, data: messages };
       } else {
         const errorMsg = response.message || 'Failed to fetch scheduled messages';
         setError(errorMsg);
@@ -490,8 +494,10 @@ export function useScheduling(): UseSchedulingReturn {
       const response = await schedulingService.getReminderConfigs(eventType);
 
       if (response.reaction === 1) {
-        setReminderConfigs(response.data);
-        return { success: true, data: response.data };
+        // Ensure data is always an array
+        const configs = Array.isArray(response.data) ? response.data : [];
+        setReminderConfigs(configs);
+        return { success: true, data: configs };
       } else {
         const errorMsg = response.message || 'Failed to fetch reminder configs';
         setError(errorMsg);

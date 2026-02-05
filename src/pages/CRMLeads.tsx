@@ -12,6 +12,7 @@ import { KanbanBoard } from '@/components/KanbanBoard';
 import { LeadImportMappingDialog } from '@/components/LeadImportMappingDialog';
 import { EditableNotesCell } from '@/components/crm/EditableNotesCell';
 import { EditableFollowupCell } from '@/components/crm/EditableFollowupCell';
+import { EditableStatusCell } from '@/components/crm/EditableStatusCell';
 import { LeadScoreSlider } from '@/components/crm/LeadScoreSlider';
 import { WhatsAppTemplateModal } from '@/components/WhatsAppTemplateModal';
 import { FollowupsContent } from '@/components/crm/FollowupsContent';
@@ -794,7 +795,17 @@ export const CRMLeads: React.FC = () => {
       status: {
         header: 'Status',
         key: 'status',
-        cell: (lead) => getStatusBadge(lead.status),
+        cell: (lead) => (
+          <div onClick={(e) => e.stopPropagation()}>
+            <EditableStatusCell
+              currentStatusId={typeof lead.status === 'number' ? lead.status : lead.status?.id}
+              statuses={statusesData?.results || []}
+              onSave={async (newStatusId) => {
+                await handleUpdateLeadStatus(lead.id, newStatusId);
+              }}
+            />
+          </div>
+        ),
         sortable: true,
         filterable: false,
         accessor: (lead) => {
@@ -941,7 +952,7 @@ export const CRMLeads: React.FC = () => {
     });
 
     return sortedColumns;
-  }, [configurationsData?.results, statusesData?.results, selectedLeadIds, toggleLeadSelection, filteredLeads, toggleAllLeads, handleUpdateNotes, handleUpdateFollowup, handleUpdateLeadScore]);
+  }, [configurationsData?.results, statusesData?.results, selectedLeadIds, toggleLeadSelection, filteredLeads, toggleAllLeads, handleUpdateNotes, handleUpdateFollowup, handleUpdateLeadScore, handleUpdateLeadStatus]);
 
   const columns: DataTableColumn<Lead>[] = dynamicColumns;
 
@@ -969,7 +980,17 @@ export const CRMLeads: React.FC = () => {
               <span>{lead.company}</span>
             </div>
           )}
-          {isFieldVisible('status') && getStatusBadge(lead.status)}
+          {isFieldVisible('status') && (
+            <div onClick={(e) => e.stopPropagation()}>
+              <EditableStatusCell
+                currentStatusId={typeof lead.status === 'number' ? lead.status : lead.status?.id}
+                statuses={statusesData?.results || []}
+                onSave={async (newStatusId) => {
+                  await handleUpdateLeadStatus(lead.id, newStatusId);
+                }}
+              />
+            </div>
+          )}
         </div>
       )}
 

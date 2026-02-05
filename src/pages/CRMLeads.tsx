@@ -36,7 +36,7 @@ type ViewMode = 'list' | 'kanban' | 'followups';
 export const CRMLeads: React.FC = () => {
   const navigate = useNavigate();
   const { user, hasModuleAccess } = useAuth();
-  const { hasCRMAccess, useLeads, useLeadStatuses, useFieldConfigurations, deleteLead, patchLead, updateLeadStatus, deleteLeadStatus, bulkCreateLeads, exportLeads, importLeads } = useCRM();
+  const { hasCRMAccess, useLeads, useLeadStatuses, useFieldConfigurations, deleteLead, patchLead, updateLeadStatus, deleteLeadStatus, bulkCreateLeads, bulkDeleteLeads, bulkUpdateLeadStatus, exportLeads, importLeads } = useCRM();
   const { hasHMSAccess, createPatient } = usePatient();
   const { formatCurrency: formatCurrencyDynamic, getCurrencyCode, getCurrencySymbol } = useCurrency();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -61,6 +61,7 @@ export const CRMLeads: React.FC = () => {
 
   const [selectedLeadIds, setSelectedLeadIds] = useState<Set<number>>(new Set());
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isBulkUpdatingStatus, setIsBulkUpdatingStatus] = useState(false);
   const [hideDuplicates, setHideDuplicates] = useState(true);
 
   const [templateModalOpen, setTemplateModalOpen] = useState(false);
@@ -150,32 +151,42 @@ export const CRMLeads: React.FC = () => {
     if (!confirmed) return;
 
     setIsDeleting(true);
-    let successCount = 0;
-    let failCount = 0;
 
     try {
-      for (const id of selectedLeadIds) {
-        try {
-          await deleteLead(id);
-          successCount++;
-        } catch (error) {
-          failCount++;
-        }
-      }
+      const leadIdsArray = Array.from(selectedLeadIds);
+      const result = await bulkDeleteLeads(leadIdsArray);
 
-      if (successCount > 0) {
-        toast.success(`Deleted ${successCount} lead(s)`);
-        setSelectedLeadIds(new Set());
-        mutate();
-      }
-
-      if (failCount > 0) {
-        toast.error(`Failed to delete ${failCount} lead(s)`);
-      }
+      toast.success(result.message || `Deleted ${result.deleted_count} lead(s)`);
+      setSelectedLeadIds(new Set());
+      mutate();
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to delete leads');
     } finally {
       setIsDeleting(false);
     }
-  }, [selectedLeadIds, deleteLead, mutate]);
+  }, [selectedLeadIds, bulkDeleteLeads, mutate]);
+
+  const handleBulkStatusChange = useCallback(async (newStatusId: number) => {
+    if (selectedLeadIds.size === 0) {
+      toast.error('No leads selected');
+      return;
+    }
+
+    setIsBulkUpdatingStatus(true);
+
+    try {
+      const leadIdsArray = Array.from(selectedLeadIds);
+      const result = await bulkUpdateLeadStatus(leadIdsArray, newStatusId);
+
+      toast.success(result.message || `Updated status for ${result.updated_count} lead(s)`);
+      setSelectedLeadIds(new Set());
+      mutate();
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to update lead status');
+    } finally {
+      setIsBulkUpdatingStatus(false);
+    }
+  }, [selectedLeadIds, bulkUpdateLeadStatus, mutate]);
 
   const toggleLeadSelection = useCallback((leadId: number) => {
     setSelectedLeadIds((prev) => {
@@ -1109,15 +1120,56 @@ export const CRMLeads: React.FC = () => {
             {hideDuplicates ? 'Show All' : 'Hide Duplicates'}
           </Button>
           {selectedLeadIds.size > 0 && (
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={handleBulkDelete}
-              disabled={isDeleting}
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Delete ({selectedLeadIds.size})
-            </Button>
+            <>
+              <span className="text-sm text-muted-foreground px-2">
+                {selectedLeadIds.size} selected
+              </span>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={isBulkUpdatingStatus}
+                  >
+                    {isBulkUpdatingStatus ? (
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4 mr-2" />
+                    )}
+                    Change Status
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="min-w-[180px]">
+                  {statusesData?.results.map((status) => (
+                    <DropdownMenuItem
+                      key={status.id}
+                      onClick={() => handleBulkStatusChange(status.id)}
+                      className="cursor-pointer"
+                    >
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="w-3 h-3 rounded-full border"
+                          style={{
+                            backgroundColor: status.color_hex || '#6B7280',
+                            borderColor: status.color_hex || '#6B7280',
+                          }}
+                        />
+                        <span>{status.name}</span>
+                      </div>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleBulkDelete}
+                disabled={isDeleting}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete ({selectedLeadIds.size})
+              </Button>
+            </>
           )}
           <Button
             variant="outline"

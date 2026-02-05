@@ -224,6 +224,26 @@ export interface LeadImportPayload {
   leads: CreateLeadPayload[];
 }
 
+// Bulk Operation Types
+export interface BulkDeletePayload {
+  lead_ids: number[];
+}
+
+export interface BulkDeleteResponse {
+  deleted_count: number;
+  message: string;
+}
+
+export interface BulkStatusUpdatePayload {
+  lead_ids: number[];
+  status_id: number;
+}
+
+export interface BulkStatusUpdateResponse {
+  updated_count: number;
+  message: string;
+}
+
 // Query Parameters Types
 export interface LeadsQueryParams {
   page?: number;

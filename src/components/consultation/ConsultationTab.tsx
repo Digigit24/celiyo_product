@@ -31,6 +31,7 @@ import { useOPDTemplate } from '@/hooks/useOPDTemplate';
 import { useIPD } from '@/hooks/useIPD';
 import { usePatient } from '@/hooks/usePatient';
 import { useClinicalNote } from '@/hooks/useClinicalNote';
+import { useScheduling } from '@/hooks/useScheduling';
 import { templatesService } from '@/services/whatsapp/templatesService';
 import { authService } from '@/services/authService';
 import { useTenant } from '@/hooks/useTenant';
@@ -112,6 +113,9 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit, onVisit
   // Clinical note hook for follow-up date
   const { useClinicalNoteByVisit, updateNote, createNote } = useClinicalNote();
   const { data: clinicalNote, mutate: mutateClinicalNote } = useClinicalNoteByVisit(visit.id);
+
+  // Scheduling hook for follow-up reminders
+  const { scheduleEvent, loading: isSchedulingReminder } = useScheduling();
 
   // Fetch patient details (for phone number)
   const { usePatientById } = usePatient();
@@ -341,79 +345,63 @@ export const ConsultationTab: React.FC<ConsultationTabProps> = ({ visit, onVisit
       // Update local state immediately for UI feedback
       setSavedFollowupDate(followupDate || null);
 
-      toast.success(followupDate ? 'Follow-up scheduled' : 'Follow-up cleared');
       setIsFollowupOpen(false);
       mutateClinicalNote(); // Refresh clinical note data
       onVisitUpdate?.();
 
-      // Show WhatsApp dialog if follow-up date is set
+      // Schedule WhatsApp reminder if follow-up date is set
       if (followupDate) {
         const patientPhone = patientData?.mobile_primary || visit.patient_details?.mobile_primary;
 
         if (!patientPhone) {
-          toast.warning('Patient phone number not available');
+          toast.success('Follow-up saved (no phone for reminder)');
         } else {
-          const preferences = authService.getUserPreferences();
-          const defaultTemplateId = preferences?.whatsappDefaults?.followup;
-          const variableMapping = preferences?.whatsappDefaults?.followupVariableMapping || [];
-
-          if (!defaultTemplateId) {
-            toast.warning('Set default followup template in Admin Settings');
-          } else {
-            try {
-              const template = await templatesService.getTemplate(defaultTemplateId);
-              const body = templatesService.extractBodyText(template);
-
-              // Build variables based on mapping
-              const variables: Record<string, string> = {};
-              const patientName = patientData?.full_name || visit.patient_details?.full_name || 'Patient';
-              const followupDateStr = format(followupDate, 'dd MMM yyyy');
-              const followupTimeStr = '10:00 AM'; // Default time, can be made configurable
-
-              variableMapping.forEach((mapping: any) => {
-                switch (mapping.fieldSource) {
-                  case 'patient_name':
-                    variables[mapping.variableNumber] = patientName;
-                    break;
-                  case 'followup_date':
-                    variables[mapping.variableNumber] = followupDateStr;
-                    break;
-                  case 'followup_time':
-                    variables[mapping.variableNumber] = followupTimeStr;
-                    break;
-                  case 'doctor_name':
-                    variables[mapping.variableNumber] = visit.doctor_details?.full_name || 'Doctor';
-                    break;
-                  case 'hospital_name':
-                    variables[mapping.variableNumber] = tenantData?.name || 'Hospital';
-                    break;
-                  case 'patient_phone':
-                    variables[mapping.variableNumber] = patientPhone;
-                    break;
-                  default:
-                    variables[mapping.variableNumber] = '';
-                }
-              });
-
-              // Auto-fill default mapping if none configured
-              if (variableMapping.length === 0) {
-                variables['1'] = patientName;
-                variables['2'] = followupDateStr;
-                variables['3'] = followupTimeStr;
-              }
-
-              setSavedFollowupDate(followupDate);
-              setTemplateBody(body);
-              setTemplateName(template.name);
-              setTemplateLanguage(template.language);
-              setWhatsAppVariables(variables);
-              setIsWhatsAppDialogOpen(true);
-            } catch (waError: any) {
-              console.error('Template fetch failed:', waError);
-              toast.error('Failed to load template: ' + (waError.message || 'Unknown error'));
+          // Format phone number
+          let phone = patientPhone.replace(/[\s\-\(\)]/g, '');
+          if (!phone.startsWith('+')) {
+            if (!phone.startsWith('91') && phone.length === 10) {
+              phone = '+91' + phone;
+            } else if (phone.startsWith('91')) {
+              phone = '+' + phone;
             }
           }
+
+          // Create follow-up datetime (default 10:00 AM)
+          const followupDateTime = new Date(followupDate);
+          followupDateTime.setHours(10, 0, 0, 0);
+
+          const patientName = patientData?.full_name || visit.patient_details?.full_name || 'Patient';
+
+          // Schedule the follow-up event with auto-reminders (1 hour before configured in backend)
+          const result = await scheduleEvent(
+            'followup_appointment',
+            phone,
+            followupDateTime.toISOString(),
+            {
+              patient_name: patientName,
+              doctor_name: visit.doctor_details?.full_name || 'Doctor',
+              hospital_name: tenantData?.name || 'Hospital',
+              visit_id: visit.id,
+              appointment_date: format(followupDate, 'dd MMM yyyy'),
+              appointment_time: '10:00 AM',
+            },
+            {
+              timezone: 'Asia/Kolkata',
+              contactName: patientName,
+            }
+          );
+
+          if (result.success) {
+            const reminderCount = result.data?.scheduled_messages?.length || 0;
+            toast.success(`Follow-up scheduled with ${reminderCount} reminder${reminderCount !== 1 ? 's' : ''}`);
+          } else {
+            // Still saved follow-up, just reminder failed
+            toast.warning('Follow-up saved, but reminder scheduling failed');
+            console.error('Scheduling failed:', result.error);
+          }
         }
+      } else {
+        toast.success('Follow-up cleared');
       }
     } catch (err: any) {
       toast.error(err.message || 'Failed to save follow-up');

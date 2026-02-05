@@ -696,6 +696,31 @@ export const API_CONFIG = {
       CONTACTS_LIST: '/vendor/contact/contacts-data',
       CONTACTS_DETAIL: '/vendor/contacts/:contactIdOrUid/get-update-data',
     },
+
+    // ==================== SCHEDULING ====================
+    // Message scheduling endpoints (Laravel API)
+    SCHEDULING: {
+      // Event scheduling (with auto-reminders)
+      SCHEDULE_EVENT: '/:vendorUid/events/schedule',
+      GET_SCHEDULED_EVENTS: '/:vendorUid/events/scheduled',
+      CANCEL_EVENT: '/:vendorUid/events/:eventUid',
+
+      // Message scheduling
+      SCHEDULE_MESSAGE: '/:vendorUid/messages/schedule',
+      SCHEDULE_BULK_MESSAGES: '/:vendorUid/messages/schedule-bulk',
+      GET_SCHEDULED_MESSAGES: '/:vendorUid/messages/scheduled',
+      GET_SCHEDULED_MESSAGE: '/:vendorUid/messages/scheduled/:messageUid',
+      CANCEL_MESSAGE: '/:vendorUid/messages/scheduled/:messageUid',
+
+      // Stats & Health
+      GET_QUEUE_STATS: '/:vendorUid/scheduling/stats',
+      GET_HEALTH: '/:vendorUid/scheduling/health',
+
+      // Reminder configs (admin)
+      SAVE_REMINDER_CONFIG: '/:vendorUid/scheduling/reminder-configs',
+      GET_REMINDER_CONFIGS: '/:vendorUid/scheduling/reminder-configs',
+      DELETE_REMINDER_CONFIG: '/:vendorUid/scheduling/reminder-configs/:configUid',
+    },
   },
 };
 

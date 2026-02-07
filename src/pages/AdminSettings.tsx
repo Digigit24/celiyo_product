@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RefreshCw, Loader2, AlertCircle, Save, Building2, Database, Settings as SettingsIcon, Image as ImageIcon, X, User, Plus, Trash2, Moon, Sun, IndianRupee, MessageSquare } from 'lucide-react';
 import { useTenant } from '@/hooks/useTenant';
 import { useAuth } from '@/hooks/useAuth';
@@ -17,6 +18,7 @@ import { authClient } from '@/lib/client';
 import { API_CONFIG, buildUrl } from '@/lib/apiConfig';
 import { CurrencySettingsTab } from '@/components/admin-settings/CurrencySettingsTab';
 import { WhatsAppDefaultsTab } from '@/components/admin-settings/WhatsAppDefaultsTab';
+import { externalWhatsappService } from '@/services/externalWhatsappService';
 
 export const AdminSettings: React.FC = () => {
   // Get tenant from current session
@@ -74,6 +76,8 @@ export const AdminSettings: React.FC = () => {
   const [leadNotificationPhone, setLeadNotificationPhone] = useState('');
   const [leadNotificationTemplate, setLeadNotificationTemplate] = useState('');
   const [leadNotificationLanguage, setLeadNotificationLanguage] = useState('en');
+  const [whatsappTemplates, setWhatsappTemplates] = useState<Array<{ template_name: string; name: string; language: string; status: string }>>([]);
+  const [isLoadingTemplates, setIsLoadingTemplates] = useState(false);
 
   // Branding settings (all go into settings JSON)
   const [headerBgColor, setHeaderBgColor] = useState('#3b82f6');
@@ -158,6 +162,28 @@ export const AdminSettings: React.FC = () => {
       setCurrencyUseIndianNumbering(settings.currency_use_indian_numbering ?? true);
     }
   }, [tenantData]);
+
+  // Fetch WhatsApp templates when vendor UID is available
+  useEffect(() => {
+    const fetchTemplates = async () => {
+      if (!whatsappVendorUid) {
+        setWhatsappTemplates([]);
+        return;
+      }
+      setIsLoadingTemplates(true);
+      try {
+        const templates = await externalWhatsappService.getApprovedTemplates();
+        const templateList = Array.isArray(templates) ? templates : [];
+        setWhatsappTemplates(templateList);
+      } catch (err) {
+        console.warn('Failed to fetch WhatsApp templates:', err);
+        setWhatsappTemplates([]);
+      } finally {
+        setIsLoadingTemplates(false);
+      }
+    };
+    fetchTemplates();
+  }, [whatsappVendorUid]);
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -648,13 +674,37 @@ export const AdminSettings: React.FC = () => {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="leadNotificationTemplate">Template Name</Label>
-                    <Input
-                      id="leadNotificationTemplate"
-                      type="text"
-                      placeholder="e.g., new_lead_alert"
+                    <Select
                       value={leadNotificationTemplate}
-                      onChange={(e) => setLeadNotificationTemplate(e.target.value)}
-                    />
+                      onValueChange={(value) => {
+                        setLeadNotificationTemplate(value);
+                        const selected = whatsappTemplates.find(
+                          (t) => (t.template_name || t.name) === value
+                        );
+                        if (selected?.language) {
+                          setLeadNotificationLanguage(selected.language);
+                        }
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={isLoadingTemplates ? 'Loading templates...' : 'Select a template'} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {whatsappTemplates.map((t) => {
+                          const name = t.template_name || t.name;
+                          return (
+                            <SelectItem key={`${name}-${t.language}`} value={name}>
+                              {name} ({t.language})
+                            </SelectItem>
+                          );
+                        })}
+                        {whatsappTemplates.length === 0 && !isLoadingTemplates && (
+                          <SelectItem value="__none" disabled>
+                            {whatsappVendorUid ? 'No approved templates found' : 'Set WhatsApp Vendor UID first'}
+                          </SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="leadNotificationLanguage">Template Language</Label>
@@ -664,7 +714,11 @@ export const AdminSettings: React.FC = () => {
                       placeholder="e.g., en"
                       value={leadNotificationLanguage}
                       onChange={(e) => setLeadNotificationLanguage(e.target.value)}
+                      readOnly
                     />
+                    <p className="text-xs text-muted-foreground">
+                      Auto-filled from selected template
+                    </p>
                   </div>
                 </div>
               </div>

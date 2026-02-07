@@ -2,6 +2,7 @@
 import { useState, useCallback } from 'react';
 import useSWR from 'swr';
 import { crmService } from '@/services/crmService';
+import { externalWhatsappService } from '@/services/externalWhatsappService';
 import {
   Lead,
   LeadStatus,
@@ -91,6 +92,33 @@ export const useCRM = () => {
     );
   };
 
+  // Send WhatsApp lead notification (non-blocking)
+  const sendLeadNotification = useCallback((leadData: CreateLeadPayload, createdLead: Lead) => {
+    try {
+      const configJson = localStorage.getItem('celiyo_lead_notification');
+      if (!configJson) return;
+
+      const config = JSON.parse(configJson);
+      if (!config.phone || !config.template) return;
+
+      if (!externalWhatsappService.isConfigured()) return;
+
+      externalWhatsappService.sendTemplateMessage({
+        phone_number: config.phone,
+        template_name: config.template,
+        template_language: config.language || 'en',
+        field_1: createdLead.name || leadData.name,
+        field_2: createdLead.email || leadData.email || 'N/A',
+        field_3: createdLead.phone || leadData.phone,
+        field_4: createdLead.source || leadData.source || 'CRM',
+      }).catch((err) => {
+        console.warn('Lead WhatsApp notification failed:', err);
+      });
+    } catch {
+      // Silently fail — notification should never block lead creation
+    }
+  }, []);
+
   // Create lead
   const createLead = useCallback(async (leadData: CreateLeadPayload) => {
     if (!hasCRMAccess) {
@@ -102,6 +130,8 @@ export const useCRM = () => {
 
     try {
       const newLead = await crmService.createLead(leadData);
+      // Send WhatsApp notification (fire-and-forget)
+      sendLeadNotification(leadData, newLead);
       return newLead;
     } catch (err: any) {
       const errorMessage = err.message || 'Failed to create lead';
@@ -110,7 +140,7 @@ export const useCRM = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [hasCRMAccess]);
+  }, [hasCRMAccess, sendLeadNotification]);
 
   // Update lead
   const updateLead = useCallback(async (id: number, leadData: UpdateLeadPayload) => {

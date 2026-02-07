@@ -70,6 +70,11 @@ export const AdminSettings: React.FC = () => {
   const [whatsappVendorUid, setWhatsappVendorUid] = useState('');
   const [whatsappApiToken, setWhatsappApiToken] = useState('');
 
+  // Lead notification settings
+  const [leadNotificationPhone, setLeadNotificationPhone] = useState('');
+  const [leadNotificationTemplate, setLeadNotificationTemplate] = useState('');
+  const [leadNotificationLanguage, setLeadNotificationLanguage] = useState('en');
+
   // Branding settings (all go into settings JSON)
   const [headerBgColor, setHeaderBgColor] = useState('#3b82f6');
   const [headerTextColor, setHeaderTextColor] = useState('#ffffff');
@@ -128,6 +133,20 @@ export const AdminSettings: React.FC = () => {
       setWhatsappVendorUid(settings.whatsapp_vendor_uid || '');
       setWhatsappApiToken(settings.whatsapp_api_token || '');
 
+      // Lead notification settings
+      setLeadNotificationPhone(settings.lead_notification_phone || '');
+      setLeadNotificationTemplate(settings.lead_notification_template || '');
+      setLeadNotificationLanguage(settings.lead_notification_language || 'en');
+
+      // Persist notification config to localStorage for CRM hook
+      if (settings.lead_notification_phone) {
+        localStorage.setItem('celiyo_lead_notification', JSON.stringify({
+          phone: settings.lead_notification_phone,
+          template: settings.lead_notification_template || '',
+          language: settings.lead_notification_language || 'en',
+        }));
+      }
+
       // Currency settings
       setCurrencyCode(settings.currency_code || 'INR');
       setCurrencySymbol(settings.currency_symbol || '₹');
@@ -185,6 +204,10 @@ export const AdminSettings: React.FC = () => {
         // WhatsApp API settings
         whatsapp_vendor_uid: whatsappVendorUid,
         whatsapp_api_token: whatsappApiToken,
+        // Lead notification settings
+        lead_notification_phone: leadNotificationPhone,
+        lead_notification_template: leadNotificationTemplate,
+        lead_notification_language: leadNotificationLanguage,
         // Currency settings
         currency_code: currencyCode,
         currency_symbol: currencySymbol,
@@ -208,6 +231,18 @@ export const AdminSettings: React.FC = () => {
       };
 
       await updateTenant(tenantId, updateData);
+
+      // Persist lead notification config to localStorage for CRM hook
+      if (leadNotificationPhone) {
+        localStorage.setItem('celiyo_lead_notification', JSON.stringify({
+          phone: leadNotificationPhone,
+          template: leadNotificationTemplate,
+          language: leadNotificationLanguage,
+        }));
+      } else {
+        localStorage.removeItem('celiyo_lead_notification');
+      }
+
       toast.success('Tenant settings saved successfully');
       mutate();
     } catch (err: any) {
@@ -589,6 +624,49 @@ export const AdminSettings: React.FC = () => {
                 <p className="text-xs text-muted-foreground">
                   Your WhatsApp API access token for authentication (stored securely)
                 </p>
+              </div>
+
+              {/* Lead Notification Settings */}
+              <div className="space-y-4 pt-4 border-t">
+                <h3 className="text-sm font-semibold">Lead Notification (WhatsApp)</h3>
+                <p className="text-xs text-muted-foreground">
+                  Send a WhatsApp notification whenever a new lead is created. Leave phone empty to disable.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="leadNotificationPhone">Notification Phone</Label>
+                    <Input
+                      id="leadNotificationPhone"
+                      type="tel"
+                      placeholder="e.g., 919876543210"
+                      value={leadNotificationPhone}
+                      onChange={(e) => setLeadNotificationPhone(e.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      With country code, no + prefix
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="leadNotificationTemplate">Template Name</Label>
+                    <Input
+                      id="leadNotificationTemplate"
+                      type="text"
+                      placeholder="e.g., new_lead_alert"
+                      value={leadNotificationTemplate}
+                      onChange={(e) => setLeadNotificationTemplate(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="leadNotificationLanguage">Template Language</Label>
+                    <Input
+                      id="leadNotificationLanguage"
+                      type="text"
+                      placeholder="e.g., en"
+                      value={leadNotificationLanguage}
+                      onChange={(e) => setLeadNotificationLanguage(e.target.value)}
+                    />
+                  </div>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">

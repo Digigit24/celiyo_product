@@ -18,7 +18,7 @@ import { authClient } from '@/lib/client';
 import { API_CONFIG, buildUrl } from '@/lib/apiConfig';
 import { CurrencySettingsTab } from '@/components/admin-settings/CurrencySettingsTab';
 import { WhatsAppDefaultsTab } from '@/components/admin-settings/WhatsAppDefaultsTab';
-import { externalWhatsappService } from '@/services/externalWhatsappService';
+// WhatsApp templates are fetched directly via fetch() using state values
 
 export const AdminSettings: React.FC = () => {
   // Get tenant from current session
@@ -163,17 +163,26 @@ export const AdminSettings: React.FC = () => {
     }
   }, [tenantData]);
 
-  // Fetch WhatsApp templates when vendor UID is available
+  // Fetch WhatsApp templates when vendor UID and API token are available
   useEffect(() => {
     const fetchTemplates = async () => {
-      if (!whatsappVendorUid) {
+      if (!whatsappVendorUid || !whatsappApiToken) {
         setWhatsappTemplates([]);
         return;
       }
       setIsLoadingTemplates(true);
       try {
-        const templates = await externalWhatsappService.getApprovedTemplates();
-        const templateList = Array.isArray(templates) ? templates : [];
+        // Call API directly using state values (not localStorage)
+        const baseUrl = API_CONFIG.WHATSAPP_EXTERNAL_BASE_URL;
+        const res = await fetch(`${baseUrl}/${whatsappVendorUid}/templates?status=APPROVED`, {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${whatsappApiToken}`,
+          },
+        });
+        if (!res.ok) throw new Error('Failed to fetch templates');
+        const json = await res.json();
+        const templateList = Array.isArray(json?.data) ? json.data : Array.isArray(json) ? json : [];
         setWhatsappTemplates(templateList);
       } catch (err) {
         console.warn('Failed to fetch WhatsApp templates:', err);
@@ -183,7 +192,7 @@ export const AdminSettings: React.FC = () => {
       }
     };
     fetchTemplates();
-  }, [whatsappVendorUid]);
+  }, [whatsappVendorUid, whatsappApiToken]);
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

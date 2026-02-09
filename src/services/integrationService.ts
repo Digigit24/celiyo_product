@@ -356,12 +356,13 @@ class IntegrationService {
     }
   }
 
-  // Test workflow manually
+  // Test workflow manually (long timeout — backend processes all rows synchronously)
   async testWorkflow(id: number, data?: WorkflowTestRequest): Promise<WorkflowTestResponse> {
     try {
       const response = await crmClient.post<WorkflowTestResponse>(
         API_CONFIG.CRM.WORKFLOWS.TEST.replace(':id', id.toString()),
-        data || {}
+        data || {},
+        { timeout: 300000 } // 5 min — large sheets need time
       );
       return response.data;
     } catch (error: any) {

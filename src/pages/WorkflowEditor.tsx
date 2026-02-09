@@ -346,11 +346,12 @@ export const WorkflowEditor = () => {
     }
 
     setIsTesting(true);
+    toast.info('Syncing all rows from sheet — this may take a few minutes...');
     try {
       const result = await testWorkflow(parseInt(workflowId), {
-        reset_last_processed: true, // force full read for tests
+        reset_last_processed: true,
       });
-      toast.success(result.message || 'Workflow test executed');
+      toast.success(result.message || 'Workflow test executed — check CRM Leads');
     } catch (error: any) {
       toast.error(error.message || 'Failed to test workflow');
     } finally {

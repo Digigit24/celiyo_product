@@ -43,7 +43,7 @@ export default function TasksFormDrawer({
     useTask,
     useLeads,
     createTask,
-    updateTask,
+    patchTask,
     deleteTask,
   } = useCRM();
 
@@ -136,7 +136,7 @@ export default function TasksFormDrawer({
 
         console.log('Updating task with values:', values);
 
-        await updateTask(taskId, values as UpdateTaskPayload);
+        await patchTask(taskId, values as UpdateTaskPayload);
 
         toast.success('Task updated successfully');
         handleSuccess();

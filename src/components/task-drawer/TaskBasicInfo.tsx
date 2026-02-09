@@ -153,11 +153,10 @@ const TaskBasicInfo = forwardRef<TaskBasicInfoHandle, TaskBasicInfoProps>(
 
                 resolve(payload);
               } else {
-                // Update task - all fields optional
-                const payload: UpdateTaskPayload = {};
-
-                // Add only fields that have values
-                if (data.lead !== undefined) payload.lead = Number(data.lead);
+                // Update task - lead is always required by backend
+                const payload: UpdateTaskPayload = {
+                  lead: Number(data.lead) || task?.lead,
+                };
                 if (data.title) payload.title = data.title;
                 if (data.description !== undefined) payload.description = data.description;
                 if (data.status) payload.status = data.status as TaskStatusEnum;

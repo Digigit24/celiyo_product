@@ -355,6 +355,7 @@ export interface ApiError {
 
 export interface WorkflowTestRequest {
   test_data?: Record<string, any>;
+  reset_last_processed?: boolean;
 }
 
 export interface WorkflowTestResponse {

@@ -35,8 +35,8 @@ import type {
   TriggerTypeEnum,
   ActionTypeEnum,
   TransformationTypeEnum,
-  LEAD_FIELD_OPTIONS,
 } from '@/types/integration.types';
+import { LEAD_FIELD_OPTIONS } from '@/types/integration.types';
 
 export const WorkflowEditor = () => {
   const { workflowId } = useParams<{ workflowId: string }>();
@@ -139,13 +139,6 @@ export const WorkflowEditor = () => {
       setActionType(actions[0].action_type);
     }
   }, [actions]);
-
-  // Ensure columns load when trigger prefills state
-  useEffect(() => {
-    if (selectedConnection && spreadsheetId && sheetName) {
-      loadSheetColumns(selectedConnection, spreadsheetId, sheetName);
-    }
-  }, [selectedConnection, spreadsheetId, sheetName]);
 
   // Load spreadsheets when connection is selected
   useEffect(() => {
@@ -339,18 +332,12 @@ export const WorkflowEditor = () => {
     }
   };
 
-  // Destination CRM fields with required flags
-  const destinationFields = [
-    { value: 'name', label: 'Name', required: true },
-    { value: 'phone', label: 'Phone', required: true },
-    { value: 'email', label: 'Email', required: false },
-    { value: 'company', label: 'Company', required: false },
-    { value: 'title', label: 'Title', required: false },
-    { value: 'address_line1', label: 'Address Line 1', required: false },
-    { value: 'city', label: 'City', required: false },
-    { value: 'state', label: 'State', required: false },
-    { value: 'country', label: 'Country', required: false },
-  ];
+  // Destination CRM fields from shared LEAD_FIELD_OPTIONS
+  const destinationFields = LEAD_FIELD_OPTIONS.map((f) => ({
+    value: f.value,
+    label: f.label,
+    required: f.required ?? false,
+  }));
 
   const handleTestWorkflow = async () => {
     if (!workflowId) {
@@ -850,9 +837,9 @@ export const WorkflowEditor = () => {
                       <div key={`${mapping.destination_field}-${idx}`} className="flex items-center justify-between p-3 border rounded-lg bg-muted/40">
                         <div className="flex items-center gap-2">
                           <FileText className="h-4 w-4 text-muted-foreground" />
-                          <span className="font-medium">{mapping.destination_field}</span>
-                          <ArrowRight className="h-4 w-4 text-muted-foreground" />
                           <span className="font-medium">{mapping.source_field}</span>
+                          <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-medium">{mapping.destination_field}</span>
                           {mapping.is_required && <Badge variant="secondary">Required</Badge>}
                         </div>
                         <Badge variant="outline">Queued</Badge>

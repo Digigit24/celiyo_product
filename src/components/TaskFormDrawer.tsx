@@ -46,7 +46,7 @@ export const TaskFormDrawer: React.FC<TaskFormDrawerProps> = ({
   onModeChange,
 }) => {
   const { user } = useAuth();
-  const { useTask, createTask, updateTask, deleteTask } = useCRM();
+  const { useTask, createTask, patchTask, deleteTask } = useCRM();
 
   // Form state
   const [title, setTitle] = useState('');
@@ -98,16 +98,12 @@ export const TaskFormDrawer: React.FC<TaskFormDrawerProps> = ({
       setIsSubmitting(true);
 
       const taskData: any = {
+        lead: leadId || task?.lead,
         title: title.trim(),
         description: description.trim() || undefined,
         priority,
         status,
-        owner_user_id: user?.id,
       };
-
-      if (mode === 'create') {
-        taskData.lead = leadId;
-      }
 
       if (dueDate) {
         taskData.due_date = new Date(dueDate).toISOString();
@@ -117,7 +113,7 @@ export const TaskFormDrawer: React.FC<TaskFormDrawerProps> = ({
         await createTask(taskData);
         toast.success('Task created successfully');
       } else if (mode === 'edit' && taskId) {
-        await updateTask(taskId, taskData);
+        await patchTask(taskId, taskData);
         toast.success('Task updated successfully');
       }
 

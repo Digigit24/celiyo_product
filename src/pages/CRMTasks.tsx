@@ -6,7 +6,14 @@ import { DataTable, type DataTableColumn } from '@/components/DataTable';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, RefreshCw, CheckSquare } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Plus, RefreshCw, CheckSquare, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatDistanceToNow, format } from 'date-fns';
 import type {
@@ -15,11 +22,12 @@ import type {
   TaskStatusEnum,
   PriorityEnum,
 } from '@/types/crmTypes';
+import { TASK_STATUS_OPTIONS } from '@/types/crmTypes';
 import TasksFormDrawer from '@/components/TasksFormDrawer';
 
 export const CRMTasks: React.FC = () => {
   const { user } = useAuth();
-  const { hasCRMAccess, useTasks, deleteTask } = useCRM();
+  const { hasCRMAccess, useTasks, patchTask, deleteTask } = useCRM();
 
   // Query parameters state
   const [queryParams, setQueryParams] = useState<TasksQueryParams>({
@@ -92,6 +100,20 @@ export const CRMTasks: React.FC = () => {
     mutate();
   };
 
+  // Inline task status update
+  const [savingStatusTaskId, setSavingStatusTaskId] = useState<number | null>(null);
+  const handleTaskStatusChange = async (taskId: number, newStatus: string) => {
+    setSavingStatusTaskId(taskId);
+    try {
+      await patchTask(taskId, { status: newStatus as TaskStatusEnum });
+      mutate();
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to update task status');
+    } finally {
+      setSavingStatusTaskId(null);
+    }
+  };
+
   // Get status badge variant
   const getStatusBadge = (status: TaskStatusEnum) => {
     const statusConfig = {
@@ -136,7 +158,34 @@ export const CRMTasks: React.FC = () => {
     {
       key: 'status',
       header: 'Status',
-      cell: (task) => getStatusBadge(task.status),
+      cell: (task) => {
+        const isSaving = savingStatusTaskId === task.id;
+        return (
+          <div onClick={(e) => e.stopPropagation()}>
+            <Select
+              value={task.status}
+              onValueChange={(value) => handleTaskStatusChange(task.id, value)}
+              disabled={isSaving}
+            >
+              <SelectTrigger className="h-auto p-0 border-0 bg-transparent shadow-none focus:ring-0 min-w-[120px]">
+                <SelectValue>
+                  <div className="flex items-center gap-1.5">
+                    {getStatusBadge(task.status)}
+                    {isSaving && <Loader2 className="h-3 w-3 animate-spin" />}
+                  </div>
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {TASK_STATUS_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        );
+      },
     },
     {
       key: 'priority',

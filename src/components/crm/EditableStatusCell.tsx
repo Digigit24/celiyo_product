@@ -41,8 +41,10 @@ export const EditableStatusCell: React.FC<EditableStatusCellProps> = ({
     setIsSaving(true);
     try {
       await onSave(statusId);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to update status:', error);
+      const { toast } = await import('sonner');
+      toast.error(error?.message || 'Failed to update status');
     } finally {
       setIsSaving(false);
       setIsOpen(false);

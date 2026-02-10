@@ -76,6 +76,7 @@ import { LabReports } from "./pages/diagnostics/LabReports"; // Import Lab Repor
 import Integrations from "./pages/Integrations"; // Import Integrations page
 import WorkflowEditor from "./pages/WorkflowEditor"; // Import Workflow Editor page
 import { WorkflowLogs } from "./pages/WorkflowLogs"; // Import Workflow Logs page
+import { CRMDebug } from "./pages/CRMDebug";
 
 import { WebSocketProvider } from "./context/WebSocketProvider";
 import { RealtimeChatProvider } from "./context/RealtimeChatProvider";
@@ -125,6 +126,7 @@ const AppLayout = () => {
               <Route path="/crm/tasks" element={<ModuleProtectedRoute requiredModule="crm"><CRMTasks /></ModuleProtectedRoute>} />
               <Route path="/crm/meetings" element={<ModuleProtectedRoute requiredModule="crm"><Meetings /></ModuleProtectedRoute>} />
               <Route path="/crm/pipeline" element={<ModuleProtectedRoute requiredModule="crm"><Navigate to="/crm/leads" replace /></ModuleProtectedRoute>} />
+              <Route path="/crm/debug" element={<ModuleProtectedRoute requiredModule="crm"><CRMDebug /></ModuleProtectedRoute>} />
 
               {/* HMS Routes */}
               <Route path="/hms/doctors" element={<ModuleProtectedRoute requiredModule="hms"><Doctors /></ModuleProtectedRoute>} />

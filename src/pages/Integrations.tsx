@@ -358,8 +358,8 @@ useEffect(() => {
                       <CardContent className="p-6">
                         <div className="flex items-start justify-between mb-4">
                           <div className="p-3 bg-gray-100 rounded-lg">
-                            {integration.logo_url ? (
-                              <img src={integration.logo_url} alt={integration.name} className="h-8 w-8" />
+                            {integration.icon_url ? (
+                              <img src={integration.icon_url} alt={integration.name} className="h-8 w-8" />
                             ) : (
                               <Plug className="h-8 w-8 text-gray-600" />
                             )}
@@ -451,9 +451,9 @@ useEffect(() => {
                     >
                       <div className="flex items-center gap-3">
                         <div className="p-2 bg-gray-100 rounded-lg">
-                          {connection.integration_details?.logo_url ? (
+                          {connection.integration_details?.icon_url ? (
                             <img
-                              src={connection.integration_details.logo_url}
+                              src={connection.integration_details.icon_url}
                               alt={connection.name}
                               className="h-6 w-6"
                             />

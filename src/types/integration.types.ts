@@ -57,7 +57,7 @@ export interface Integration {
   name: string;
   type: IntegrationTypeEnum;
   description: string;
-  logo_url?: string;
+  icon_url?: string;
   is_active: boolean;
   requires_oauth: boolean;
   config_schema?: Record<string, any>;
@@ -69,7 +69,7 @@ export interface IntegrationCreateData {
   name: string;
   type: IntegrationTypeEnum;
   description: string;
-  logo_url?: string;
+  icon_url?: string;
   is_active?: boolean;
   requires_oauth?: boolean;
   config_schema?: Record<string, any>;

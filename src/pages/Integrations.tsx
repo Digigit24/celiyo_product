@@ -8,14 +8,14 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, RefreshCw, Plug, Workflow, ExternalLink, Check } from 'lucide-react';
+import { Plus, RefreshCw, Plug, Workflow, ExternalLink, Check, Unplug, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Integration } from '@/types/integration.types';
 
 export const Integrations = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { useIntegrationsList, useConnectionsList, useWorkflowsList, initiateOAuth } = useIntegrations();
+  const { useIntegrationsList, useConnectionsList, useWorkflowsList, initiateOAuth, disconnectConnection, deleteConnection } = useIntegrations();
   const [activeTab, setActiveTab] = useState<'available' | 'connected' | 'workflows'>('available');
   const [isProcessingOAuth, setIsProcessingOAuth] = useState(false);
   const debugOAuth = import.meta.env.DEV || import.meta.env.VITE_DEBUG_OAUTH === 'true';
@@ -472,12 +472,41 @@ useEffect(() => {
                         <Badge variant={connection.is_active ? 'default' : 'secondary'}>
                           {connection.is_active ? 'Active' : 'Inactive'}
                         </Badge>
+                        {connection.is_active && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={async () => {
+                              if (!confirm(`Disconnect "${connection.name}"? The connection will be deactivated but not deleted.`)) return;
+                              try {
+                                await disconnectConnection(connection.id);
+                                toast.success('Connection disconnected');
+                                mutateConnections();
+                              } catch (err: any) {
+                                toast.error(err.message || 'Failed to disconnect');
+                              }
+                            }}
+                          >
+                            <Unplug className="h-4 w-4 mr-1" />
+                            Disconnect
+                          </Button>
+                        )}
                         <Button
-                          variant="outline"
+                          variant="destructive"
                           size="sm"
-                          onClick={() => navigate(`/integrations/connections/${connection.id}`)}
+                          onClick={async () => {
+                            if (!confirm(`Remove "${connection.name}" completely? This cannot be undone.`)) return;
+                            try {
+                              await deleteConnection(connection.id);
+                              toast.success('Connection removed');
+                              mutateConnections();
+                            } catch (err: any) {
+                              toast.error(err.message || 'Failed to remove connection');
+                            }
+                          }}
                         >
-                          Manage
+                          <Trash2 className="h-4 w-4 mr-1" />
+                          Remove
                         </Button>
                       </div>
                     </div>

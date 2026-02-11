@@ -762,18 +762,6 @@ export const CRMLeads: React.FC = () => {
               <Button
                 variant="outline"
                 size="sm"
-                className="h-7 px-2 text-xs gap-1"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleCallLead(lead);
-                }}
-              >
-                <Phone className="h-3 w-3" />
-                Call
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
                 className="h-7 px-2 text-xs gap-1 text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -1021,18 +1009,6 @@ export const CRMLeads: React.FC = () => {
           )}
           {isFieldVisible('phone') && (
             <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 px-3 text-xs gap-1.5 flex-1"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleCallLead(lead);
-                }}
-              >
-                <Phone className="h-3.5 w-3.5" />
-                Call
-              </Button>
               <Button
                 variant="outline"
                 size="sm"
@@ -1351,9 +1327,22 @@ export const CRMLeads: React.FC = () => {
 
             {!isLoading && leadsData && leadsData.count > 0 && (
               <div className="flex items-center justify-between px-6 py-4 border-t">
-                <p className="text-sm text-muted-foreground">
-                  Showing {leadsData.results.length} of {leadsData.count} lead(s)
-                </p>
+                <div className="flex items-center gap-3">
+                  <p className="text-sm text-muted-foreground">
+                    Showing {leadsData.results.length} of {leadsData.count} lead(s)
+                  </p>
+                  <select
+                    className="h-8 rounded-md border border-input bg-background px-2 text-sm"
+                    value={queryParams.page_size || 20}
+                    onChange={(e) =>
+                      setQueryParams((prev) => ({ ...prev, page_size: Number(e.target.value), page: 1 }))
+                    }
+                  >
+                    <option value={20}>20 / page</option>
+                    <option value={50}>50 / page</option>
+                    <option value={100}>100 / page</option>
+                  </select>
+                </div>
                 <div className="flex gap-2">
                   <Button
                     variant="outline"

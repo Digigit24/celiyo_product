@@ -112,6 +112,8 @@ export interface DataTableProps<T> {
   /** empty state text */
   emptyTitle?: string;
   emptySubtitle?: string;
+  /** hide internal pagination (use when parent handles server-side pagination) */
+  hidePagination?: boolean;
 }
 
 // This is just to pass bound handlers down to mobile card
@@ -145,6 +147,7 @@ export function DataTable<T>({
   extraActions,
   emptyTitle = 'No records found',
   emptySubtitle = 'Try adjusting your filters or search criteria',
+  hidePagination = false,
 }: DataTableProps<T>) {
   const isMobile = useIsMobile();
 
@@ -248,10 +251,10 @@ export function DataTable<T>({
   }, [rows, filters, sortConfig, columns]);
 
   // Calculate pagination
-  const totalPages = Math.ceil(filteredAndSortedRows.length / entriesPerPage);
-  const startIndex = (currentPage - 1) * entriesPerPage;
-  const endIndex = startIndex + entriesPerPage;
-  const processedRows = filteredAndSortedRows.slice(startIndex, endIndex);
+  const totalPages = hidePagination ? 1 : Math.ceil(filteredAndSortedRows.length / entriesPerPage);
+  const startIndex = hidePagination ? 0 : (currentPage - 1) * entriesPerPage;
+  const endIndex = hidePagination ? filteredAndSortedRows.length : startIndex + entriesPerPage;
+  const processedRows = hidePagination ? filteredAndSortedRows : filteredAndSortedRows.slice(startIndex, endIndex);
 
   // Reset to page 1 when filters or entries per page changes
   React.useEffect(() => {
@@ -415,7 +418,7 @@ export function DataTable<T>({
           </div>
 
           {/* Pagination controls for mobile */}
-          {filteredAndSortedRows.length > 0 && (
+          {!hidePagination && filteredAndSortedRows.length > 0 && (
             <div className="border-t bg-background p-4 space-y-3">
               {/* Entries per page selector */}
               <div className="flex items-center justify-center gap-2">
@@ -703,7 +706,7 @@ export function DataTable<T>({
         </Table>
 
         {/* Pagination controls */}
-        {filteredAndSortedRows.length > 0 && (
+        {!hidePagination && filteredAndSortedRows.length > 0 && (
           <div className="flex items-center justify-between px-4 py-4 border-t">
             {/* Entries per page selector */}
             <div className="flex items-center gap-2">

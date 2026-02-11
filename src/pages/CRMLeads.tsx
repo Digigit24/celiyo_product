@@ -1323,6 +1323,7 @@ export const CRMLeads: React.FC = () => {
               onDelete={handleDeleteLead}
               emptyTitle="No leads found"
               emptySubtitle="Get started by creating your first lead"
+              hidePagination
             />
 
             {!isLoading && leadsData && leadsData.count > 0 && (

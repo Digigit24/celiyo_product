@@ -401,6 +401,7 @@ export const CRMTasks: React.FC = () => {
                 onDelete={handleDelete}
                 emptyTitle="No tasks found"
                 emptySubtitle="Create a new task to get started"
+                hidePagination
               />
 
               {/* Pagination */}
